@@ -1,0 +1,27 @@
+{
+  "name": "agronavis",
+  "version": "1.0.0",
+  "private": true,
+  "description": "🌾 Agronavis — Enterprise Farm Assistant Platform",
+  "workspaces": [
+    "apps/*",
+    "backend",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:mobile": "npm run dev --workspace=apps/mobile",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:mobile\"",
+    "lint": "npm run lint --workspaces --if-present",
+    "type-check": "npm run type-check --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf {} + && find . -name 'dist' -type d -prune -exec rm -rf {} +"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

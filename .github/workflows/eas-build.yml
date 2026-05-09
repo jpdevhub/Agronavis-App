@@ -1,0 +1,27 @@
+name: EAS Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: EAS Build (${{ matrix.platform }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [android, ios]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm install -g eas-cli
+      - run: npm ci
+      - name: EAS Build
+        working-directory: apps/mobile
+        run: eas build --platform ${{ matrix.platform }} --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
