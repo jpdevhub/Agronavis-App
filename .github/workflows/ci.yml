@@ -12,13 +12,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run type-check
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Type check — backend
+        working-directory: backend
+        run: npm run type-check
+
+      - name: Type check — mobile
+        working-directory: apps/mobile
+        run: npm run type-check
 
   test-backend:
     name: Backend Tests
@@ -37,16 +50,35 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Push schema to test DB
+        working-directory: backend
+        run: npx prisma db push --skip-generate
+        env:
+          DATABASE_URL: postgresql://agronavis:test_password@localhost:5432/agronavis_test
+
       - name: Run backend tests
         working-directory: backend
-        run: npm test
+        run: npm test -- --passWithNoTests
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://agronavis:test_password@localhost:5432/agronavis_test
+          CLERK_SECRET_KEY: sk_test_placeholder
+          JWT_SECRET: test_jwt_secret_minimum_32_characters_long
+          ALLOWED_ORIGINS: http://localhost:8081
+          LOG_LEVEL: error

@@ -1,10 +1,10 @@
-# 🌾 Agronavis — Enterprise Farm Assistant Platform
+# Agronavis — Enterprise Farm Assistant Platform
 
 > An AI-powered, full-stack farm management and advisory platform for Indian farmers.
 
 ---
 
-## 📁 Monorepo Structure
+## Monorepo Structure
 
 ```
 Agronavis/
@@ -12,20 +12,20 @@ Agronavis/
 │   └── mobile/          # React Native (Expo Router) — farmer-facing app
 ├── backend/             # Node.js + Express + TypeScript REST API
 ├── packages/
-│   └── shared-types/    # Shared TypeScript interfaces (used by app & backend)
+│   └── shared-types/    # Shared TypeScript interfaces (used by app and backend)
 ├── services/
 │   └── ml-service/      # Python FastAPI — AI/ML microservice
-├── docs/                # Architecture & API documentation
+├── docs/                # Architecture and API documentation
 └── scripts/             # Dev automation scripts
 ```
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
-- Node.js ≥ 20
-- npm ≥ 10
+- Node.js >= 20
+- npm >= 10
 - Expo CLI (`npm install -g expo-cli`)
 - PostgreSQL (local or cloud)
 
@@ -44,12 +44,12 @@ npm run dev
 ```
 
 This will start:
-- 🖥️  Backend API  →  `http://localhost:3001`
-- 📱  Expo DevTools → Metro bundler
+- Backend API  →  `http://localhost:3001`
+- Expo DevTools → Metro bundler
 
 ---
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -65,20 +65,20 @@ This will start:
 
 ---
 
-## 🌱 Key Features (Roadmap)
+## Key Features (Roadmap)
 
 - [ ] Smart irrigation scheduling (IoT integration)
 - [ ] AI crop disease detection (camera scan)
 - [ ] AI Sahayak assistant (multilingual chatbot)
 - [ ] Weather-based advisory system
 - [ ] Market price intelligence
-- [ ] Farmer community & knowledge-sharing
-- [ ] Farm & crop management dashboard
+- [ ] Farmer community and knowledge-sharing
+- [ ] Farm and crop management dashboard
 - [ ] Government scheme recommendations
 
 ---
 
-## 📖 Documentation
+## Documentation
 
 - [Architecture Overview](docs/architecture.md)
 - [API Reference](docs/api.md)

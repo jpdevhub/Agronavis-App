@@ -7,7 +7,7 @@ import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from '@store/index';
 import * as SecureStore from 'expo-secure-store';
 
-// ─── Clerk token cache (secure storage) ──────────────────────────────────────
+// Clerk token cache — secure storage
 const tokenCache = {
   async getToken(key: string) {
     try {
@@ -25,7 +25,7 @@ const tokenCache = {
   },
 };
 
-// ─── Auth-aware route guard ───────────────────────────────────────────────────
+// Auth-aware route guard
 function RouteGuard() {
   const { isSignedIn, isLoaded } = useAuth();
   const segments = useSegments();
@@ -46,7 +46,7 @@ function RouteGuard() {
   return <Slot />;
 }
 
-// ─── Root Layout ─────────────────────────────────────────────────────────────
+// Root Layout
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

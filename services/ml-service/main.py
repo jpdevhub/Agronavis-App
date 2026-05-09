@@ -1,6 +1,6 @@
 """
-🌾 Agronavis ML Service
-========================
+Agronavis ML Service
+====================
 FastAPI microservice for AI/ML features:
 - Crop disease detection (image classification)
 - Yield prediction

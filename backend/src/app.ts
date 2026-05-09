@@ -8,7 +8,7 @@ import { logger } from './config/logger';
 import { errorMiddleware } from './middleware/error.middleware';
 import { loggerMiddleware } from './middleware/logger.middleware';
 
-// ── Module Routes ──────────────────────────────────────────────────────────────
+// Module Routes
 import { farmerRoutes } from './modules/farmers/farmers.routes';
 import { farmRoutes } from './modules/farms/farms.routes';
 import { cropRoutes } from './modules/crops/crops.routes';
@@ -22,10 +22,10 @@ import { authRoutes } from './modules/auth/auth.routes';
 export function createApp(): Application {
   const app = express();
 
-  // ── Security ────────────────────────────────────────────────────────────────
+  // Security
   app.use(helmet());
 
-  // ── CORS ────────────────────────────────────────────────────────────────────
+  // CORS
   const allowedOrigins = env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
   app.use(
     cors({
@@ -37,7 +37,7 @@ export function createApp(): Application {
     })
   );
 
-  // ── Rate Limiting ────────────────────────────────────────────────────────────
+  // Rate Limiting
   app.use(
     rateLimit({
       windowMs: env.RATE_LIMIT_WINDOW_MS,
@@ -48,26 +48,26 @@ export function createApp(): Application {
     })
   );
 
-  // ── Request Parsing ──────────────────────────────────────────────────────────
+  // Request Parsing
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
 
-  // ── Logging ─────────────────────────────────────────────────────────────────
+  // Logging
   app.use(morgan('combined', { stream: { write: (msg) => logger.http(msg.trim()) } }));
   app.use(loggerMiddleware);
 
-  // ── Health Check ─────────────────────────────────────────────────────────────
+  // Health Check
   app.get('/health', (_req: Request, res: Response) => {
     res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
       version: '1.0.0',
       environment: env.NODE_ENV,
-      service: '🌾 Agronavis API',
+      service: 'Agronavis API',
     });
   });
 
-  // ── API Routes ───────────────────────────────────────────────────────────────
+  // API Routes
   const prefix = `/api/${env.API_VERSION}`;
 
   app.use(`${prefix}/auth`, authRoutes);
@@ -80,22 +80,22 @@ export function createApp(): Application {
   app.use(`${prefix}/community`, communityRoutes);
   app.use(`${prefix}/notifications`, notificationRoutes);
 
-  // ── Root Info ────────────────────────────────────────────────────────────────
+  // Root Info
   app.get('/', (_req: Request, res: Response) => {
     res.json({
-      name: '🌾 Agronavis API',
+      name: 'Agronavis API',
       version: '1.0.0',
       docs: `${prefix}/docs`,
       health: '/health',
     });
   });
 
-  // ── 404 ──────────────────────────────────────────────────────────────────────
+  // 404
   app.use('*', (req: Request, res: Response) => {
     res.status(404).json({ success: false, error: `Route ${req.originalUrl} not found` });
   });
 
-  // ── Error Handler (must be last) ─────────────────────────────────────────────
+  // Error Handler (must be last)
   app.use(errorMiddleware);
 
   return app;
