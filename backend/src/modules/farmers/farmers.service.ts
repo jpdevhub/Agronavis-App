@@ -2,6 +2,8 @@ import prisma from '../../config/database';
 import { CreateFarmerInput, UpdateFarmerInput } from './farmers.schema';
 import { AppError } from '../../middleware/error.middleware';
 
+import { IrrigationType, SoilType } from '@prisma/client';
+
 export const farmerService = {
   async getByClerkId(clerkId: string) {
     return prisma.farmer.findUnique({ where: { clerkId } });
@@ -12,7 +14,12 @@ export const farmerService = {
     if (existing) throw new AppError(409, 'Farmer profile already exists');
 
     return prisma.farmer.create({
-      data: { ...data, clerkId },
+      data: {
+        ...data,
+        clerkId,
+        irrigationType: data.irrigationType as IrrigationType | undefined,
+        soilType: data.soilType as SoilType | undefined,
+      },
     });
   },
 
@@ -20,7 +27,9 @@ export const farmerService = {
     const farmer = await prisma.farmer.findUnique({ where: { id } });
     if (!farmer) throw new AppError(404, 'Farmer not found');
 
-    return prisma.farmer.update({ where: { id }, data });
+    const updateData: any = { ...data };
+
+    return prisma.farmer.update({ where: { id }, data: updateData });
   },
 
   async delete(id: string) {
