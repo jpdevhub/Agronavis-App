@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Farmer } from '@agronavis/shared-types';
-import { RequestStatus } from '@types/api.types';
+import { Farmer } from '../../../../packages/shared-types/src/index';
+import { RequestStatus } from '../../types/api.types';
 
 interface FarmerState {
   profile: Farmer | null;

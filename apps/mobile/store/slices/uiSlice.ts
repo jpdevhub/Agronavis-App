@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { ThemeMode } from '@types/ui.types';
+import { ThemeMode } from '../../types/ui.types';
 
 interface UIState {
   theme: ThemeMode;
@@ -9,7 +9,7 @@ interface UIState {
 
 const uiSlice = createSlice({
   name: 'ui',
-  initialState: { theme: 'dark' as ThemeMode, language: 'en', isLoading: false } satisfies UIState,
+  initialState: { theme: 'dark' as ThemeMode, language: 'en', isLoading: false as boolean } satisfies UIState,
   reducers: {
     setTheme: (state, action: PayloadAction<ThemeMode>) => { state.theme = action.payload; },
     setLanguage: (state, action: PayloadAction<string>) => { state.language = action.payload; },

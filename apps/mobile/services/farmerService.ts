@@ -1,6 +1,6 @@
 import api from './api';
-import { ApiResponse } from '@types/api.types';
-import { Farmer } from '@agronavis/shared-types';
+import { ApiResponse } from '../types/api.types';
+import { Farmer } from '../../../packages/shared-types/src/index';
 
 export const farmerService = {
   /** Get current farmer's profile */

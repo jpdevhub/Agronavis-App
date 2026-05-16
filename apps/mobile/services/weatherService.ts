@@ -1,6 +1,6 @@
 import api from './api';
-import { ApiResponse } from '@types/api.types';
-import { WeatherData, Advisory } from '@agronavis/shared-types';
+import { ApiResponse } from '../types/api.types';
+import { WeatherData, Advisory } from '../../../packages/shared-types/src/index';
 
 export const weatherService = {
   getCurrentWeather: (lat: number, lon: number) =>

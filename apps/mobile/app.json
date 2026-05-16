@@ -56,7 +56,9 @@
           "icon": "./assets/images/notification-icon.png",
           "color": "#0E3D1F"
         }
-      ]
+      ],
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true
