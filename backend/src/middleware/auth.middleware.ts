@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { clerkClient } from '@clerk/express';
+import { verifyToken } from '@clerk/express';
 import { AppError } from './error.middleware';
 
 /** Verifies Clerk JWT from Authorization header and attaches userId to request */
@@ -11,7 +11,8 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
     }
 
     const token = authHeader.substring(7);
-    const { sub: userId } = await clerkClient.verifyToken(token);
+    const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY as string });
+    const userId = payload.sub;
 
     req.userId = userId;
     next();

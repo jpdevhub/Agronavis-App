@@ -22,11 +22,28 @@ const rootReducer = combineReducers({
   ui: uiReducer,
 });
 
+import { Platform } from 'react-native';
+
+const safeStorage = {
+  getItem: (key: string) => {
+    if (Platform.OS === 'web' && typeof window === 'undefined') return Promise.resolve(null);
+    return AsyncStorage.getItem(key);
+  },
+  setItem: (key: string, value: string) => {
+    if (Platform.OS === 'web' && typeof window === 'undefined') return Promise.resolve();
+    return AsyncStorage.setItem(key, value);
+  },
+  removeItem: (key: string) => {
+    if (Platform.OS === 'web' && typeof window === 'undefined') return Promise.resolve();
+    return AsyncStorage.removeItem(key);
+  },
+};
+
 // ─── Persist Config ───────────────────────────────────────────────────────────
 const persistConfig = {
   key: 'agronavis-root',
   version: 1,
-  storage: AsyncStorage,
+  storage: safeStorage,
   whitelist: ['auth', 'farmer', 'ui'], // Only persist auth, farmer profile, and UI prefs
 };
 

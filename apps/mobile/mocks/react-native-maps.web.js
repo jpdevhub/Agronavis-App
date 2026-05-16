@@ -6,6 +6,9 @@ const MapView = ({ children, style }) => <View style={style}>{children}</View>;
 const Marker = () => null;
 const Polyline = () => null;
 const Polygon = () => null;
+
+export default MapView;
+export { Marker, Polyline, Polygon };
 const Circle = () => null;
 const Callout = ({ children }) => <>{children}</>;
 

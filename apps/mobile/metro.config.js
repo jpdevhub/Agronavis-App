@@ -16,5 +16,10 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   }
   return context.resolveRequest(context, moduleName, platform);
 };
+// Ignore macOS metadata files
+config.resolver.blockList = [
+  ...Array.from(config.resolver.blockList || []),
+  /(^|\/)\._.*/
+];
 
 module.exports = config;

@@ -1,21 +1,15 @@
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Colors } from '@/constants/theme';
 
-type IconName = React.ComponentProps<typeof Ionicons>['name'];
+type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
-interface TabConfig {
-  name: string;
-  title: string;
-  icon: IconName;
-  activeIcon: IconName;
-}
-
-const TABS: TabConfig[] = [
-  { name: 'dashboard', title: 'Home', icon: 'home-outline', activeIcon: 'home' },
-  { name: 'farm', title: 'Farm', icon: 'leaf-outline', activeIcon: 'leaf' },
-  { name: 'crops', title: 'Crops', icon: 'nutrition-outline', activeIcon: 'nutrition' },
-  { name: 'advisory', title: 'Advisory', icon: 'bulb-outline', activeIcon: 'bulb' },
-  { name: 'community', title: 'Community', icon: 'people-outline', activeIcon: 'people' },
+// Exactly 4 tabs — no more, no less.
+const TABS: { name: string; title: string; icon: IconName }[] = [
+  { name: 'dashboard/index', title: 'Dashboard', icon: 'dashboard'    },
+  { name: 'farm',            title: 'My Farms',  icon: 'agriculture'  },
+  { name: 'scan',            title: 'AI Scanner',icon: 'photo-camera' },
+  { name: 'community/index', title: 'Community', icon: 'groups'       },
 ];
 
 export default function TabsLayout() {
@@ -24,24 +18,38 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#0E3D1F',
-          borderTopColor: '#1A5C30',
-          height: 65,
-          paddingBottom: 10,
+          backgroundColor: 'rgba(255,255,255,0.96)',
+          borderTopWidth: 0,
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 10,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          shadowColor: '#0b1c30',
+          shadowOffset: { width: 0, height: -6 },
+          shadowOpacity: 0.08,
+          shadowRadius: 20,
+          elevation: 20,
+          position: 'absolute',
         },
-        tabBarActiveTintColor: '#4CAF50',
-        tabBarInactiveTintColor: '#6B9F7E',
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.outline,
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '700',
+          letterSpacing: 0.3,
+          marginTop: 2,
+        },
       }}
     >
-      {TABS.map(({ name, title, icon, activeIcon }) => (
+      {TABS.map(({ name, title, icon }) => (
         <Tabs.Screen
           key={name}
           name={name}
           options={{
             title,
-            tabBarIcon: ({ focused, color, size }) => (
-              <Ionicons name={focused ? activeIcon : icon} size={size} color={color} />
+            tabBarIcon: ({ color, size }) => (
+              <MaterialIcons name={icon} size={size} color={color} />
             ),
           }}
         />

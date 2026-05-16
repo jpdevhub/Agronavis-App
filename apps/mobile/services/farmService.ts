@@ -1,6 +1,6 @@
 import api from './api';
-import { ApiResponse } from '@types/api.types';
-import { Farm } from '@agronavis/shared-types';
+import { ApiResponse } from '../types/api.types';
+import { Farm } from '../../../packages/shared-types/src/index';
 
 export const farmService = {
   getMyFarms: () => api.get<ApiResponse<Farm[]>>('/farms'),
