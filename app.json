@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "4418b05e-cf5e-4ccc-a472-1bc936253a63"
+      }
+    },
+    "android": {
+      "package": "com.karolix.agronavis"
+    }
+  }
+}
