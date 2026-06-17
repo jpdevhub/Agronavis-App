@@ -2,37 +2,52 @@ import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, ActivityIndicator, StatusBar,
+  ScrollView, ActivityIndicator, StatusBar, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
+import { supabase } from '@/utils/supabase';
 
-function SocialBtn({ icon, label }: { icon: React.ComponentProps<typeof MaterialIcons>['name']; label: string }) {
-  return (
-    <TouchableOpacity style={styles.socialBtn} activeOpacity={0.8}>
-      <MaterialIcons name={icon} size={20} color={Colors.onSurface} />
-      <Text style={styles.socialLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
+// ─── Validation Schema ────────────────────────────────────────────────────────
+
+const loginSchema = z.object({
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+type LoginFields = z.infer<typeof loginSchema>;
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function LoginScreen() {
   const router = useRouter();
-
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
-  const [loading,  setLoading]  = useState(false);
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFields>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
-  const handleLogin = () => {
-    setLoading(true);
-    // Simulate brief loading then navigate
-    setTimeout(() => {
-      setLoading(false);
-      router.replace('/(tabs)/dashboard');
-    }, 600);
+  const onSubmit = async (data: LoginFields) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+
+    if (!error) {
+      // onAuthStateChange in useAuthStore and the root layout guard handle routing
+      return;
+    }
+
+    Alert.alert('Login failed', error.message);
   };
 
   return (
@@ -56,40 +71,55 @@ export default function LoginScreen() {
           {/* Email */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Email</Text>
-            <View style={styles.inputWrap}>
+            <View style={[styles.inputWrap, errors.email && styles.inputError]}>
               <MaterialIcons name="mail-outline" size={20} color={Colors.onSurfaceVariant} style={styles.inputIcon} />
-              <TextInput
-                id="login-email"
-                style={styles.input}
-                placeholder="your@email.com"
-                placeholderTextColor={Colors.outline}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={email}
-                onChangeText={setEmail}
+              <Controller
+                control={control}
+                name="email"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    id="login-email"
+                    style={styles.input}
+                    placeholder="your@email.com"
+                    placeholderTextColor={Colors.outline}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                )}
               />
             </View>
+            {errors.email && <Text style={styles.fieldError}>{errors.email.message}</Text>}
           </View>
 
           {/* Password */}
           <View style={styles.fieldGroup}>
             <View style={styles.labelRow}>
               <Text style={styles.label}>Password</Text>
-              <TouchableOpacity>
+              <TouchableOpacity id="login-forgot-password">
                 <Text style={styles.forgotLink}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.inputWrap}>
+            <View style={[styles.inputWrap, errors.password && styles.inputError]}>
               <MaterialIcons name="lock-outline" size={20} color={Colors.onSurfaceVariant} style={styles.inputIcon} />
-              <TextInput
-                id="login-password"
-                style={[styles.input, { paddingRight: 44 }]}
-                placeholder="••••••••"
-                placeholderTextColor={Colors.outline}
-                secureTextEntry={!showPass}
-                value={password}
-                onChangeText={setPassword}
+              <Controller
+                control={control}
+                name="password"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    id="login-password"
+                    style={[styles.input, { paddingRight: 44 }]}
+                    placeholder="Min 8 characters"
+                    placeholderTextColor={Colors.outline}
+                    secureTextEntry={!showPass}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                )}
               />
               <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPass(p => !p)}>
                 <MaterialIcons
@@ -99,38 +129,32 @@ export default function LoginScreen() {
                 />
               </TouchableOpacity>
             </View>
+            {errors.password && <Text style={styles.fieldError}>{errors.password.message}</Text>}
           </View>
 
           {/* Submit */}
-          <TouchableOpacity onPress={handleLogin} disabled={loading} activeOpacity={0.88}>
+          <TouchableOpacity
+            id="login-submit"
+            onPress={handleSubmit(onSubmit)}
+            disabled={isSubmitting}
+            activeOpacity={0.88}
+          >
             <LinearGradient
               colors={[Colors.primary, Colors.primaryContainer]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={styles.submitBtn}
             >
-              {loading
+              {isSubmitting
                 ? <ActivityIndicator color={Colors.onPrimary} />
                 : <Text style={styles.submitText}>Log In</Text>}
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerLabel}>Or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Social stubs */}
-          <View style={styles.socials}>
-            <SocialBtn icon="g-translate" label="Google" />
-            <SocialBtn icon="phone-iphone" label="Apple" />
-          </View>
-
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+            <Text style={styles.footerText}>Don&apos;t have an account? </Text>
+            <TouchableOpacity id="login-go-register" onPress={() => router.push('/(auth)/register')}>
               <Text style={styles.footerLink}>Sign up</Text>
             </TouchableOpacity>
           </View>
@@ -168,10 +192,14 @@ const styles = StyleSheet.create({
     borderRadius: Radii.lg,
     height: 56,
     paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
+  inputError:   { borderColor: '#ef4444' },
   inputIcon:    { marginRight: 10 },
   input:        { flex: 1, fontSize: 15, fontWeight: '400', color: Colors.onSurface },
   eyeBtn:       { padding: 4 },
+  fieldError:   { fontSize: 12, color: '#ef4444', fontWeight: '500' },
   submitBtn: {
     height: 56,
     borderRadius: Radii.xxl,
@@ -184,20 +212,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   submitText:   { fontSize: 17, fontWeight: '700', color: Colors.onPrimary, letterSpacing: 0.2 },
-  divider:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  dividerLine:  { flex: 1, height: 1, backgroundColor: Colors.outlineVariant, opacity: 0.5 },
-  dividerLabel: { fontSize: 13, color: Colors.onSurfaceVariant, fontWeight: '500' },
-  socials:      { gap: 10 },
-  socialBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    height: 52,
-    borderRadius: Radii.lg,
-    backgroundColor: Colors.surfaceContainerHigh,
-  },
-  socialLabel:  { fontSize: 15, fontWeight: '600', color: Colors.onSurface },
   footer:       { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingTop: 4 },
   footerText:   { fontSize: 14, color: Colors.onSurfaceVariant },
   footerLink:   { fontSize: 14, fontWeight: '700', color: Colors.primary },

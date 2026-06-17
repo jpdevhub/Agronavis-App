@@ -2,30 +2,64 @@ import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView,
-  ActivityIndicator, StatusBar,
+  ActivityIndicator, StatusBar, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
+import { supabase } from '@/utils/supabase';
+
+// ─── Validation Schema ────────────────────────────────────────────────────────
+
+const registerSchema = z.object({
+  fullName: z
+    .string()
+    .min(2, 'Full name must be at least 2 characters')
+    .max(80, 'Name is too long'),
+  email: z.string().email('Enter a valid email address'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[0-9!@#$%^&*]/, 'Password must include a number or special character'),
+  agreed: z.literal(true, {
+    errorMap: () => ({ message: 'You must accept the terms to continue' }),
+  }),
+});
+
+type RegisterFields = z.infer<typeof registerSchema>;
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function RegisterScreen() {
   const router = useRouter();
-
-  const [fullName, setFullName] = useState('');
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
-  const [agreed,   setAgreed]   = useState(false);
-  const [loading,  setLoading]  = useState(false);
 
-  const handleRegister = () => {
-    if (!agreed) return;
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      router.push('/(onboarding)/step1' as any);
-    }, 600);
+  const {
+    control,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterFields>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { fullName: '', email: '', password: '', agreed: undefined },
+  });
+
+  const agreedValue = watch('agreed');
+
+  const onSubmit = async (data: RegisterFields) => {
+    const { error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: { data: { full_name: data.fullName } },
+    });
+
+    if (error) {
+      Alert.alert('Registration failed', error.message);
+    }
   };
 
   return (
@@ -50,52 +84,75 @@ export default function RegisterScreen() {
           {/* Full Name */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Full Name</Text>
-            <View style={styles.inputWrap}>
+            <View style={[styles.inputWrap, errors.fullName && styles.inputError]}>
               <MaterialIcons name="person-outline" size={20} color={Colors.onSurfaceVariant} style={styles.icon} />
-              <TextInput
-                id="register-name"
-                style={styles.input}
-                placeholder="John Doe"
-                placeholderTextColor={Colors.outline}
-                autoCapitalize="words"
-                value={fullName}
-                onChangeText={setFullName}
+              <Controller
+                control={control}
+                name="fullName"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    id="register-name"
+                    style={styles.input}
+                    placeholder="Full Name"
+                    placeholderTextColor={Colors.outline}
+                    autoCapitalize="words"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                )}
               />
             </View>
+            {errors.fullName && <Text style={styles.fieldError}>{errors.fullName.message}</Text>}
           </View>
 
           {/* Email */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Email</Text>
-            <View style={styles.inputWrap}>
+            <View style={[styles.inputWrap, errors.email && styles.inputError]}>
               <MaterialIcons name="mail-outline" size={20} color={Colors.onSurfaceVariant} style={styles.icon} />
-              <TextInput
-                id="register-email"
-                style={styles.input}
-                placeholder="your@email.com"
-                placeholderTextColor={Colors.outline}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={email}
-                onChangeText={setEmail}
+              <Controller
+                control={control}
+                name="email"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    id="register-email"
+                    style={styles.input}
+                    placeholder="your@email.com"
+                    placeholderTextColor={Colors.outline}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                )}
               />
             </View>
+            {errors.email && <Text style={styles.fieldError}>{errors.email.message}</Text>}
           </View>
 
           {/* Password */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Password</Text>
-            <View style={styles.inputWrap}>
+            <View style={[styles.inputWrap, errors.password && styles.inputError]}>
               <MaterialIcons name="lock-outline" size={20} color={Colors.onSurfaceVariant} style={styles.icon} />
-              <TextInput
-                id="register-password"
-                style={[styles.input, { paddingRight: 44 }]}
-                placeholder="Min 8 characters"
-                placeholderTextColor={Colors.outline}
-                secureTextEntry={!showPass}
-                value={password}
-                onChangeText={setPassword}
+              <Controller
+                control={control}
+                name="password"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    id="register-password"
+                    style={[styles.input, { paddingRight: 44 }]}
+                    placeholder="Min 8 chars, 1 number or symbol"
+                    placeholderTextColor={Colors.outline}
+                    secureTextEntry={!showPass}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                )}
               />
               <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPass(p => !p)}>
                 <MaterialIcons
@@ -105,32 +162,46 @@ export default function RegisterScreen() {
                 />
               </TouchableOpacity>
             </View>
+            {errors.password && <Text style={styles.fieldError}>{errors.password.message}</Text>}
           </View>
 
           {/* Terms */}
           <View style={styles.terms}>
-            <TouchableOpacity
-              id="register-terms-checkbox"
-              style={[styles.checkbox, agreed && styles.checkboxChecked]}
-              onPress={() => setAgreed(a => !a)}
-              activeOpacity={0.8}
-            >
-              {agreed && <MaterialIcons name="check" size={14} color={Colors.onPrimary} />}
-            </TouchableOpacity>
+            <Controller
+              control={control}
+              name="agreed"
+              render={({ field: { onChange, value } }) => (
+                <TouchableOpacity
+                  id="register-terms-checkbox"
+                  style={[styles.checkbox, value && styles.checkboxChecked]}
+                  onPress={() => onChange(value ? undefined : true)}
+                  activeOpacity={0.8}
+                >
+                  {value && <MaterialIcons name="check" size={14} color={Colors.onPrimary} />}
+                </TouchableOpacity>
+              )}
+            />
             <Text style={styles.termsText}>
               I agree to the{' '}
               <Text style={styles.termsLink}>Terms and Conditions</Text>
             </Text>
           </View>
+          {errors.agreed && <Text style={[styles.fieldError, { marginTop: -8 }]}>{errors.agreed.message}</Text>}
 
           {/* Submit */}
-          <TouchableOpacity onPress={handleRegister} disabled={loading || !agreed} activeOpacity={0.88}>
+          <TouchableOpacity
+            id="register-submit"
+            onPress={handleSubmit(onSubmit)}
+            disabled={isSubmitting}
+            activeOpacity={0.88}
+          >
             <LinearGradient
-              colors={agreed ? [Colors.primary, Colors.primaryContainer] : [Colors.outlineVariant, Colors.outlineVariant]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              colors={agreedValue ? [Colors.primary, Colors.primaryContainer] : [Colors.outlineVariant, Colors.outlineVariant]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={styles.submitBtn}
             >
-              {loading
+              {isSubmitting
                 ? <ActivityIndicator color={Colors.onPrimary} />
                 : <Text style={styles.submitText}>Create Account</Text>}
             </LinearGradient>
@@ -139,7 +210,7 @@ export default function RegisterScreen() {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+            <TouchableOpacity id="register-go-login" onPress={() => router.push('/(auth)/login')}>
               <Text style={styles.footerLink}>Log in</Text>
             </TouchableOpacity>
           </View>
@@ -150,8 +221,8 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: Colors.surface },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  root:           { flex: 1, backgroundColor: Colors.surface },
+  scroll:         { flexGrow: 1, justifyContent: 'center', padding: 24 },
   card: {
     backgroundColor: Colors.surfaceContainerLow,
     borderRadius: Radii.xl,
@@ -176,10 +247,14 @@ const styles = StyleSheet.create({
     borderRadius: Radii.lg,
     height: 52,
     paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
+  inputError:     { borderColor: '#ef4444' },
   icon:           { marginRight: 10 },
   input:          { flex: 1, fontSize: 15, fontWeight: '400', color: Colors.onSurface },
   eyeBtn:         { padding: 4 },
+  fieldError:     { fontSize: 12, color: '#ef4444', fontWeight: '500' },
   terms:          { flexDirection: 'row', alignItems: 'center', gap: 10 },
   checkbox: {
     width: 22, height: 22, borderRadius: 6, borderWidth: 2,
