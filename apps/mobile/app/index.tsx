@@ -2,10 +2,9 @@ import { Redirect } from 'expo-router';
 
 /**
  * Root index — Expo Router needs this file to handle the app's entry URL.
- * Redirects immediately to the auth welcome screen.
- * Once authentication is integrated (Clerk), add your auth check here:
- *   - isSignedIn → redirect to /(tabs)
- *   - not signed in → redirect to /(auth)/welcome
+ * The root _layout.tsx handles session hydration and protected routing via
+ * useAuthStore. This file always redirects to /(auth)/welcome; the layout
+ * guard will immediately push to /(tabs)/dashboard if a session exists.
  */
 export default function Index() {
   return <Redirect href="/(auth)/welcome" />;
