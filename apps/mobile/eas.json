@@ -14,7 +14,14 @@
         "buildType": "apk"
       },
       "env": {
-        "npm_config_legacy_peer_deps": "true"
+        "npm_config_legacy_peer_deps": "true",
+        "EXPO_PUBLIC_SUPABASE_URL": "EXPO_PUBLIC_SUPABASE_URL",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+        "EXPO_PUBLIC_API_URL": "EXPO_PUBLIC_API_URL",
+        "EXPO_PUBLIC_API_TIMEOUT": "30000",
+        "EXPO_PUBLIC_ENABLE_SAHAYAK": "true",
+        "EXPO_PUBLIC_ENABLE_MARKET_PRICES": "true",
+        "EXPO_PUBLIC_ENABLE_IOT": "false"
       }
     },
     "production": {
@@ -23,7 +30,14 @@
         "buildType": "apk"
       },
       "env": {
-        "npm_config_legacy_peer_deps": "true"
+        "npm_config_legacy_peer_deps": "true",
+        "EXPO_PUBLIC_SUPABASE_URL": "EXPO_PUBLIC_SUPABASE_URL",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+        "EXPO_PUBLIC_API_URL": "EXPO_PUBLIC_API_URL",
+        "EXPO_PUBLIC_API_TIMEOUT": "30000",
+        "EXPO_PUBLIC_ENABLE_SAHAYAK": "true",
+        "EXPO_PUBLIC_ENABLE_MARKET_PRICES": "true",
+        "EXPO_PUBLIC_ENABLE_IOT": "false"
       }
     }
   },
