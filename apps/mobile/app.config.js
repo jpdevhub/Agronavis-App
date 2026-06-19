@@ -1,0 +1,84 @@
+/**
+ * app.config.js — Dynamic Expo config
+ *
+ * Why this file exists instead of app.json:
+ *   Static app.json does NOT perform ${VAR} substitution for native fields
+ *   like `android.googleMapsApiKey`. Dynamic config reads process.env at
+ *   EAS build time so the real API key is written into AndroidManifest.xml.
+ */
+
+/** @type {import('expo/config').ExpoConfig} */
+module.exports = ({ config }) => ({
+  ...config,
+  name: 'Agronavis',
+  slug: 'agronavis',
+  version: '1.0.0',
+  orientation: 'portrait',
+  icon: './assets/images/icon.png',
+  scheme: 'agronavis',
+  userInterfaceStyle: 'automatic',
+  newArchEnabled: true,
+  assetBundlePatterns: ['**/*'],
+
+  splash: {
+    image: './assets/images/splash-icon.png',
+    resizeMode: 'contain',
+    backgroundColor: '#0E3D1F',
+  },
+
+  ios: {
+    supportsTablet: false,
+    bundleIdentifier: 'com.agronavis.app',
+    infoPlist: {
+      NSCameraUsageDescription:
+        'Agronavis uses your camera to scan crops for disease detection.',
+      NSLocationWhenInUseUsageDescription:
+        'Agronavis uses your location to provide weather and soil data for your farm.',
+      NSPhotoLibraryUsageDescription:
+        'Agronavis needs access to your photos to upload farm images.',
+    },
+  },
+
+  android: {
+    adaptiveIcon: {
+      foregroundImage: './assets/images/adaptive-icon.png',
+      backgroundColor: '#0E3D1F',
+    },
+    package: 'com.agronavis.app',
+    // process.env is available during EAS Build — this writes the real key into AndroidManifest.xml
+    googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+    permissions: [
+      'android.permission.CAMERA',
+      'android.permission.ACCESS_FINE_LOCATION',
+      'android.permission.ACCESS_COARSE_LOCATION',
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.RECORD_AUDIO',
+    ],
+  },
+
+  web: {
+    bundler: 'metro',
+    output: 'static',
+    favicon: './assets/images/favicon.png',
+  },
+
+  plugins: [
+    'expo-router',
+    'expo-font',
+    'expo-location',
+    ['expo-camera', { cameraPermission: 'Allow Agronavis to access your camera for crop scanning.' }],
+    ['expo-notifications', { icon: './assets/images/notification-icon.png', color: '#0E3D1F' }],
+    'expo-secure-store',
+    '@react-native-community/datetimepicker',
+    './plugins/withMonorepoFix',
+  ],
+
+  experiments: {
+    typedRoutes: true,
+  },
+
+  extra: {
+    eas: { projectId: '4418b05e-cf5e-4ccc-a472-1bc936253a63' },
+    router: {},
+  },
+});

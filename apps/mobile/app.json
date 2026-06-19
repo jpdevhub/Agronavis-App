@@ -31,7 +31,6 @@
         "backgroundColor": "#0E3D1F"
       },
       "package": "com.agronavis.app",
-      "googleMapsApiKey": "${EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_FINE_LOCATION",
