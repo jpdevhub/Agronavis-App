@@ -65,7 +65,7 @@ export default function FarmFieldDrawer({
   const [region, setRegion]   = useState({ latitude: 20.5937, longitude: 78.9629, latitudeDelta: 0.003, longitudeDelta: 0.003 });
   const [pins, setPins]       = useState<LatLng[]>([]);
   const [locating, setLocating] = useState(false);
-  const [mapReady, setMapReady] = useState(false); // don't render map until GPS resolves
+  const [mapReady, setMapReady] = useState(true); // show map at India centre immediately; GPS animates on top
   const [saving, setSaving]   = useState(false);
   const [locName, setLocName] = useState('');
   const [fieldName, setFieldName] = useState('');
@@ -78,24 +78,25 @@ export default function FarmFieldDrawer({
     setLocating(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setMapReady(true); // show map at fallback anyway
-        return;
-      }
+      if (status !== 'granted') return; // map already visible at fallback centre
 
-      // Fast path: last-known position for instant render
+      // Fast path: last-known position → animate map immediately
       const last = await Location.getLastKnownPositionAsync();
       if (last) {
         const r = { latitude: last.coords.latitude, longitude: last.coords.longitude, latitudeDelta: 0.003, longitudeDelta: 0.003 };
         setRegion(r);
-        setMapReady(true); // render map NOW at coarse location
+        mapRef.current?.animateToRegion(r, 400);
       }
 
-      // Precise path: refine with current position
-      const { coords } = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      // Precise path: 10-second timeout so it never hangs on Android
+      const gpsPromise = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const timeout    = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000));
+      const result     = await Promise.race([gpsPromise, timeout]);
+      if (!result) return; // timed out — last-known is good enough
+
+      const { coords } = result;
       const r = { latitude: coords.latitude, longitude: coords.longitude, latitudeDelta: 0.003, longitudeDelta: 0.003 };
       setRegion(r);
-      if (!last) setMapReady(true); // first render if no last-known
       mapRef.current?.animateToRegion(r, 600);
 
       // Reverse geocode for label
@@ -107,7 +108,7 @@ export default function FarmFieldDrawer({
         if (mode === 'onboarding') setLocation(s, d);
       }
     } catch {
-      setMapReady(true); // show map at fallback on any error
+      // Silently ignored — map is already visible at fallback or last-known position
     } finally {
       setLocating(false);
     }
