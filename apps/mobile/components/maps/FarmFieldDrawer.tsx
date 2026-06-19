@@ -14,7 +14,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, Alert, Platform, KeyboardAvoidingView,
 } from 'react-native';
-import MapView, { Marker, Polygon, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Marker, Polygon, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -219,11 +219,11 @@ export default function FarmFieldDrawer({
       </View>
 
       {/* ── Map ── */}
-      {/* PROVIDER_DEFAULT avoids PROVIDER_GOOGLE init crash in Expo Go.
-          Satellite tiles still work via Expo Go's bundled Maps SDK.   */}
+      {/* Use PROVIDER_GOOGLE on Android so satellite tiles work in the APK.
+          PROVIDER_DEFAULT on iOS uses Apple Maps which also supports satellite. */}
       <MapView
         ref={mapRef}
-        provider={PROVIDER_DEFAULT}
+        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
         style={styles.map}
         mapType="satellite"
         region={region}
