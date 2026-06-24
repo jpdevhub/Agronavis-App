@@ -11,7 +11,7 @@ config.resolver.sourceExts = [...config.resolver.sourceExts, 'svg'];
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (platform === 'web') {
     if (moduleName === 'react-native-maps') {
-      return { filePath: `${__dirname}/mocks/react-native-maps.web.js`, type: 'sourceFile' };
+      return context.resolveRequest(context, '@teovilla/react-native-web-maps', platform);
     }
   }
   return context.resolveRequest(context, moduleName, platform);

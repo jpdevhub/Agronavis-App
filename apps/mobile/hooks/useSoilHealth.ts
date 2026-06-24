@@ -58,7 +58,7 @@ async function fetchSoilHealth(fieldId: string): Promise<SoilHealth | null> {
   const { data: regional } = await supabase
     .from('regional_soil_data')
     .select('n_High, n_Medium, n_Low, p_High, p_Medium, p_Low, k_High, k_Medium, k_Low, "pH_Alkaline", "pH_Acidic", "pH_Neutral"')
-    .ilike('"District"', farmer.district.trim())
+    .filter('"District"', 'ilike', farmer.district.trim())
     .maybeSingle();
 
   if (!regional) return null;

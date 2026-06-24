@@ -7,12 +7,13 @@
  * - Flash toggle
  * - Camera permission handled inline
  */
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, StatusBar,
   ActivityIndicator, Platform, ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -31,13 +32,28 @@ export default function ScanScreen() {
   const [facing, setFacing]   = useState<CameraType>('back');
   const [flash,  setFlash]    = useState<FlashMode>('off');
   const [busy,   setBusy]     = useState(false);
+  // isFocused: true only while this tab is active — gates CameraView mount
+  // so the camera hardware releases when you navigate away.
+  const [isFocused, setIsFocused] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => {
+        // Called when screen loses focus — unmounts CameraView, releases camera
+        setIsFocused(false);
+      };
+    }, [])
+  );
 
   // Request permission on mount if not yet decided
-  useEffect(() => {
-    if (permission && !permission.granted && permission.canAskAgain) {
-      requestPermission();
-    }
-  }, [permission]);
+  useFocusEffect(
+    useCallback(() => {
+      if (permission && !permission.granted && permission.canAskAgain) {
+        requestPermission();
+      }
+    }, [permission])
+  );
 
   // ── Capture ──
   async function handleCapture() {
@@ -102,14 +118,16 @@ export default function ScanScreen() {
     <View style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor="#000" translucent />
 
-      {/* ── Live camera ── */}
+      {/* ── Live camera (only mounted while tab is active) ── */}
       <View style={styles.cameraWrap}>
-        <CameraView
-          ref={cameraRef}
-          style={StyleSheet.absoluteFill}
-          facing={facing}
-          flash={flash}
-        />
+        {isFocused && (
+          <CameraView
+            ref={cameraRef}
+            style={StyleSheet.absoluteFill}
+            facing={facing}
+            flash={flash}
+          />
+        )}
 
         {/* Top bar */}
         <View style={styles.camTopBar}>

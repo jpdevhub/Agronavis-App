@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, ActivityIndicator, StatusBar, Alert,
+  ScrollView, ActivityIndicator, StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
@@ -27,6 +27,7 @@ type LoginFields = z.infer<typeof loginSchema>;
 export default function LoginScreen() {
   const router = useRouter();
   const [showPass, setShowPass] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const {
     control,
     handleSubmit,
@@ -37,17 +38,36 @@ export default function LoginScreen() {
   });
 
   const onSubmit = async (data: LoginFields) => {
+    setAuthError(null);
     const { error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     });
 
-    if (!error) {
-      // onAuthStateChange in useAuthStore and the root layout guard handle routing
+    if (error) {
+      // Show inline — Alert.alert is unreliable on web
+      setAuthError(error.message);
       return;
     }
 
-    Alert.alert('Login failed', error.message);
+    // Navigate directly — don't rely solely on onAuthStateChange chain
+    // (the root layout guard acts as a fallback for session-restore on boot)
+    try {
+      const { data: farmer } = await supabase
+        .from('farmers')
+        .select('onboarding_complete')
+        .eq('id', (await supabase.auth.getUser()).data.user!.id)
+        .single();
+
+      if (farmer?.onboarding_complete) {
+        router.replace('/(tabs)/dashboard' as any);
+      } else {
+        router.replace('/(onboarding)/step1' as any);
+      }
+    } catch {
+      // If the DB query fails just go to dashboard
+      router.replace('/(tabs)/dashboard' as any);
+    }
   };
 
   return (
@@ -132,6 +152,14 @@ export default function LoginScreen() {
             {errors.password && <Text style={styles.fieldError}>{errors.password.message}</Text>}
           </View>
 
+          {/* Auth-level error banner */}
+          {authError && (
+            <View style={styles.errorBanner}>
+              <MaterialIcons name="error-outline" size={16} color="#991b1b" />
+              <Text style={styles.errorBannerText}>{authError}</Text>
+            </View>
+          )}
+
           {/* Submit */}
           <TouchableOpacity
             id="login-submit"
@@ -166,12 +194,14 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   root:         { flex: 1, backgroundColor: Colors.surface },
-  scroll:       { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  scroll:       { flexGrow: 1, justifyContent: 'center', padding: 24, alignItems: 'center' },
   card: {
     backgroundColor: Colors.surfaceContainerLowest,
     borderRadius: Radii.xxl,
     padding: 28,
     gap: 20,
+    width: '100%',
+    maxWidth: 480,
     shadowColor: '#0b1c30',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.06,
@@ -215,4 +245,22 @@ const styles = StyleSheet.create({
   footer:       { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingTop: 4 },
   footerText:   { fontSize: 14, color: Colors.onSurfaceVariant },
   footerLink:   { fontSize: 14, fontWeight: '700', color: Colors.primary },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#991b1b',
+    lineHeight: 18,
+  },
 });

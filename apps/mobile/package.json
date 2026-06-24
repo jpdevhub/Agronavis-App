@@ -30,6 +30,7 @@
     "@react-navigation/native": "^7.1.8",
     "@supabase/supabase-js": "^2.108.1",
     "@tanstack/react-query": "^5.101.0",
+    "@teovilla/react-native-web-maps": "^0.9.5",
     "axios": "^1.12.2",
     "expo": "~54.0.10",
     "expo-auth-session": "~7.0.11",

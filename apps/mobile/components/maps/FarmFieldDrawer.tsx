@@ -62,13 +62,18 @@ export default function FarmFieldDrawer({
   const { setLocation } = useOnboardingStore();
   const mapRef        = useRef<MapView>(null);
 
-  const [region, setRegion]   = useState({ latitude: 20.5937, longitude: 78.9629, latitudeDelta: 0.003, longitudeDelta: 0.003 });
+  const [region, setRegion]   = useState({ latitude: 20.5937, longitude: 78.9629, latitudeDelta: 15, longitudeDelta: 15 });
   const [pins, setPins]       = useState<LatLng[]>([]);
   const [locating, setLocating] = useState(false);
-  const [mapReady, setMapReady] = useState(true); // show map at India centre immediately; GPS animates on top
+  // mapReady: false until we have real GPS — prevents the map rendering at the
+  // hardcoded India centre and then jarring-jumping to the user's location.
+  const [mapReady, setMapReady] = useState(false);
   const [saving, setSaving]   = useState(false);
   const [locName, setLocName] = useState('');
   const [fieldName, setFieldName] = useState('');
+  const [locationError, setLocationError] = useState<string | null>(null);
+  // Map type toggle — satellite+labels (hybrid) is best for farm drawing
+  const [mapViewType, setMapViewType] = useState<'hybrid' | 'roadmap'>('hybrid');
 
   useEffect(() => { flyToLocation(); }, []);
 
@@ -76,27 +81,78 @@ export default function FarmFieldDrawer({
 
   async function flyToLocation() {
     setLocating(true);
+    setLocationError(null);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return; // map already visible at fallback centre
+      // On web, expo-location hangs — use the browser's native geolocation API instead.
+      // IMPORTANT: This library ignores the `region` prop on web after mount.
+      // Must use mapRef.current?.animateCamera() to pan the map.
+      if (Platform.OS === 'web') {
+        // Show India-level view immediately (initialRegion is set once at mount)
+        setMapReady(true);
 
-      // Fast path: last-known position → animate map immediately
+        if (!navigator.geolocation) {
+          setLocationError('Geolocation is not supported by your browser.');
+          setLocating(false);
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+            setRegion({ latitude, longitude, latitudeDelta: 0.003, longitudeDelta: 0.003 });
+            // animateCamera uses map.moveCamera() — works without LatLngBounds
+            mapRef.current?.animateCamera?.({
+              center: { latitude, longitude },
+              zoom: 16,
+            });
+            setLocating(false);
+          },
+          (err) => {
+            setLocationError('Could not get location. Tap 📍 to retry.');
+            setLocating(false);
+            console.warn('Web geolocation error:', err.message);
+          },
+          { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 }
+        );
+        return;
+      }
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        // Show map at India centre so it's not blank forever
+        setRegion({ latitude: 20.5937, longitude: 78.9629, latitudeDelta: 8, longitudeDelta: 8 });
+        setMapReady(true);
+        setLocationError('Location permission denied — tap the 📍 button after granting access.');
+        return;
+      }
+
+      // Fast path: last-known position → show map immediately at real location
       const last = await Location.getLastKnownPositionAsync();
       if (last) {
         const r = { latitude: last.coords.latitude, longitude: last.coords.longitude, latitudeDelta: 0.003, longitudeDelta: 0.003 };
         setRegion(r);
-        mapRef.current?.animateToRegion(r, 400);
+        setMapReady(true);           // ← map mounts only once we have real coords
+        if (Platform.OS !== 'web') mapRef.current?.animateToRegion(r, 400);
       }
 
       // Precise path: 10-second timeout so it never hangs on Android
       const gpsPromise = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const timeout    = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000));
       const result     = await Promise.race([gpsPromise, timeout]);
-      if (!result) return; // timed out — last-known is good enough
+
+      if (!result) {
+        // Timed out — if last-known already set mapReady we're fine; else show fallback
+        if (!mapReady) {
+          setRegion({ latitude: 20.5937, longitude: 78.9629, latitudeDelta: 8, longitudeDelta: 8 });
+          setMapReady(true);
+        }
+        return;
+      }
 
       const { coords } = result;
       const r = { latitude: coords.latitude, longitude: coords.longitude, latitudeDelta: 0.003, longitudeDelta: 0.003 };
       setRegion(r);
+      if (!mapReady) setMapReady(true);
       mapRef.current?.animateToRegion(r, 600);
 
       // Reverse geocode for label
@@ -107,8 +163,12 @@ export default function FarmFieldDrawer({
         setLocName([d, s].filter(Boolean).join(', '));
         if (mode === 'onboarding') setLocation(s, d);
       }
-    } catch {
-      // Silently ignored — map is already visible at fallback or last-known position
+    } catch (err: any) {
+      // Show map at fallback rather than hanging on a black screen
+      setRegion({ latitude: 20.5937, longitude: 78.9629, latitudeDelta: 8, longitudeDelta: 8 });
+      setMapReady(true);
+      setLocationError('Could not get location. Tap 📍 to retry.');
+      console.warn('FarmFieldDrawer location error:', err?.message);
     } finally {
       setLocating(false);
     }
@@ -181,13 +241,15 @@ export default function FarmFieldDrawer({
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
-  // Show a GPS-acquiring screen until we have a real coordinate.
-  // This ensures the map opens directly at field-level zoom in satellite mode.
+  // Show GPS-acquiring screen while waiting for real coordinates.
+  // This prevents the map from mounting at the hardcoded India fallback centre
+  // and then jarring-jumping — we wait for actual GPS before mounting MapView.
   if (!mapReady) {
     return (
       <View style={styles.gpsWait}>
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.gpsText}>Finding your location…</Text>
+        <Text style={styles.gpsSubText}>This takes a few seconds on first launch</Text>
       </View>
     );
   }
@@ -210,24 +272,46 @@ export default function FarmFieldDrawer({
           )}
         </View>
 
-        {onSkip ? (
-          <TouchableOpacity onPress={onSkip} style={styles.skipBtn}>
-            <Text style={styles.skipText}>Skip</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.headerIconBtn} />   /* spacer */
-        )}
+        {/* Map type toggle — satellite ↔ normal */}
+        <TouchableOpacity
+          style={styles.mapTypeBtn}
+          onPress={() => setMapViewType(t => t === 'hybrid' ? 'roadmap' : 'hybrid')}
+        >
+          <MaterialIcons
+            name={mapViewType === 'hybrid' ? 'map' : 'satellite'}
+            size={18}
+            color="#fff"
+          />
+          <Text style={styles.mapTypeText}>
+            {mapViewType === 'hybrid' ? 'Map' : 'Satellite'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* ── Map ── */}
-      {/* Use PROVIDER_GOOGLE on Android so satellite tiles work in the APK.
-          PROVIDER_DEFAULT on iOS uses Apple Maps which also supports satellite. */}
+      {/*
+        Web library notes (from source inspection):
+        • `region` prop is IGNORED after mount — only `initialRegion` sets initial center.
+        • `mapType` is NOT passed to GoogleMap — must use `options.mapTypeId` instead.
+        • `animateCamera()` uses map.moveCamera() and works correctly on web.
+        • `animateToRegion()` uses LatLngBounds (crashes if maps not fully loaded).
+      */}
       <MapView
         ref={mapRef}
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
+        provider={Platform.OS === 'web' ? 'google' : Platform.OS === 'ios' ? PROVIDER_DEFAULT : PROVIDER_GOOGLE}
+        googleMapsApiKey={Platform.OS === 'web' ? process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY : undefined}
         style={styles.map}
-        mapType="satellite"
-        region={region}
+        // On web: use initialRegion (region prop is ignored by this library)
+        // On native: use region as controlled prop
+        {...(Platform.OS === 'web'
+          ? { initialRegion: { latitude: 20.5937, longitude: 78.9629, latitudeDelta: 15, longitudeDelta: 15 } }
+          : { region }
+        )}
+        // On web: mapType prop is ignored; pass via options.mapTypeId instead
+        {...(Platform.OS !== 'web'
+          ? { mapType: mapViewType }
+          : { options: { mapTypeId: mapViewType, mapTypeControl: false } }
+        )}
         onRegionChangeComplete={setRegion}
         onPress={handleMapPress}
         showsUserLocation
@@ -261,6 +345,14 @@ export default function FarmFieldDrawer({
           <Text style={styles.bannerText}>
             Tap {4 - pins.length} more corner{4 - pins.length !== 1 ? 's' : ''} to outline your field
           </Text>
+        </View>
+      )}
+
+      {/* Location error notice */}
+      {locationError && (
+        <View style={styles.locErrorBanner}>
+          <MaterialIcons name="location-off" size={14} color="#92400e" />
+          <Text style={styles.locErrorText}>{locationError}</Text>
         </View>
       )}
 
@@ -350,8 +442,8 @@ export default function FarmFieldDrawer({
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#000' },
-  map:  { flex: 1 },
+  root: { flex: 1, backgroundColor: '#000', width: '100%', height: '100%' },
+  map:  { flex: 1, width: '100%', height: '100%' },
 
   // Header
   header: {
@@ -376,6 +468,13 @@ const styles = StyleSheet.create({
   stepText:  { fontSize: 11, fontWeight: '700', color: '#fff' },
   skipBtn:   { paddingHorizontal: 8, paddingVertical: 6 },
   skipText:  { fontSize: 14, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
+  mapTypeBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: Radii.full,
+    paddingHorizontal: 10, paddingVertical: 6,
+  },
+  mapTypeText: { fontSize: 12, fontWeight: '700', color: '#fff' },
 
   // Instruction banner
   banner: {
@@ -475,4 +574,17 @@ const styles = StyleSheet.create({
   // GPS wait screen
   gpsWait: { flex: 1, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', gap: 16 },
   gpsText: { fontSize: 15, fontWeight: '600', color: Colors.onSurfaceVariant },
+  gpsSubText: { fontSize: 12, color: Colors.outline },
+
+  // Location error banner
+  locErrorBanner: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 148 : 136,
+    left: 16, right: 16, zIndex: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#fef3c7', borderRadius: Radii.lg,
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderWidth: 1, borderColor: '#fde68a',
+  },
+  locErrorText: { flex: 1, fontSize: 12, fontWeight: '600', color: '#92400e' },
 });

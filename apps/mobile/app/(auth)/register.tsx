@@ -222,12 +222,14 @@ export default function RegisterScreen() {
 
 const styles = StyleSheet.create({
   root:           { flex: 1, backgroundColor: Colors.surface },
-  scroll:         { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  scroll:         { flexGrow: 1, justifyContent: 'center', padding: 24, alignItems: 'center' },
   card: {
     backgroundColor: Colors.surfaceContainerLow,
     borderRadius: Radii.xl,
     padding: 28,
     gap: 18,
+    width: '100%',
+    maxWidth: 480,
     shadowColor: '#0b1c30',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.06,

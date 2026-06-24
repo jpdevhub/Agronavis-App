@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ImageBackground, StyleSheet, Text, View, TouchableOpacity, StatusBar } from 'react-native';
+import { ImageBackground, StyleSheet, Text, View, TouchableOpacity, StatusBar, Platform } from 'react-native';
 
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
@@ -13,24 +13,70 @@ export default function WelcomeScreen() {
   // Micro-animation for primary CTA
 
 
+  // ── Web layout: centred card over a full-bleed hero image ─────────────────
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.rootWeb}>
+        <StatusBar barStyle="light-content" />
+        <ImageBackground source={FIELD_IMAGE} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <LinearGradient
+          colors={['rgba(11,28,48,0.45)', 'rgba(11,28,48,0.75)']}
+          style={StyleSheet.absoluteFill}
+        />
+
+        {/* Centred content column */}
+        <View style={styles.webCenter}>
+          <View style={styles.webCard}>
+            {/* Brand */}
+            <View style={styles.webBrand}>
+              <View style={styles.iconBadge}>
+                <MaterialIcons name="eco" size={40} color={Colors.primary} />
+              </View>
+              <Text style={styles.webAppName}>Agronavis</Text>
+              <Text style={styles.webTagline}>The precision horizon for modern agriculture.</Text>
+            </View>
+
+            {/* CTAs */}
+            <View style={styles.webActions}>
+              <TouchableOpacity activeOpacity={0.88} onPress={() => router.push('/(auth)/register')}>
+                <LinearGradient
+                  colors={[Colors.primary, Colors.primaryContainer]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.btnPrimary}
+                >
+                  <Text style={styles.btnPrimaryText}>Get Started</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.88}
+                onPress={() => router.push('/(auth)/login')}
+                style={styles.btnSecondaryWeb}
+              >
+                <Text style={styles.btnSecondaryText}>Log In</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // ── Native layout (original, unchanged) ────────────────────────────────────
   return (
     <View style={styles.root}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      {/* Background field photo */}
       <ImageBackground source={FIELD_IMAGE} style={StyleSheet.absoluteFill} resizeMode="cover" />
-
-      {/* Gradient scrim — bottom-heavy to ensure readability */}
       <LinearGradient
         colors={['transparent', 'rgba(11,28,48,0.55)', Colors.surface]}
         locations={[0, 0.45, 1]}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Content */}
       <View style={styles.content}>
-        {/* Logo + wordmark */}
-        <View  style={styles.brand}>
+        <View style={styles.brand}>
           <View style={styles.iconBadge}>
             <MaterialIcons name="eco" size={40} color={Colors.primary} />
           </View>
@@ -38,39 +84,25 @@ export default function WelcomeScreen() {
           <Text style={styles.tagline}>The precision horizon for modern agriculture.</Text>
         </View>
 
-        {/* CTA buttons */}
-        <View  style={styles.actions}>
-          {/* Get Started */}
-          <View >
-            <TouchableOpacity
-              activeOpacity={1}
-              
-              
-              onPress={() => router.push('/(auth)/register')}
+        <View style={styles.actions}>
+          <TouchableOpacity activeOpacity={1} onPress={() => router.push('/(auth)/register')}>
+            <LinearGradient
+              colors={[Colors.primary, Colors.primaryContainer]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.btnPrimary}
             >
-              <LinearGradient
-                colors={[Colors.primary, Colors.primaryContainer]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.btnPrimary}
-              >
-                <Text style={styles.btnPrimaryText}>Get Started</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+              <Text style={styles.btnPrimaryText}>Get Started</Text>
+            </LinearGradient>
+          </TouchableOpacity>
 
-          {/* Log In */}
-          <View >
-            <TouchableOpacity
-              activeOpacity={1}
-              
-              
-              onPress={() => router.push('/(auth)/login')}
-              style={styles.btnSecondary}
-            >
-              <Text style={styles.btnSecondaryText}>Log In</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => router.push('/(auth)/login')}
+            style={styles.btnSecondary}
+          >
+            <Text style={styles.btnSecondaryText}>Log In</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -78,6 +110,7 @@ export default function WelcomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  // ── Native ────────────────────────────────────────────────────────────────
   root: { flex: 1, backgroundColor: Colors.surface },
   content: {
     flex: 1,
@@ -138,4 +171,59 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceContainerHigh,
   },
   btnSecondaryText: { fontSize: 17, fontWeight: '700', color: Colors.onSurface, letterSpacing: 0.2 },
+
+  // ── Web ───────────────────────────────────────────────────────────────────
+  rootWeb: {
+    flex: 1,
+    minHeight: '100vh' as any,
+    backgroundColor: '#0b1c30',
+  },
+  webCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh' as any,
+    paddingVertical: 60,
+    paddingHorizontal: 24,
+  },
+  webCard: {
+    width: '100%',
+    maxWidth: 460,
+    backgroundColor: 'rgba(248,249,255,0.94)',
+    borderRadius: 32,
+    padding: 48,
+    gap: 36,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 24 },
+    shadowOpacity: 0.25,
+    shadowRadius: 48,
+  },
+  webBrand: { alignItems: 'center', gap: 14 },
+  webAppName: {
+    fontSize: 48,
+    fontWeight: '900',
+    letterSpacing: -1.5,
+    color: Colors.onSurface,
+    textAlign: 'center',
+  },
+  webTagline: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: Colors.onSurfaceVariant,
+    textAlign: 'center',
+    lineHeight: 24,
+    maxWidth: 300,
+  },
+  webActions: { width: '100%', gap: 12 },
+  btnSecondaryWeb: {
+    width: '100%',
+    height: 56,
+    borderRadius: Radii.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surfaceContainerHigh,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+  },
 });
