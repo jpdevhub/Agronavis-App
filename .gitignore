@@ -50,3 +50,8 @@ logs/
 *.pem
 .cache/
 tmp/
+
+# ─── Notebooks ──────────────────────────────────
+notebooks/
+*.ipynb
+.ipynb_checkpoints/
