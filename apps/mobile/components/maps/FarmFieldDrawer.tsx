@@ -299,6 +299,7 @@ export default function FarmFieldDrawer({
       <MapView
         ref={mapRef}
         provider={Platform.OS === 'web' ? 'google' : Platform.OS === 'ios' ? PROVIDER_DEFAULT : PROVIDER_GOOGLE}
+        // @ts-expect-error: googleMapsApiKey is required for react-native-web-maps but missing from react-native-maps types
         googleMapsApiKey={Platform.OS === 'web' ? process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY : undefined}
         style={styles.map}
         // On web: use initialRegion (region prop is ignored by this library)
