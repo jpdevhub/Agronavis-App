@@ -2,7 +2,7 @@
   "expo": {
     "name": "Agronavis",
     "slug": "agronavis",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "agronavis",
@@ -17,6 +17,7 @@
       "backgroundColor": "#0E3D1F"
     },
     "ios": {
+      "buildNumber": "2",
       "supportsTablet": false,
       "bundleIdentifier": "com.agronavis.app",
       "infoPlist": {
@@ -26,6 +27,7 @@
       }
     },
     "android": {
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0E3D1F"
