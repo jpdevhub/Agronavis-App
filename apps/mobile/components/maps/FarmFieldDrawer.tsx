@@ -132,7 +132,7 @@ export default function FarmFieldDrawer({
         const r = { latitude: last.coords.latitude, longitude: last.coords.longitude, latitudeDelta: 0.003, longitudeDelta: 0.003 };
         setRegion(r);
         setMapReady(true);           // ← map mounts only once we have real coords
-        if (Platform.OS !== 'web') mapRef.current?.animateToRegion(r, 400);
+        mapRef.current?.animateToRegion(r, 400);
       }
 
       // Precise path: 10-second timeout so it never hangs on Android
