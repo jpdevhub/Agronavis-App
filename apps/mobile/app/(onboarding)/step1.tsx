@@ -11,7 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Colors, Radii } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
-import { supabase } from '@/utils/supabase';
+import { farmerApi, storageApi } from '@/services/endpoints';
 
 export default function OnboardingStep1() {
   const router = useRouter();
@@ -49,35 +49,21 @@ export default function OnboardingStep1() {
     setSaving(true);
 
     try {
-      let avatar_url: string | null = null;
+      let avatarUrl: string | undefined;
 
-      // Upload avatar if picked
       if (avatarUri) {
-        const ext      = avatarUri.split('.').pop() ?? 'jpg';
-        const path     = `${user.id}/avatar.${ext}`;
-        const response = await fetch(avatarUri);
-        const blob     = await response.blob();
-
-        const { error: upErr } = await supabase.storage
-          .from('avatars')
-          .upload(path, blob, { upsert: true, contentType: `image/${ext}` });
-
-        if (!upErr) {
-          const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-          avatar_url = data.publicUrl;
-        }
+        const extension = avatarUri.split('.').pop()?.toLowerCase() ?? 'jpg';
+        const mime = extension === 'png' ? 'image/png' : 'image/jpeg';
+        const upload = await storageApi.upload('avatars', avatarUri, `avatar.${extension}`, mime);
+        avatarUrl = upload.publicUrl;
       }
 
-      // Save to farmers table
-      const updates: Record<string, unknown> = {
-        full_name: fullName.trim(),
-      };
-      if (phone.trim()) updates.phone = phone.trim();
-      if (avatar_url)   updates.avatar_url = avatar_url;
+      await farmerApi.update({
+        fullName: fullName.trim(),
+        ...(phone.trim() ? { phone: phone.trim() } : {}),
+        ...(avatarUrl ? { avatarUrl } : {}),
+      });
 
-      await supabase.from('farmers').update(updates).eq('id', user.id);
-
-      // Store in Zustand for later steps
       setProfile(fullName.trim(), phone.trim(), avatarUri);
     } catch {
       // Non-fatal — continue regardless

@@ -5,7 +5,8 @@ import { ImageBackground, StyleSheet, Text, View, TouchableOpacity, StatusBar, P
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
 
-const FIELD_IMAGE = { uri: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&q=80' };
+// Bundled, so the first screen renders with no network and no third-party host.
+const FIELD_IMAGE = require('@/assets/images/agronavis.png');
 
 export default function WelcomeScreen() {
   const router = useRouter();

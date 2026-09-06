@@ -50,24 +50,8 @@ export default function LoginScreen() {
       return;
     }
 
-    // Navigate directly — don't rely solely on onAuthStateChange chain
-    // (the root layout guard acts as a fallback for session-restore on boot)
-    try {
-      const { data: farmer } = await supabase
-        .from('farmers')
-        .select('onboarding_complete')
-        .eq('id', (await supabase.auth.getUser()).data.user!.id)
-        .single();
-
-      if (farmer?.onboarding_complete) {
-        router.replace('/(tabs)/dashboard' as any);
-      } else {
-        router.replace('/(onboarding)/step1' as any);
-      }
-    } catch {
-      // If the DB query fails just go to dashboard
-      router.replace('/(tabs)/dashboard' as any);
-    }
+    // Where to land is decided once, in the root layout, from a single
+    // /auth/me call that also covers onboarding and two-factor.
   };
 
   return (

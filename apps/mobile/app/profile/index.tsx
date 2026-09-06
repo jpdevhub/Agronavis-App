@@ -1,50 +1,20 @@
-import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, Image, ActivityIndicator,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
-import { supabase } from '@/utils/supabase';
+import { useFarmer } from '@/hooks/useFarmer';
 
-type Farmer = {
-  full_name: string;
-  email: string;
-  phone: string | null;
-  state: string | null;
-  district: string | null;
-  avatar_url: string | null;
-};
-
-function avatarUri(farmer: Farmer): string {
-  if (farmer.avatar_url) return farmer.avatar_url;
-  const seed = encodeURIComponent(farmer.full_name || farmer.email);
-  return `https://api.dicebear.com/7.x/personas/png?seed=${seed}&size=200`;
-}
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const user = useAuthStore(state => state.user);
   const signOut = useAuthStore(state => state.signOut);
 
-  const [farmer, setFarmer] = useState<Farmer | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchFarmer = useCallback(async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from('farmers')
-      .select('full_name, email, phone, state, district, avatar_url')
-      .eq('id', user.id)
-      .single();
-    if (data) setFarmer(data);
-    setLoading(false);
-  }, [user]);
-
-  useFocusEffect(useCallback(() => { fetchFarmer(); }, [fetchFarmer]));
+  const { data: farmer, isLoading: loading } = useFarmer();
 
   const locationLabel = [farmer?.district, farmer?.state].filter(Boolean).join(', ');
 
@@ -68,12 +38,17 @@ export default function ProfileScreen() {
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.hero}>
             <View style={styles.avatarWrap}>
-              <Image
-                source={{ uri: farmer ? avatarUri(farmer) : '' }}
-                style={styles.avatar}
-              />
+              {farmer?.avatarUrl ? (
+                <Image source={{ uri: farmer.avatarUrl }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatar, styles.avatarFallback]}>
+                  <Text style={styles.avatarInitial}>
+                    {(farmer?.fullName ?? 'F').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
             </View>
-            <Text style={styles.name}>{farmer?.full_name ?? ''}</Text>
+            <Text style={styles.name}>{farmer?.fullName ?? ''}</Text>
             <Text style={styles.email}>{farmer?.email ?? ''}</Text>
             {locationLabel ? (
               <View style={styles.locationRow}>
@@ -100,6 +75,13 @@ export default function ProfileScreen() {
             <Row icon="call" label="Phone" value={farmer?.phone ?? 'Not set'} />
             <Row icon="map" label="State" value={farmer?.state ?? 'Not set'} />
             <Row icon="location-city" label="District" value={farmer?.district ?? 'Not set'} />
+            <TouchableOpacity onPress={() => router.push('/profile/security' as never)}>
+              <Row
+                icon="lock-outline"
+                label="Two-step sign in"
+                value={farmer?.twoFactorEnabled ? 'On' : 'Off'}
+              />
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity
@@ -177,4 +159,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.errorContainer,
   },
   logoutText: { fontSize: 15, fontWeight: '700', color: Colors.error },
+  avatarFallback: {
+    backgroundColor: Colors.secondaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: { fontSize: 34, fontWeight: '600', color: Colors.onSecondaryContainer },
 });

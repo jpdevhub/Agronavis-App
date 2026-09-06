@@ -3,83 +3,48 @@ import {
   StyleSheet, StatusBar, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useEffect, useState, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
+import type { Farm, FarmField } from '@agronavis/shared-types';
 import { Colors, Radii } from '@/constants/theme';
-import { supabase } from '@/utils/supabase';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useFarmFields } from '@/hooks/useFarmFields';
+import { farmApi } from '@/services/endpoints';
 import { useFarmStore } from '@/store/useFarmStore';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type FarmField = {
-  id: string;
-  name: string;
-  area_acres: number;
-  center_latitude: number | null;
-  center_longitude: number | null;
-  created_at: string;
-};
-
-type Farm = {
-  id: string;
-  name: string;
-  area_acres: number;
-  farm_fields: FarmField[];
-};
-
-// ─── Component ───────────────────────────────────────────────────────────────
+type FarmWithFields = Farm & { fields: FarmField[] };
 
 export default function MyFarmsScreen() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
   const { activeFieldId, setActiveField, clearActiveField } = useFarmStore();
 
-  const [farms, setFarms] = useState<Farm[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const farmsQuery = useQuery({ queryKey: ['farms'], queryFn: farmApi.list });
+  const fieldsQuery = useFarmFields();
 
-  const fetchFarms = useCallback(async () => {
-    if (!user) return;
-    try {
-      const { data, error: err } = await supabase
-        .from('farms')
-        .select('id, name, area_acres, farm_fields(id, name, area_acres, center_latitude, center_longitude, created_at)')
-        .eq('farmer_id', user.id)
-        .order('created_at', { ascending: false });
+  const loading = farmsQuery.isLoading || fieldsQuery.isLoading;
+  const refreshing = farmsQuery.isRefetching || fieldsQuery.isRefetching;
+  const error = (farmsQuery.error ?? fieldsQuery.error) as Error | null;
 
-      if (err) throw err;
-      setFarms((data as Farm[]) ?? []);
-      setError(null);
-    } catch (e: any) {
-      setError(e.message ?? 'Failed to load farms.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [user]);
+  // Fields arrive as one flat list; group them under the farm that owns them.
+  const farms: FarmWithFields[] = useMemo(() => {
+    const fields = fieldsQuery.data ?? [];
+    return (farmsQuery.data ?? []).map((farm) => ({
+      ...farm,
+      fields: fields.filter((field) => field.farmId === farm.id),
+    }));
+  }, [farmsQuery.data, fieldsQuery.data]);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchFarms();
-    }, [fetchFarms])
+  const onRefresh = () => {
+    farmsQuery.refetch();
+    fieldsQuery.refetch();
+  };
+
+  const totalFields = farms.reduce((sum, farm) => sum + farm.fields.length, 0);
+  const totalAcres = farms.reduce(
+    (sum, farm) => sum + farm.fields.reduce((acc, field) => acc + field.areaAcres, 0),
+    0,
   );
-
-  // Auto-select first field on first load if none selected
-  useEffect(() => {
-    if (!activeFieldId && farms.length > 0) {
-      const firstField = farms[0]?.farm_fields?.[0];
-      if (firstField) setActiveField(firstField.id, farms[0].id);
-    }
-  }, [farms, activeFieldId]);
-
-  const onRefresh = () => { setRefreshing(true); fetchFarms(); };
-
-  const totalFields = farms.reduce((s, f) => s + f.farm_fields.length, 0);
-  const totalAcres  = farms.reduce((s, f) => s + f.farm_fields.reduce((a, ff) => a + ff.area_acres, 0), 0);
 
   return (
     <View style={styles.root}>
@@ -109,7 +74,6 @@ export default function MyFarmsScreen() {
           { label: 'Overview', icon: 'home',    route: '/(tabs)/farm' },
           { label: 'Map',      icon: 'map',     route: '/(tabs)/farm/map' },
           { label: 'Fields',   icon: 'layers',  route: '/(tabs)/farm/fields' },
-          { label: 'History',  icon: 'history', route: '/(tabs)/farm/history' },
         ].map(({ label, icon, route }) => (
           <TouchableOpacity
             key={label}
@@ -138,8 +102,8 @@ export default function MyFarmsScreen() {
       ) : error ? (
         <View style={styles.center}>
           <MaterialIcons name="cloud-off" size={48} color={Colors.outline} />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={fetchFarms}>
+          <Text style={styles.errorText}>{error.message}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={onRefresh}>
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -148,7 +112,7 @@ export default function MyFarmsScreen() {
           <MaterialIcons name="agriculture" size={64} color={Colors.primaryFixed} />
           <Text style={styles.emptyTitle}>No farms yet</Text>
           <Text style={styles.emptyText}>
-            Tap "Map New Field" to draw your first farm boundary on the satellite map.
+            Tap Map New Field to draw your first farm boundary on the satellite map.
           </Text>
           <TouchableOpacity
             style={styles.emptyBtn}
@@ -176,18 +140,18 @@ export default function MyFarmsScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.farmName}>{farm.name}</Text>
                   <Text style={styles.farmMeta}>
-                    {farm.farm_fields.length} field{farm.farm_fields.length !== 1 ? 's' : ''}
+                    {farm.fields.length} field{farm.fields.length !== 1 ? 's' : ''}
                   </Text>
                 </View>
               </View>
 
               {/* Field Cards */}
-              {farm.farm_fields.length === 0 ? (
+              {farm.fields.length === 0 ? (
                 <View style={styles.noFieldsCard}>
                   <Text style={styles.noFieldsText}>No fields mapped yet.</Text>
                 </View>
               ) : (
-                farm.farm_fields.map((field) => {
+                farm.fields.map((field) => {
                   const isActive = activeFieldId === field.id;
                   return (
                     <TouchableOpacity
@@ -209,9 +173,9 @@ export default function MyFarmsScreen() {
                             {field.name}
                           </Text>
                           <Text style={styles.fieldMeta}>
-                            {Math.abs(field.area_acres).toFixed(2)} acres
-                            {field.center_latitude
-                              ? ` · ${field.center_latitude.toFixed(4)}°N`
+                            {Math.abs(field.areaAcres).toFixed(2)} acres
+                            {field.centerLatitude
+                              ? ` · ${field.centerLatitude.toFixed(4)}°N`
                               : ''}
                           </Text>
                         </View>

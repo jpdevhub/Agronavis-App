@@ -19,9 +19,8 @@ import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
-import { useAuthStore } from '@/store/useAuthStore';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
-import { supabase } from '@/utils/supabase';
+import { useCreateField } from '@/hooks/useFarmFields';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -58,7 +57,7 @@ function computeAcres(coords: LatLng[]): number {
 export default function FarmFieldDrawer({
   mode, onComplete, onBack, onSkip,
 }: FarmFieldDrawerProps) {
-  const user          = useAuthStore((s) => s.user);
+  const createField   = useCreateField();
   const { setLocation } = useOnboardingStore();
   const mapRef        = useRef<MapView>(null);
 
@@ -108,7 +107,7 @@ export default function FarmFieldDrawer({
             setLocating(false);
           },
           (err) => {
-            setLocationError('Could not get location. Tap 📍 to retry.');
+            setLocationError('Could not get your location. Tap the locate button to retry.');
             setLocating(false);
             console.warn('Web geolocation error:', err.message);
           },
@@ -122,7 +121,7 @@ export default function FarmFieldDrawer({
         // Show map at India centre so it's not blank forever
         setRegion({ latitude: 20.5937, longitude: 78.9629, latitudeDelta: 8, longitudeDelta: 8 });
         setMapReady(true);
-        setLocationError('Location permission denied — tap the 📍 button after granting access.');
+        setLocationError('Location permission denied. Grant access, then tap the locate button.');
         return;
       }
 
@@ -167,7 +166,7 @@ export default function FarmFieldDrawer({
       // Show map at fallback rather than hanging on a black screen
       setRegion({ latitude: 20.5937, longitude: 78.9629, latitudeDelta: 8, longitudeDelta: 8 });
       setMapReady(true);
-      setLocationError('Could not get location. Tap 📍 to retry.');
+      setLocationError('Could not get your location. Tap the locate button to retry.');
       console.warn('FarmFieldDrawer location error:', err?.message);
     } finally {
       setLocating(false);
@@ -185,49 +184,30 @@ export default function FarmFieldDrawer({
   function clearPins(){ setPins([]); setFieldName(''); }
 
   async function handleSave() {
-    if (pins.length !== 4 || !fieldName.trim() || !user) return;
+    if (pins.length !== 4 || !fieldName.trim()) return;
     setSaving(true);
     try {
-      const centerLat  = pins.reduce((s, p) => s + p.latitude,  0) / 4;
-      const centerLon  = pins.reduce((s, p) => s + p.longitude, 0) / 4;
-      const acres      = computeAcres(pins);
+      const centerLat = pins.reduce((sum, p) => sum + p.latitude, 0) / pins.length;
+      const centerLon = pins.reduce((sum, p) => sum + p.longitude, 0) / pins.length;
+      const acres = computeAcres(pins);
 
-      // 1. Ensure parent farm exists (FK: farm_fields.farm_id → farms.id)
-      let farmId: string;
-      const { data: existing } = await supabase
-        .from('farms')
-        .select('id')
-        .eq('farmer_id', user.id)
-        .limit(1);
+      // GeoJSON is [longitude, latitude], and the ring must close on itself.
+      const ring: [number, number][] = pins.map((p) => [p.longitude, p.latitude]);
+      ring.push(ring[0]);
 
-      if (existing && existing.length > 0) {
-        farmId = existing[0].id;
-      } else {
-        const { data: newFarm, error: farmErr } = await supabase
-          .from('farms')
-          .insert({ farmer_id: user.id, name: 'My Farm', area_acres: acres > 0 ? acres : 1.0 })
-          .select('id')
-          .single();
-        if (farmErr) throw farmErr;
-        farmId = newFarm.id;
-      }
-
-      // 2. Insert field (FK: farm_fields.farm_id → farms.id)
-      const { error: fieldErr } = await supabase
-        .from('farm_fields')
-        .insert({
-          farm_id:          farmId,
-          name:             fieldName.trim(),
-          area_acres:       acres > 0 ? acres : 1.0,
-          polygon:          { type: 'Polygon', coordinates: pins },
-          center_latitude:  parseFloat(centerLat.toFixed(6)),
-          center_longitude: parseFloat(centerLon.toFixed(6)),
-        });
-      if (fieldErr) throw fieldErr;
+      // The API resolves or creates the parent farm and recomputes the area
+      // from this geometry, so the client sends only what it measured.
+      await createField.mutateAsync({
+        name: fieldName.trim(),
+        areaAcres: acres > 0 ? acres : 1,
+        polygon: { type: 'Polygon', coordinates: [ring] },
+        centerLatitude: Number(centerLat.toFixed(6)),
+        centerLongitude: Number(centerLon.toFixed(6)),
+      });
 
       onComplete();
-    } catch (err: any) {
-      Alert.alert('Error saving field', err?.message ?? 'Please try again.');
+    } catch (err) {
+      Alert.alert('Could not save field', (err as Error).message);
     } finally {
       setSaving(false);
     }

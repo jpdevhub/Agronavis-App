@@ -1,0 +1,59 @@
+# ═════════════════════════════════════════════════════════════════════════════
+#  Render blueprint — the Agronavis API
+#
+#  New Blueprint ▸ point at this repo ▸ Render reads this file.
+#  Values marked `sync: false` are prompted for on first deploy and are never
+#  stored in git. See docs/deployment/render.md for the full walkthrough.
+# ═════════════════════════════════════════════════════════════════════════════
+
+services:
+  - type: web
+    name: agronavis-api
+    runtime: node
+    plan: free
+    region: singapore # closest free region to Indian users
+    branch: main
+    healthCheckPath: /health
+
+    # Only the API's dependency tree — the Expo app's native packages would add
+    # ~700 MB and several minutes to every build for no benefit.
+    buildCommand: npm ci --workspace=@agronavis/backend --include-workspace-root && npm run build --workspace=@agronavis/backend
+    startCommand: npm run start --workspace=@agronavis/backend
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+
+      # Render injects PORT; the server reads it. Do not set it here.
+
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      - key: OPENWEATHER_API_KEY
+        sync: false
+      - key: AGMARKNET_API_KEY
+        sync: false
+
+      # Generated once by Render and held for the life of the service.
+      # Changing it makes every existing 2FA enrolment undecryptable.
+      - key: TOTP_ENCRYPTION_KEY
+        generateValue: true
+
+      # Native apps send no Origin header and are unaffected by this list. It
+      # exists for browsers: the Expo web build and the enterprise console.
+      - key: ALLOWED_ORIGINS
+        value: http://localhost:8081,http://localhost:19006
+
+      # The weather and market pollers. A free instance sleeps after 15 minutes
+      # of no traffic, so they only run while the service is awake — see
+      # docs/deployment/render.md.
+      - key: ENABLE_JOBS
+        value: "true"
+      - key: WEATHER_POLL_CRON
+        value: "*/30 * * * *"
+      - key: MARKET_POLL_CRON
+        value: "15 * * * *"

@@ -9,7 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
-import { supabase } from '@/utils/supabase';
+import { farmerApi } from '@/services/endpoints';
 
 type NotifItem = {
   id: string;
@@ -40,21 +40,11 @@ export default function OnboardingStep3() {
     if (!user || finishing) return;
     setFinishing(true);
     try {
-      const { error } = await supabase
-        .from('farmers')
-        .update({
-          onboarding_complete: true,
-          profile_settings: {
-            language: 'en',
-            sms_alerts: false,
-            push_notifications: true,
-            notifications: enabled,
-          },
-          ...(state    ? { state }    : {}),
-          ...(district ? { district } : {}),
-        })
-        .eq('id', user.id);
-      if (error) throw error;
+      await farmerApi.update({
+        onboardingComplete: true,
+        ...(state ? { state } : {}),
+        ...(district ? { district } : {}),
+      });
       reset();
       router.replace('/(tabs)/dashboard');
     } catch (err: any) {
@@ -67,10 +57,7 @@ export default function OnboardingStep3() {
     if (!user || finishing) return;
     setFinishing(true);
     try {
-      await supabase
-        .from('farmers')
-        .update({ onboarding_complete: true })
-        .eq('id', user.id);
+      await farmerApi.update({ onboardingComplete: true });
     } catch { /* non-fatal */ }
     reset();
     router.replace('/(tabs)/dashboard');
@@ -110,7 +97,7 @@ export default function OnboardingStep3() {
         </View>
         <Text style={styles.title}>Stay Informed</Text>
         <Text style={styles.subtitle}>
-          Choose what matters most. We'll only notify you when action is needed.
+          Choose what matters most. We only notify you when action is needed.
         </Text>
 
         <View style={styles.list}>

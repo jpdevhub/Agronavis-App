@@ -1,47 +1,57 @@
 #!/usr/bin/env bash
-# Agronavis One-Command Setup Script
-set -e
+# Agronavis — one-command setup
+set -euo pipefail
 
-BOLD=$(tput bold)
-GREEN=$(tput setaf 2)
-YELLOW=$(tput setaf 3)
-RESET=$(tput sgr0)
+cd "$(dirname "$0")/.."
 
-echo ""
-echo "${BOLD}${GREEN}Agronavis — Project Setup${RESET}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+bold=$(tput bold 2>/dev/null || true)
+green=$(tput setaf 2 2>/dev/null || true)
+yellow=$(tput setaf 3 2>/dev/null || true)
+reset=$(tput sgr0 2>/dev/null || true)
 
-# Check prerequisites
-echo "${BOLD}Checking prerequisites...${RESET}"
-command -v node >/dev/null 2>&1 || { echo "Node.js is required. Install from https://nodejs.org"; exit 1; }
-command -v npm >/dev/null 2>&1  || { echo "npm is required."; exit 1; }
-NODE_VER=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-if [ "$NODE_VER" -lt 20 ]; then echo "Node.js >= 20 required. Found: $(node -v)"; exit 1; fi
-echo "Node $(node -v) / npm $(npm -v)"
+echo
+echo "${bold}${green}Agronavis setup${reset}"
+echo
 
-# Install dependencies
-echo ""
-echo "${BOLD}Installing workspace dependencies...${RESET}"
+command -v node >/dev/null || { echo "Node.js is required: https://nodejs.org"; exit 1; }
+command -v npm  >/dev/null || { echo "npm is required."; exit 1; }
+
+node_major=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+if [ "$node_major" -lt 20 ]; then
+  echo "Node 20 or newer is required. Found $(node -v)."
+  exit 1
+fi
+echo "Node $(node -v), npm $(npm -v)"
+
+echo
+echo "${bold}Installing dependencies${reset}"
 npm install --legacy-peer-deps
-echo "Dependencies installed"
 
-# Environment files
-echo ""
-echo "${BOLD}Setting up environment files...${RESET}"
-if [ ! -f .env ]; then cp .env.example .env; echo "Created root .env"; fi
-if [ ! -f backend/.env ]; then cp backend/.env.example backend/.env; echo "Created backend/.env"; fi
-if [ ! -f apps/mobile/.env ]; then cp apps/mobile/.env.example apps/mobile/.env; echo "Created apps/mobile/.env"; fi
+# One .env for the whole repo. Both the API and the Expo app read it.
+if [ ! -f .env ]; then
+  cp .env.example .env
+  echo "Created .env from .env.example"
+else
+  echo ".env already exists, leaving it alone"
+fi
 
-echo ""
-echo "${BOLD}${YELLOW}Next Steps:${RESET}"
-echo "  1. Edit ${BOLD}backend/.env${RESET} — add your DATABASE_URL and CLERK_SECRET_KEY"
-echo "  2. Edit ${BOLD}apps/mobile/.env${RESET} — add your EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY"
-echo "  3. Run ${BOLD}cd backend && npm run db:push${RESET} to create database tables"
-echo ""
-echo "${BOLD}Start development:${RESET}"
-echo "  ${GREEN}npm run dev:backend${RESET}   — API server on :3001"
-echo "  ${GREEN}npm run dev:mobile${RESET}    — Expo"
-echo "  ${GREEN}npm run dev${RESET}           — Both concurrently"
-echo ""
-echo "${BOLD}${GREEN}Setup complete.${RESET}"
+missing=()
+grep -q '^SUPABASE_URL=https://[^Y]' .env || missing+=("SUPABASE_URL")
+grep -q '^OPENWEATHER_API_KEY=.\+' .env || missing+=("OPENWEATHER_API_KEY")
+grep -q '^AGMARKNET_API_KEY=.\+' .env || missing+=("AGMARKNET_API_KEY")
+grep -q '^SUPABASE_SERVICE_ROLE_KEY=.\+' .env || missing+=("SUPABASE_SERVICE_ROLE_KEY")
+grep -q '^EXPO_PUBLIC_SUPABASE_ANON_KEY=.\+' .env || missing+=("EXPO_PUBLIC_SUPABASE_ANON_KEY")
+
+echo
+if [ ${#missing[@]} -gt 0 ]; then
+  echo "${bold}${yellow}Fill these in .env before starting:${reset}"
+  for key in "${missing[@]}"; do echo "  - $key"; done
+  echo "  Where each one comes from: docs/free-apis.md"
+  echo
+fi
+
+echo "${bold}Then:${reset}"
+echo "  npm run db:push    apply supabase/migrations to your project"
+echo "  npm run dev        API on :3001 and Expo together"
+echo "  npm run verify     typecheck, lint and test"
+echo

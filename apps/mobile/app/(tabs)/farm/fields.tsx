@@ -1,79 +1,174 @@
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar, ScrollView, Image } from 'react-native';
+import { useCallback, useState } from 'react';
+import {
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, Radii } from '@/constants/theme';
-
-const FIELDS = [
-  { id: '1', name: 'North Plot', size: '2.5 Acres', crop: 'Wheat', status: 'Active', img: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&q=70' },
-  { id: '2', name: 'South Field', size: '1.8 Acres', crop: 'Corn', status: 'Fallow', img: 'https://images.unsplash.com/photo-1562516155-e0c1ee44059b?w=400&q=70' },
-  { id: '3', name: 'East Block', size: '3.2 Acres', crop: 'Soybean', status: 'Planning', img: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&q=70' },
-];
+import { Button, Card, EmptyState, Skeleton } from '@/components/ui';
+import { Colors, Radii, Spacing, Type } from '@/constants/theme';
+import { useDeleteField, useFarmFields } from '@/hooks/useFarmFields';
+import { useFarmStore } from '@/store/useFarmStore';
 
 export default function MappedFieldsScreen() {
   const router = useRouter();
+  const { data: fields, isLoading, error, refetch } = useFarmFields();
+  const deleteField = useDeleteField();
+  const activeFieldId = useFarmStore((s) => s.activeFieldId);
+  const setActiveField = useFarmStore((s) => s.setActiveField);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
+  const confirmDelete = (id: string, name: string) => {
+    Alert.alert('Delete field', `Remove "${name}" and its mapped boundary?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteField.mutate(id) },
+    ]);
+  };
+
   return (
     <View style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
+
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <MaterialIcons name="arrow-back" size={22} color={Colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mapped Fields</Text>
-        <View style={{ width: 38 }} />
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
+          <MaterialIcons name="arrow-back" size={22} color={Colors.onSurface} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Mapped fields</Text>
+        <View style={styles.headerSpacer} />
       </View>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {FIELDS.map(field => (
-          <View key={field.id} style={styles.fieldCard}>
-            <Image source={{ uri: field.img }} style={styles.fieldImg} resizeMode="cover" />
-            <View style={styles.fieldInfo}>
-              <View style={styles.fieldTop}>
-                <Text style={styles.fieldName}>{field.name}</Text>
-                <View style={[styles.statusBadge, field.status === 'Active' && styles.activeBadge]}>
-                  <Text style={[styles.statusText, field.status === 'Active' && styles.activeText]}>
-                    {field.status}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.fieldMeta}>{field.size} • {field.crop}</Text>
-              <TouchableOpacity style={styles.detailBtn} activeOpacity={0.8}>
-                <Text style={styles.detailBtnText}>View Details</Text>
-                <MaterialIcons name="arrow-forward" size={16} color={Colors.primary} />
-              </TouchableOpacity>
+
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+      >
+        {isLoading ? (
+          [0, 1, 2].map((i) => (
+            <View key={i} style={styles.skeleton}>
+              <Skeleton height={92} radius={Radii.lg} />
             </View>
-          </View>
-        ))}
-        <View style={{ height: 100 }} />
+          ))
+        ) : error ? (
+          <EmptyState
+            icon="cloud-off"
+            title="Could not load your fields"
+            description={error.message}
+            actionLabel="Try again"
+            onAction={() => refetch()}
+          />
+        ) : !fields?.length ? (
+          <EmptyState
+            icon="layers"
+            title="No fields mapped yet"
+            description="Draw a boundary on the satellite map and Agronavis will compute its area, soil profile and irrigation needs."
+            actionLabel="Map a field"
+            onAction={() => router.push('/(tabs)/farm/map' as never)}
+          />
+        ) : (
+          fields.map((field) => {
+            const active = field.id === activeFieldId;
+            return (
+              <Card key={field.id} variant={active ? 'filled' : 'outlined'} style={styles.card}>
+                <View style={styles.cardTop}>
+                  <View style={styles.cardTitleGroup}>
+                    <Text style={styles.fieldName}>{field.name}</Text>
+                    <Text style={styles.fieldMeta}>
+                      {field.areaAcres.toFixed(2)} acres
+                      {field.areaHectares !== null ? ` · ${field.areaHectares.toFixed(2)} ha` : ''}
+                    </Text>
+                  </View>
+                  {active ? (
+                    <View style={styles.activeBadge}>
+                      <Text style={styles.activeBadgeText}>Active</Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                {field.centerLatitude !== null && field.centerLongitude !== null ? (
+                  <View style={styles.coords}>
+                    <MaterialIcons name="place" size={16} color={Colors.onSurfaceVariant} />
+                    <Text style={styles.coordsText}>
+                      {field.centerLatitude.toFixed(5)}, {field.centerLongitude.toFixed(5)}
+                    </Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.actions}>
+                  {active ? null : (
+                    <Button
+                      label="Set active"
+                      variant="tonal"
+                      onPress={() => setActiveField(field.id, field.farmId)}
+                    />
+                  )}
+                  <Button
+                    label="Delete"
+                    variant="text"
+                    onPress={() => confirmDelete(field.id, field.name)}
+                  />
+                </View>
+              </Card>
+            );
+          })
+        )}
+
+        {fields?.length ? (
+          <Button
+            label="Map another field"
+            icon="add-location-alt"
+            fullWidth
+            onPress={() => router.push('/(tabs)/farm/map' as never)}
+          />
+        ) : null}
+
+        <View style={styles.bottomSpace} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:         { flex: 1, backgroundColor: Colors.surface },
+  root: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 52, paddingBottom: 14,
-    backgroundColor: 'rgba(248,249,255,0.95)',
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06, shadowRadius: 12, elevation: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.xxl,
+    paddingBottom: Spacing.sm,
+    backgroundColor: Colors.surface,
   },
-  backBtn:      { padding: 8, borderRadius: Radii.full, backgroundColor: Colors.surfaceContainerHigh },
-  headerTitle:  { fontSize: 18, fontWeight: '800', color: Colors.onSurface },
-  scroll:       { padding: 20, gap: 14 },
-  fieldCard: {
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radii.xl, overflow: 'hidden',
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05, shadowRadius: 12, elevation: 3,
+  headerTitle: { ...Type.titleLarge, color: Colors.onSurface },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerSpacer: { width: 44 },
+  scroll: { padding: Spacing.lg, gap: Spacing.md },
+  skeleton: { marginBottom: Spacing.md },
+  card: { gap: Spacing.md, padding: Spacing.lg },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  cardTitleGroup: { flex: 1, gap: 2 },
+  fieldName: { ...Type.titleMedium, color: Colors.onSurface },
+  fieldMeta: { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
+  activeBadge: {
+    backgroundColor: Colors.primaryContainer,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radii.full,
   },
-  fieldImg:     { width: '100%', height: 130 },
-  fieldInfo:    { padding: 16, gap: 8 },
-  fieldTop:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  fieldName:    { fontSize: 17, fontWeight: '700', color: Colors.onSurface },
-  statusBadge:  { paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radii.full, backgroundColor: Colors.surfaceContainerHigh },
-  activeBadge:  { backgroundColor: Colors.primaryFixed },
-  statusText:   { fontSize: 12, fontWeight: '700', color: Colors.onSurfaceVariant },
-  activeText:   { color: Colors.primary },
-  fieldMeta:    { fontSize: 13, color: Colors.onSurfaceVariant },
-  detailBtn:    { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingTop: 4 },
-  detailBtnText:{ fontSize: 13, fontWeight: '700', color: Colors.primary },
+  activeBadgeText: { ...Type.labelSmall, color: Colors.onPrimaryContainer },
+  coords: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  coordsText: { ...Type.bodySmall, color: Colors.onSurfaceVariant },
+  actions: { flexDirection: 'row', gap: Spacing.sm },
+  bottomSpace: { height: Spacing.xxxl },
 });

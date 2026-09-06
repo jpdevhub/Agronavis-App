@@ -1,173 +1,363 @@
-/**
- * Scan Result Screen
- *
- * Receives `imageUri` from the scan screen via router params.
- * Shows the captured image and a deterministic disease result.
- * (In production, replace the mock detection with your TFLite/API inference.)
- */
+import { useMemo, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, StatusBar,
-  ScrollView, Image, ActivityIndicator,
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, Radii } from '@/constants/theme';
+import type { DiseaseReference } from '@agronavis/shared-types';
+import { Button, Card, EmptyState, Skeleton } from '@/components/ui';
+import { Colors, Radii, Shape, Spacing, Type } from '@/constants/theme';
+import { useDiseaseLibrary } from '@/hooks/useCropCatalog';
+import { cropApi, storageApi } from '@/services/endpoints';
+import { useFarmStore } from '@/store/useFarmStore';
 
-// Static treatment plan (shown until live inference is integrated)
-const TREATMENT_PLANS: Record<string, { disease: string; sci: string; severity: number; steps: string[] }> = {
-  default: {
-    disease: 'Early Blight',
-    sci:     'Alternaria solani',
-    severity: 0.6,
-    steps: [
-      'Remove and destroy infected plant debris immediately.',
-      'Apply copper-based fungicide every 7–10 days.',
-      'Avoid overhead irrigation to reduce moisture on foliage.',
-      'Ensure good air circulation by proper plant spacing.',
-    ],
-  },
-};
+type SaveState = { status: 'idle' | 'saving' | 'saved'; error?: string };
 
 export default function ScanResultScreen() {
   const router = useRouter();
   const { imageUri } = useLocalSearchParams<{ imageUri?: string }>();
+  const activeFarmId = useFarmStore((s) => s.activeFarmId);
 
-  const result     = TREATMENT_PLANS['default'];
-  const displayUri = imageUri ?? 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=600&q=80';
-  const confidence = 94;
+  const { diseases, isLoading, error, refetch } = useDiseaseLibrary();
+  const [search, setSearch] = useState('');
+  const [cropType, setCropType] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [save, setSave] = useState<SaveState>({ status: 'idle' });
 
-  const severityLabel = result.severity < 0.35 ? 'Mild' : result.severity < 0.65 ? 'Moderate' : 'Severe';
-  const severityColor = result.severity < 0.35
-    ? Colors.primaryContainer
-    : result.severity < 0.65
-      ? Colors.tertiaryFixed ?? Colors.primaryContainer
-      : Colors.error;
+  const cropTypes = useMemo(
+    () => Array.from(new Set(diseases.map((d) => d.cropType))).sort(),
+    [diseases],
+  );
+
+  const visible = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return diseases.filter((d) => {
+      if (cropType && d.cropType !== cropType) return false;
+      if (!term) return true;
+      return d.name.toLowerCase().includes(term) || d.cropType.toLowerCase().includes(term);
+    });
+  }, [diseases, search, cropType]);
+
+  async function recordAs(disease: DiseaseReference) {
+    if (!imageUri) return;
+    setSave({ status: 'saving' });
+    try {
+      const upload = await storageApi.upload(
+        'crop-scans',
+        imageUri,
+        `scan-${Date.now()}.jpg`,
+        'image/jpeg',
+      );
+      await cropApi.recordScan({
+        farmId: activeFarmId ?? undefined,
+        imageUrl: upload.publicUrl,
+        detectedDisease: disease.name,
+        recommendation: disease.treatment.join('\n'),
+      });
+      setSave({ status: 'saved' });
+    } catch (err) {
+      setSave({ status: 'idle', error: err instanceof Error ? err.message : 'Could not save the scan' });
+    }
+  }
+
+  if (save.status === 'saved') {
+    return (
+      <View style={styles.root}>
+        <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
+        <EmptyState
+          icon="check-circle"
+          title="Scan saved"
+          description="The photo and the identification are on your farm record. Treatment steps are in your advisory feed."
+          actionLabel="Back to scanning"
+          onAction={() => router.replace('/(tabs)/scan' as never)}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
-          <MaterialIcons name="arrow-back" size={22} color={Colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Scan Result</Text>
-        <TouchableOpacity style={styles.headerBtn}>
-          <MaterialIcons name="share" size={22} color={Colors.primary} />
-        </TouchableOpacity>
-      </View>
+      <StatusBar barStyle="light-content" />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* Captured image */}
-        <View style={styles.imageCard}>
-          <Image source={{ uri: displayUri }} style={styles.leafImage} resizeMode="cover" />
-          <View style={styles.imageOverlay} />
-          <View style={styles.confidenceWrap}>
-            <View style={styles.confidenceBadge}>
-              <MaterialIcons name="verified" size={16} color={Colors.primary} />
-              <Text style={styles.confidenceText}>{confidence}% Confidence</Text>
+        <View style={styles.hero}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.photo} resizeMode="cover" />
+          ) : (
+            <View style={[styles.photo, styles.photoMissing]}>
+              <MaterialIcons name="image-not-supported" size={40} color={Colors.onSurfaceVariant} />
             </View>
-          </View>
+          )}
+          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
+            <MaterialIcons name="arrow-back" size={22} color={Colors.onSurface} />
+          </Pressable>
         </View>
 
-        {/* Disease card */}
-        <View style={styles.diseaseCard}>
-          <View style={styles.diseaseBadge}>
-            <Text style={styles.diseaseBadgeText}>DETECTED</Text>
-          </View>
-          <Text style={styles.diseaseName}>{result.disease}</Text>
-          <Text style={styles.diseaseSci}>{result.sci}</Text>
-          <View style={styles.severityRow}>
-            <Text style={styles.severityLabel}>Severity</Text>
-            <View style={styles.severityTrack}>
-              <View style={[styles.severityFill, { width: `${result.severity * 100}%`, backgroundColor: severityColor }]} />
+        <View style={styles.body}>
+          <Card variant="filled" style={styles.notice}>
+            <View style={styles.noticeHead}>
+              <MaterialIcons name="info" size={20} color={Colors.onTertiaryContainer} />
+              <Text style={styles.noticeTitle}>Automatic detection is not live yet</Text>
             </View>
-            <Text style={styles.severityValue}>{severityLabel}</Text>
-          </View>
-        </View>
+            <Text style={styles.noticeBody}>
+              Agronavis does not guess a diagnosis it cannot make. Match the photo against the
+              reference library below and the scan will be filed against your farm with the right
+              treatment plan.
+            </Text>
+          </Card>
 
-        {/* Treatment plan */}
-        <View style={styles.treatmentCard}>
-          <View style={styles.treatmentHeader}>
-            <MaterialIcons name="healing" size={22} color={Colors.primary} />
-            <Text style={styles.treatmentTitle}>Treatment Plan</Text>
+          {save.error ? <Text style={styles.error}>{save.error}</Text> : null}
+
+          <Text style={styles.sectionTitle}>Reference library</Text>
+
+          <View style={styles.searchWrap}>
+            <MaterialIcons name="search" size={20} color={Colors.onSurfaceVariant} />
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search a disease or crop"
+              placeholderTextColor={Colors.onSurfaceVariant}
+              style={styles.searchInput}
+              returnKeyType="search"
+            />
           </View>
-          {result.steps.map((text, i) => (
-            <View key={i} style={styles.treatRow}>
-              <View style={styles.stepBubble}>
-                <Text style={styles.stepNum}>{i + 1}</Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filters}
+          >
+            <FilterChip label="All crops" active={cropType === null} onPress={() => setCropType(null)} />
+            {cropTypes.map((c) => (
+              <FilterChip
+                key={c}
+                label={c}
+                active={cropType === c}
+                onPress={() => setCropType(cropType === c ? null : c)}
+              />
+            ))}
+          </ScrollView>
+
+          {isLoading ? (
+            [0, 1, 2].map((i) => (
+              <View key={i} style={styles.skeleton}>
+                <Skeleton height={68} radius={Radii.lg} />
               </View>
-              <Text style={styles.stepText}>{text}</Text>
-            </View>
-          ))}
+            ))
+          ) : error ? (
+            <EmptyState
+              icon="cloud-off"
+              title="Library unavailable"
+              description={error.message}
+              actionLabel="Try again"
+              onAction={() => refetch()}
+            />
+          ) : visible.length === 0 ? (
+            <EmptyState
+              icon="search-off"
+              title="No match"
+              description="Nothing in the library matches that search. Try the crop name instead."
+            />
+          ) : (
+            visible.map((disease) => (
+              <DiseaseCard
+                key={disease.id}
+                disease={disease}
+                open={openId === disease.id}
+                busy={save.status === 'saving'}
+                canSave={!!imageUri}
+                onToggle={() => setOpenId(openId === disease.id ? null : disease.id)}
+                onSelect={() => recordAs(disease)}
+              />
+            ))
+          )}
         </View>
-
-        {/* Scan another */}
-        <TouchableOpacity activeOpacity={0.88} onPress={() => router.replace('/(tabs)/scan' as any)}>
-          <LinearGradient colors={[Colors.primary, '#004d34']} style={styles.newScanBtn}>
-            <MaterialIcons name="photo-camera" size={20} color="#fff" />
-            <Text style={styles.newScanText}>Scan Another Plant</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );
 }
 
+function FilterChip({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={[styles.chip, active && styles.chipActive]}
+    >
+      <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function DiseaseCard({
+  disease,
+  open,
+  busy,
+  canSave,
+  onToggle,
+  onSelect,
+}: {
+  disease: DiseaseReference;
+  open: boolean;
+  busy: boolean;
+  canSave: boolean;
+  onToggle: () => void;
+  onSelect: () => void;
+}) {
+  return (
+    <Card variant={open ? 'filled' : 'outlined'} style={styles.diseaseCard}>
+      <Pressable onPress={onToggle} style={styles.diseaseHead} accessibilityRole="button">
+        <View style={styles.diseaseTitleGroup}>
+          <Text style={styles.diseaseName}>{disease.name}</Text>
+          <Text style={styles.diseaseMeta}>
+            {disease.cropType}
+            {disease.severity ? ` · ${disease.severity}` : ''}
+          </Text>
+        </View>
+        <MaterialIcons
+          name={open ? 'expand-less' : 'expand-more'}
+          size={24}
+          color={Colors.onSurfaceVariant}
+        />
+      </Pressable>
+
+      {open ? (
+        <View style={styles.diseaseBody}>
+          {disease.description ? (
+            <Text style={styles.diseaseText}>{disease.description}</Text>
+          ) : null}
+
+          {disease.symptoms.length ? (
+            <View style={styles.list}>
+              <Text style={styles.listTitle}>Symptoms</Text>
+              {disease.symptoms.map((s) => (
+                <Text key={s} style={styles.listItem}>
+                  {s}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+
+          {disease.treatment.length ? (
+            <View style={styles.list}>
+              <Text style={styles.listTitle}>Treatment</Text>
+              {disease.treatment.map((s) => (
+                <Text key={s} style={styles.listItem}>
+                  {s}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+
+          {busy ? (
+            <ActivityIndicator color={Colors.primary} style={styles.busy} />
+          ) : (
+            <Button
+              label={canSave ? 'This matches my photo' : 'No photo to file'}
+              icon="check"
+              fullWidth
+              disabled={!canSave}
+              onPress={onSelect}
+            />
+          )}
+        </View>
+      ) : null}
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
-  root:    { flex: 1, backgroundColor: Colors.surface },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 52, paddingBottom: 14,
-    backgroundColor: 'rgba(248,249,255,0.95)',
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06, shadowRadius: 12, elevation: 6,
-  },
-  headerBtn:   { padding: 8, borderRadius: Radii.full, backgroundColor: Colors.surfaceContainerHigh },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.onSurface },
-  scroll:      { padding: 20, gap: 16 },
+  root: { flex: 1, backgroundColor: Colors.background },
+  scroll: { paddingBottom: Spacing.xxxl },
 
-  imageCard:       { borderRadius: Radii.xxl, overflow: 'hidden', height: 230 },
-  leafImage:       { width: '100%', height: '100%' },
-  imageOverlay:    { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.18)' },
-  confidenceWrap:  { position: 'absolute', bottom: 16, right: 16 },
-  confidenceBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: Radii.full, paddingHorizontal: 12, paddingVertical: 6 },
-  confidenceText:  { fontSize: 13, fontWeight: '800', color: Colors.primary },
-
-  diseaseCard: {
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radii.xxl, padding: 20, gap: 8,
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.05, shadowRadius: 16, elevation: 3,
+  hero: { height: 260, backgroundColor: Colors.surfaceContainerHigh },
+  photo: { width: '100%', height: '100%' },
+  photoMissing: { alignItems: 'center', justifyContent: 'center' },
+  backBtn: {
+    position: 'absolute',
+    top: Spacing.xxl,
+    left: Spacing.lg,
+    width: 40,
+    height: 40,
+    borderRadius: Shape.full,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  diseaseBadge:    { alignSelf: 'flex-start', backgroundColor: Colors.errorContainer, borderRadius: Radii.full, paddingHorizontal: 12, paddingVertical: 4 },
-  diseaseBadgeText:{ fontSize: 11, fontWeight: '900', color: Colors.onErrorContainer, letterSpacing: 1 },
-  diseaseName:     { fontSize: 28, fontWeight: '900', letterSpacing: -0.5, color: Colors.onSurface },
-  diseaseSci:      { fontSize: 14, fontStyle: 'italic', color: Colors.onSurfaceVariant },
-  severityRow:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
-  severityLabel:   { fontSize: 13, fontWeight: '600', color: Colors.onSurfaceVariant },
-  severityTrack:   { flex: 1, height: 8, backgroundColor: Colors.surfaceContainerHigh, borderRadius: 4, overflow: 'hidden' },
-  severityFill:    { height: '100%', borderRadius: 4 },
-  severityValue:   { fontSize: 13, fontWeight: '700', color: Colors.onSurface },
 
-  treatmentCard: {
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radii.xxl, padding: 20, gap: 14,
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.05, shadowRadius: 16, elevation: 3,
-  },
-  treatmentHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  treatmentTitle:  { fontSize: 18, fontWeight: '800', color: Colors.onSurface },
-  treatRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  stepBubble:      { width: 28, height: 28, borderRadius: 14, backgroundColor: Colors.primaryFixed, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  stepNum:         { fontSize: 13, fontWeight: '900', color: Colors.primary },
-  stepText:        { flex: 1, fontSize: 14, color: Colors.onSurface, lineHeight: 20 },
+  body: { padding: Spacing.lg, gap: Spacing.md },
 
-  newScanBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: 56, borderRadius: Radii.xxl, gap: 10,
-    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
+  notice: { padding: Spacing.lg, gap: Spacing.sm },
+  noticeHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  noticeTitle: { ...Type.titleSmall, color: Colors.onSurface, flex: 1 },
+  noticeBody: { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
+
+  error: { ...Type.bodyMedium, color: Colors.error },
+  sectionTitle: { ...Type.titleMedium, color: Colors.onSurface, marginTop: Spacing.sm },
+
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    height: 52,
+    borderRadius: Shape.full,
+    backgroundColor: Colors.surfaceContainerHigh,
   },
-  newScanText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  searchInput: { flex: 1, ...Type.bodyLarge, color: Colors.onSurface },
+
+  filters: { gap: Spacing.sm, paddingVertical: Spacing.xs },
+  chip: {
+    paddingHorizontal: Spacing.lg,
+    height: 32,
+    justifyContent: 'center',
+    borderRadius: Shape.small,
+    borderWidth: 1,
+    borderColor: Colors.outline,
+  },
+  chipActive: { backgroundColor: Colors.secondaryContainer, borderColor: 'transparent' },
+  chipLabel: { ...Type.labelLarge, color: Colors.onSurfaceVariant },
+  chipLabelActive: { color: Colors.onSecondaryContainer },
+
+  skeleton: { marginBottom: Spacing.sm },
+  diseaseCard: { paddingVertical: Spacing.xs },
+  diseaseHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+  },
+  diseaseTitleGroup: { flex: 1, gap: 2 },
+  diseaseName: { ...Type.titleSmall, color: Colors.onSurface },
+  diseaseMeta: { ...Type.bodySmall, color: Colors.onSurfaceVariant, textTransform: 'capitalize' },
+  diseaseBody: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
+    gap: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.outlineVariant,
+    paddingTop: Spacing.md,
+  },
+  diseaseText: { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
+  list: { gap: Spacing.xs },
+  listTitle: { ...Type.labelLarge, color: Colors.onSurface },
+  listItem: { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
+  busy: { paddingVertical: Spacing.md },
 });

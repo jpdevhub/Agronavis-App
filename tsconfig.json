@@ -1,4 +1,9 @@
 {
-  "compilerOptions": {},
-  "extends": "expo/tsconfig.base"
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    { "path": "./packages/shared-types" },
+    { "path": "./backend" },
+    { "path": "./apps/mobile" }
+  ]
 }

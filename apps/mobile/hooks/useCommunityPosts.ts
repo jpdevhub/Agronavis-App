@@ -1,75 +1,64 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/utils/supabase';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { CommunityPost } from '@agronavis/shared-types';
+import { communityApi } from '@/services/endpoints';
 
-export type CommunityPost = {
-  id: string;
-  author_id: string;
-  title: string;
-  content: string;
-  attached_image_url: string | null;
-  media_type: 'image' | 'video' | null;
-  upvotes: number;
-  created_at: string;
-  farmers: { full_name: string; avatar_url: string | null; state: string | null } | null;
-};
+export type { CommunityPost };
 
-// ── Fetch all posts ───────────────────────────────────────────────────────────
-async function fetchPosts(): Promise<CommunityPost[]> {
-  const { data, error } = await supabase
-    .from('community_posts')
-    .select('id, author_id, title, content, attached_image_url, media_type, upvotes, created_at, farmers(full_name, avatar_url, state)')
-    .order('created_at', { ascending: false })
-    .limit(30);
-  if (error) throw error;
-  return (data ?? []) as unknown as CommunityPost[];
-}
-
-// ── Create post ───────────────────────────────────────────────────────────────
-async function createPost(payload: { authorId: string; title: string; content: string; imageUrl?: string; mediaType?: 'image' | 'video' }) {
-  const { error } = await supabase.from('community_posts').insert({
-    author_id:          payload.authorId,
-    title:              payload.title,
-    content:            payload.content,
-    attached_image_url: payload.imageUrl ?? null,
-    media_type:         payload.mediaType ?? null,
-  });
-  if (error) throw error;
-}
-
-// ── Toggle upvote ─────────────────────────────────────────────────────────────
-async function toggleLike(postId: string, currentLikes: number, increment: boolean) {
-  const { error } = await supabase
-    .from('community_posts')
-    .update({ upvotes: Math.max(0, currentLikes + (increment ? 1 : -1)) })
-    .eq('id', postId);
-  if (error) throw error;
-}
-
-// ── Hooks ─────────────────────────────────────────────────────────────────────
 export function useCommunityPosts() {
   return useQuery({
-    queryKey: ['community_posts'],
-    queryFn:  fetchPosts,
-    staleTime: 60_000, // 1 min
+    queryKey: ['community', 'posts'],
+    queryFn: () => communityApi.listPosts({ limit: 30 }),
+    staleTime: 60_000,
   });
 }
 
 export function useCreatePost() {
-  const qc   = useQueryClient();
-  const user = useAuthStore((s) => s.user);
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (p: { title: string; content: string; imageUrl?: string; mediaType?: 'image' | 'video' }) =>
-      createPost({ authorId: user!.id, ...p }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['community_posts'] }),
+    mutationFn: communityApi.createPost,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['community', 'posts'] }),
   });
 }
 
-export function useToggleLike() {
-  const qc = useQueryClient();
+export function useDeletePost() {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ postId, currentLikes, liked }: { postId: string; currentLikes: number; liked: boolean }) =>
-      toggleLike(postId, currentLikes, !liked),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['community_posts'] }),
+    mutationFn: communityApi.deletePost,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['community', 'posts'] }),
+  });
+}
+
+/**
+ * Upvote toggle. The count comes back from the server, so two people voting at
+ * once can no longer overwrite each other.
+ */
+export function useToggleVote() {
+  const queryClient = useQueryClient();
+  const queryKey = ['community', 'posts'];
+
+  return useMutation({
+    mutationFn: ({ postId, liked }: { postId: string; liked: boolean }) =>
+      communityApi.vote(postId, liked ? 'down' : 'up'),
+
+    onMutate: async ({ postId, liked }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<CommunityPost[]>(queryKey);
+      queryClient.setQueryData<CommunityPost[]>(queryKey, (old) =>
+        (old ?? []).map((post) =>
+          post.id === postId
+            ? { ...post, upvotes: Math.max(0, post.upvotes + (liked ? -1 : 1)) }
+            : post,
+        ),
+      );
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+    },
+    onSuccess: ({ upvotes }, { postId }) => {
+      queryClient.setQueryData<CommunityPost[]>(queryKey, (old) =>
+        (old ?? []).map((post) => (post.id === postId ? { ...post, upvotes } : post)),
+      );
+    },
   });
 }
