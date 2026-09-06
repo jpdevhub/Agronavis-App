@@ -1,32 +1,54 @@
 {
   "name": "agronavis",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
-  "description": "🌾 Agronavis — Enterprise Farm Assistant Platform",
+  "description": "Agronavis — AI-driven geospatial intelligence platform for Indian agriculture",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "workspaces": [
     "apps/*",
     "backend",
     "packages/*"
   ],
   "scripts": {
-    "dev:mobile": "npm run dev --workspace=apps/mobile",
-    "dev:backend": "npm run dev --workspace=backend",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:mobile\"",
+    "dev": "concurrently -n api,mobile -c green,cyan \"npm:dev:api\" \"npm:dev:mobile\"",
+    "dev:api": "npm run dev --workspace=@agronavis/backend",
+    "dev:mobile": "npm run dev --workspace=@agronavis/mobile",
+
+    "build": "npm run build --workspaces --if-present",
+    "start": "npm run start --workspace=@agronavis/backend",
+
     "lint": "npm run lint --workspaces --if-present",
-    "type-check": "npm run type-check --workspaces --if-present",
+    "lint:fix": "npm run lint:fix --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf {} + && find . -name 'dist' -type d -prune -exec rm -rf {} +"
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,sql}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,sql}\"",
+    "verify": "npm run typecheck && npm run lint && npm run test",
+
+    "db:link": "supabase link --project-ref $(node -e \"console.log(new URL(process.env.SUPABASE_URL||require('dotenv').config().parsed.SUPABASE_URL).hostname.split('.')[0])\")",
+    "db:push": "supabase db push",
+    "db:diff": "supabase db diff -f",
+    "db:types": "supabase gen types typescript --linked --schema public > packages/shared-types/src/database.types.ts",
+
+    "mobile:android": "npm run android --workspace=@agronavis/mobile",
+    "mobile:ios": "npm run ios --workspace=@agronavis/mobile",
+    "mobile:build": "npm run build:android --workspace=@agronavis/mobile",
+
+    "clean": "rimraf \"**/dist\" \"**/.expo\" \"**/*.tsbuildinfo\" \"**/coverage\"",
+    "clean:deps": "rimraf node_modules \"apps/*/node_modules\" backend/node_modules \"packages/*/node_modules\"",
+    "reinstall": "npm run clean:deps && npm install"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
-  },
-  "dependencies": {
-    "react-native-svg": "15.12.1",
-    "react-native-worklets": "0.5.1"
-  },
-  "engines": {
-    "node": ">=20.0.0",
-    "npm": ">=10.0.0"
+    "concurrently": "^9.1.2",
+    "dotenv": "^16.4.7",
+    "prettier": "^3.4.2",
+    "rimraf": "^6.0.1",
+    "supabase": "^2.12.1",
+    "typescript": "~5.9.2"
   },
   "overrides": {
     "react-native-svg": "15.12.1",

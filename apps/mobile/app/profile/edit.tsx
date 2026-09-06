@@ -13,7 +13,8 @@ import { z } from 'zod';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Radii } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
-import { supabase } from '@/utils/supabase';
+import { useFarmer, useUpdateFarmer } from '@/hooks/useFarmer';
+import { storageApi } from '@/services/endpoints';
 
 const schema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -36,24 +37,19 @@ export default function EditProfileScreen() {
     defaultValues: { full_name: '', phone: '', state: '', district: '' },
   });
 
+  const { data: farmer } = useFarmer();
+  const updateFarmer = useUpdateFarmer();
+
   useEffect(() => {
-    if (!user) return;
-    supabase
-      .from('farmers')
-      .select('full_name, phone, state, district, avatar_url')
-      .eq('id', user.id)
-      .single()
-      .then(({ data }) => {
-        if (!data) return;
-        reset({
-          full_name: data.full_name ?? '',
-          phone:     data.phone ?? '',
-          state:     data.state ?? '',
-          district:  data.district ?? '',
-        });
-        if (data.avatar_url) setAvatarUri(data.avatar_url);
-      });
-  }, [user, reset]);
+    if (!farmer) return;
+    reset({
+      full_name: farmer.fullName ?? '',
+      phone: farmer.phone ?? '',
+      state: farmer.state ?? '',
+      district: farmer.district ?? '',
+    });
+    if (farmer.avatarUrl) setAvatarUri(farmer.avatarUrl);
+  }, [farmer, reset]);
 
   const pickAndUpload = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -64,58 +60,41 @@ export default function EditProfileScreen() {
     });
     if (result.canceled || !user) return;
 
-    const asset    = result.assets[0];
-    const rawExt   = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
-    const ext      = rawExt === 'jpg' ? 'jpeg' : rawExt;
-    const mimeType = `image/${ext}`;
-    const path  = `${user.id}/avatar.${ext}`;
+    const asset = result.assets[0];
+    const rawExtension = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const extension = rawExtension === 'jpg' ? 'jpeg' : rawExtension;
 
     setUploading(true);
-    let arrayBuffer: ArrayBuffer;
     try {
-      const response = await fetch(asset.uri);
-      arrayBuffer = await response.arrayBuffer();
-    } catch (e) {
+      const upload = await storageApi.upload(
+        'avatars',
+        asset.uri,
+        `avatar.${extension}`,
+        `image/${extension}`,
+      );
+      // Cache-bust so the new picture shows immediately.
+      const publicUrl = `${upload.publicUrl}?t=${Date.now()}`;
+      await updateFarmer.mutateAsync({ avatarUrl: publicUrl });
+      setAvatarUri(publicUrl);
+    } catch (error) {
+      Alert.alert('Upload failed', (error as Error).message);
+    } finally {
       setUploading(false);
-      Alert.alert('Upload failed', 'Could not read image file.');
-      return;
     }
-
-    const { error } = await supabase.storage
-      .from('avatars')
-      .upload(path, arrayBuffer, { upsert: true, contentType: mimeType });
-
-    if (error) {
-      setUploading(false);
-      Alert.alert('Upload failed', error.message);
-      return;
-    }
-
-    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
-    const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-
-    await supabase.from('farmers').update({ avatar_url: publicUrl }).eq('id', user.id);
-    setAvatarUri(publicUrl);
-    setUploading(false);
   };
 
   const onSubmit = async (data: FormFields) => {
-    if (!user) return;
-    const { error } = await supabase
-      .from('farmers')
-      .update({
-        full_name: data.full_name,
-        phone:     data.phone || null,
-        state:     data.state || null,
-        district:  data.district || null,
-      })
-      .eq('id', user.id);
-
-    if (error) {
-      Alert.alert('Save failed', error.message);
-      return;
+    try {
+      await updateFarmer.mutateAsync({
+        fullName: data.full_name,
+        phone: data.phone || null,
+        state: data.state || null,
+        district: data.district || null,
+      });
+      router.back();
+    } catch (error) {
+      Alert.alert('Save failed', (error as Error).message);
     }
-    router.back();
   };
 
   return (

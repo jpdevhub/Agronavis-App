@@ -1,11 +1,10 @@
 // ─── App Constants ────────────────────────────────────────────────────────────
 
 export const APP_NAME = 'Agronavis';
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.1.5';
 
 // ── API ───────────────────────────────────────────────────────────────────────
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
-export const API_TIMEOUT = Number(process.env.EXPO_PUBLIC_API_TIMEOUT ?? 30000);
+export { Env, socketUrl } from './env';
 
 // ── Storage Keys ──────────────────────────────────────────────────────────────
 export const STORAGE_KEYS = {

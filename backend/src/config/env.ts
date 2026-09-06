@@ -1,42 +1,95 @@
-import { z } from 'zod';
+import fs from 'fs';
+import path from 'path';
 import dotenv from 'dotenv';
+import { z } from 'zod';
 
-dotenv.config();
+/** Loads the ONE .env at the repository root. */
+function findRepoRoot(from: string): string {
+  let dir = from;
+  for (let i = 0; i < 8; i += 1) {
+    const pkg = path.join(dir, 'package.json');
+    if (fs.existsSync(pkg)) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(pkg, 'utf8')) as { workspaces?: unknown };
+        if (parsed.workspaces) return dir;
+      } catch {
+        /* not the root, keep walking */
+      }
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return from;
+}
 
-// ─── Environment Schema — fails fast if required vars are missing ─────────────
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().default(3001),
-  API_VERSION: z.string().default('v1'),
+const repoRoot = findRepoRoot(__dirname);
+// `override: false` — a real environment variable (CI, Docker, Render, Fly)
+// always beats the local file.
+dotenv.config({ path: path.join(repoRoot, '.env'), override: false });
 
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    PORT: z.coerce.number().int().positive().default(3001),
+    API_VERSION: z.string().default('v1'),
+    LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),
 
-  CLERK_SECRET_KEY: z.string().min(1, 'CLERK_SECRET_KEY is required'),
+    ALLOWED_ORIGINS: z.string().default('http://localhost:8081'),
+    RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
+    RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
 
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
-  JWT_EXPIRES_IN: z.string().default('7d'),
+    // ── Supabase — the only datastore ──────────────────────────────────────
+    SUPABASE_URL: z.string().url('SUPABASE_URL must be your https://<ref>.supabase.co URL'),
+    SUPABASE_SERVICE_ROLE_KEY: z
+      .string()
+      .min(20, 'SUPABASE_SERVICE_ROLE_KEY is required — the API cannot read the database without it'),
+    /** Only needed by projects still issuing legacy HS256 access tokens. */
+    SUPABASE_JWT_SECRET: z.string().optional(),
 
-  ALLOWED_ORIGINS: z.string().default('http://localhost:8081'),
+    // ── Third-party APIs (secrets — never reach the client) ────────────────
+    OPENWEATHER_API_KEY: z.string().optional(),
+    AGMARKNET_API_KEY: z.string().optional(),
+    TOTP_ENCRYPTION_KEY: z.string().optional(),
 
-  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900_000),
-  RATE_LIMIT_MAX: z.coerce.number().default(100),
-
-  OPENWEATHER_API_KEY: z.string().optional(),
-  AGMARKET_API_KEY: z.string().optional(),
-  GOOGLE_MAPS_API_KEY: z.string().optional(),
-
-  ML_SERVICE_URL: z.string().default('http://localhost:8000'),
-  ML_SERVICE_API_KEY: z.string().optional(),
-
-  LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
-});
+    // ── Background jobs ───────────────────────────────────────────────────
+    ENABLE_JOBS: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((v) => v === 'true'),
+    WEATHER_POLL_CRON: z.string().default('*/30 * * * *'),
+    MARKET_POLL_CRON: z.string().default('15 * * * *'),
+  })
+  .transform((raw) => ({
+    ...raw,
+    isProduction: raw.NODE_ENV === 'production',
+    isTest: raw.NODE_ENV === 'test',
+    allowedOrigins: raw.ALLOWED_ORIGINS.split(',')
+      .map((o) => o.trim())
+      .filter(Boolean),
+    /** JWKS endpoint for asymmetric (ES256/RS256) Supabase access tokens. */
+    supabaseJwksUrl: new URL('/auth/v1/.well-known/jwks.json', raw.SUPABASE_URL).toString(),
+  }));
 
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error('❌ Invalid environment variables:\n', parsed.error.format());
+  const issues = parsed.error.issues
+    .map((i) => `  · ${i.path.join('.')}: ${i.message}`)
+    .join('\n');
+  console.error(
+    `\nInvalid environment. Fix these in ${path.join(repoRoot, '.env')} (see .env.example):\n${issues}\n`,
+  );
   process.exit(1);
 }
 
 export const env = parsed.data;
 export type Env = typeof env;
+export const REPO_ROOT = repoRoot;
+
+/** Warn loudly about optional keys whose absence silently degrades a feature. */
+export function reportOptionalEnv(warn: (msg: string) => void): void {
+  if (!env.OPENWEATHER_API_KEY) warn('OPENWEATHER_API_KEY is not set — weather endpoints will fail');
+  if (!env.AGMARKNET_API_KEY) warn('AGMARKNET_API_KEY is not set — mandi prices will be empty');
+  if (!env.TOTP_ENCRYPTION_KEY) warn('TOTP_ENCRYPTION_KEY is not set — two-factor auth is disabled');
+}

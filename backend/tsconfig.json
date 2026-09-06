@@ -1,31 +1,18 @@
 {
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
     "module": "CommonJS",
+    "moduleResolution": "Node",
     "lib": ["ES2022"],
+    "types": ["node", "jest"],
     "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
     "baseUrl": ".",
     "paths": {
-      "@config/*": ["src/config/*"],
-      "@modules/*": ["src/modules/*"],
-      "@middleware/*": ["src/middleware/*"],
-      "@shared/*": ["src/shared/*"],
-      "@jobs/*": ["src/jobs/*"]
-    }
+      "@/*": ["./src/*"],
+      "@agronavis/shared-types": ["../packages/shared-types/src/index.ts"]
+    },
+    "isolatedModules": false,
+    "noEmit": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "tests"]
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
 }

@@ -12,12 +12,10 @@ import {
   View, Text, TouchableOpacity, StyleSheet, StatusBar,
   ActivityIndicator, Platform, ScrollView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Radii } from '@/constants/theme';
 
 const CORNER_SIZE  = 44;

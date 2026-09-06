@@ -1,23 +1,20 @@
-import { Request, Response, NextFunction } from 'express';
-import { ZodSchema, ZodError } from 'zod';
-import { AppError } from './error.middleware';
+import type { NextFunction, Request, RequestHandler, Response } from 'express';
+import type { ZodTypeAny, z } from 'zod';
 
-type ValidateTarget = 'body' | 'query' | 'params';
+type Target = 'body' | 'query' | 'params';
 
-/** Validates request body/query/params against a Zod schema */
-export function validate(schema: ZodSchema, target: ValidateTarget = 'body') {
-  return (req: Request, _res: Response, next: NextFunction): void => {
-    try {
-      const parsed = schema.parse(req[target]);
-      req[target] = parsed;
-      next();
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const messages = error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ');
-        next(new AppError(400, `Validation error: ${messages}`));
-      } else {
-        next(error);
-      }
-    }
+/**
+ * Parses and replaces the given request part with the schema's output, so
+ * handlers receive coerced, defaulted, typed values rather than raw strings.
+ */
+export function validate<S extends ZodTypeAny>(schema: S, target: Target = 'body'): RequestHandler {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req[target]);
+    if (!result.success) return next(result.error);
+    // req.query/params are getter-only in Express 5; assign through defineProperty.
+    Object.defineProperty(req, target, { value: result.data, writable: true, configurable: true });
+    next();
   };
 }
+
+export type Validated<S extends ZodTypeAny> = z.infer<S>;

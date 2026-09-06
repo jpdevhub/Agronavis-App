@@ -6,79 +6,52 @@ on:
   pull_request:
     branches: [main, develop]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
 jobs:
-  lint-and-typecheck:
-    name: Lint & Type Check
+  verify:
+    name: Lint, typecheck and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
 
-      - name: Install dependencies
+      - name: Install
         run: npm ci --legacy-peer-deps
 
-      - name: Generate Prisma client
-        working-directory: backend
-        run: npx prisma generate
+      - name: Typecheck
+        run: npm run typecheck
 
-      - name: Type check — backend
-        working-directory: backend
-        run: npm run type-check
+      - name: Lint
+        run: npm run lint
 
-      - name: Type check — mobile
-        working-directory: apps/mobile
-        run: npm run type-check
+      # tests/setup.ts supplies the environment the API validates at import
+      # time, so no secrets are needed here.
+      - name: Test
+        run: npm test
 
-  test-backend:
-    name: Backend Tests
+  build-api:
+    name: Build API
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: agronavis
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: agronavis_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
 
-      - name: Install dependencies
+      - name: Install
         run: npm ci --legacy-peer-deps
 
-      - name: Generate Prisma client
-        working-directory: backend
-        run: npx prisma generate
-
-      - name: Push schema to test DB
-        working-directory: backend
-        run: npx prisma db push --skip-generate
-        env:
-          DATABASE_URL: postgresql://agronavis:test_password@localhost:5432/agronavis_test
-
-      - name: Run backend tests
-        working-directory: backend
-        run: npm test -- --passWithNoTests
-        env:
-          NODE_ENV: test
-          DATABASE_URL: postgresql://agronavis:test_password@localhost:5432/agronavis_test
-          CLERK_SECRET_KEY: sk_test_placeholder
-          JWT_SECRET: test_jwt_secret_minimum_32_characters_long
-          ALLOWED_ORIGINS: http://localhost:8081
-          LOG_LEVEL: error
+      - name: Build
+        run: npm run build --workspace=@agronavis/backend

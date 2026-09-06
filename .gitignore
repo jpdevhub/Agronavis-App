@@ -1,57 +1,77 @@
-# ─── OS & Editor ────────────────────────────────
+# ─── Agronavis — single repo-wide ignore file ────────────────────────────────
+# There is exactly ONE .gitignore in this repository (plus the generated
+# apps/mobile/android/.gitignore that Expo prebuild owns). Add rules here.
+
+# ── OS & editor ──────────────────────────────────────────────────────────────
 .DS_Store
 ._*
 Thumbs.db
 *.swp
 *.swo
-.vscode/settings.json
 .idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
 
-# ─── Node ───────────────────────────────────────
+# ── Node ─────────────────────────────────────────────────────────────────────
 node_modules/
+.npm
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-.npm
 
-# ─── Build outputs ──────────────────────────────
-dist/
-build/
-out/
-*.tsbuildinfo
-.turbo/
-
-# ─── Environment variables ──────────────────────
+# ── Environment — ONE .env at the repo root, never committed ─────────────────
 .env
 .env.local
 .env.*.local
 !.env.example
 
-# ─── Expo / React Native ────────────────────────
-.expo/
-.expo-shared/
+# ── Build output ─────────────────────────────────────────────────────────────
+dist/
+build/
+out/
 web-build/
-android/
-ios/
-
-# ─── Backend ────────────────────────────────────
-backend/dist/
-
-# ─── Testing ────────────────────────────────────
-coverage/
-.nyc_output/
-
-# ─── Logs ───────────────────────────────────────
-logs/
-*.log
-
-# ─── Misc ───────────────────────────────────────
-*.pem
+*.tsbuildinfo
+.turbo/
 .cache/
 tmp/
 
-# ─── Notebooks ──────────────────────────────────
+# ── Expo / React Native ──────────────────────────────────────────────────────
+.expo/
+.expo-shared/
+apps/mobile/android/
+apps/mobile/ios/
+
+# ── Supabase CLI ─────────────────────────────────────────────────────────────
+supabase/.branches/
+supabase/.temp/
+
+# ── Testing ──────────────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── Python (ML service / notebooks) ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# ── Data & model artefacts (too large / not source) ──────────────────────────
 notebooks/
 *.ipynb
-.ipynb_checkpoints/
+*.pth
+*.onnx
+*.tif
+*.tiff
+
+# ── Secrets ──────────────────────────────────────────────────────────────────
+*.pem
+*.p8
+*.p12
+*.keystore
+!debug.keystore
+google-services.json
+GoogleService-Info.plist

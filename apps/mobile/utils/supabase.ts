@@ -1,11 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
+import { Env } from '@/constants/env';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = Env.supabaseUrl;
+const supabaseAnonKey = Env.supabaseAnonKey;
 
 /**
- * Supabase client — platform-aware storage to avoid SSR crash.
+ * Supabase client. Used for authentication only — sign-in, session storage and
+ * token refresh. Every read and write goes through the Agronavis API.
+ *
+ * Platform-aware storage avoids an SSR crash.
  *
  * Problem: Expo Router's static renderer runs in Node.js (no `window`).
  * AsyncStorage's web shim calls `window.localStorage` at module-init time,

@@ -1,498 +1,527 @@
+import { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, StatusBar, Image, ActivityIndicator,
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, Radii } from '@/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { FarmTask, NutrientLevel, PestAlertEvent } from '@agronavis/shared-types';
+import { Colors, Elevation, Shape, Spacing, Type } from '@/constants/theme';
+import { Button, Card, EmptyState, Skeleton, Surface } from '@/components/ui';
+import { AdvisoryCard } from '@/components/dashboard/AdvisoryCard';
+import { ForecastStrip, weatherIcon } from '@/components/dashboard/ForecastStrip';
+import { MarketPrices } from '@/components/dashboard/MarketPrices';
+import { PestAlertBanner } from '@/components/PestAlertBanner';
+import { useAdvisories } from '@/hooks/useAdvisories';
 import { useFarmer } from '@/hooks/useFarmer';
 import { useFarmFields } from '@/hooks/useFarmFields';
-import { useTimelineTasks, FarmTask } from '@/hooks/useTimelineTasks';
-import { useWeather } from '@/hooks/useWeather';
+import { useMarketPrices } from '@/hooks/useMarketPrices';
+import { useNotifications } from '@/hooks/useNotifications';
 import { useSoilHealth } from '@/hooks/useSoilHealth';
+import { useTimelineTasks } from '@/hooks/useTimelineTasks';
+import { useWeather } from '@/hooks/useWeather';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import { useFarmStore } from '@/store/useFarmStore';
 
-const FARM_URL = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80';
+type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
-// ── Skeleton placeholder ──────────────────────────────────────────────────────
-function Skeleton({ width, height, borderRadius = 8 }: { width: number | string; height: number; borderRadius?: number }) {
-  return (
-    <View style={[styles.skeleton, { width: width as number, height, borderRadius }]} />
-  );
-}
-
-// ── NPK Chip ──────────────────────────────────────────────────────────────────
-const NPK_COLORS: Record<string, { bg: string; text: string }> = {
-  High:   { bg: Colors.secondaryContainer, text: Colors.onSecondaryContainer },
-  Medium: { bg: Colors.tertiaryFixed,      text: Colors.onTertiaryContainer  },
-  Low:    { bg: Colors.errorContainer,     text: Colors.onErrorContainer     },
-  'N/A':  { bg: Colors.surfaceContainerHigh, text: Colors.onSurfaceVariant  },
+const NUTRIENT_TONE: Record<NutrientLevel, { container: string; on: string }> = {
+  High: { container: Colors.secondaryContainer, on: Colors.onSecondaryContainer },
+  Medium: { container: Colors.tertiaryContainer, on: Colors.onTertiaryContainer },
+  Low: { container: Colors.errorContainer, on: Colors.onErrorContainer },
+  'N/A': { container: Colors.surfaceContainerHighest, on: Colors.onSurfaceVariant },
 };
 
-function StatChip({ label, value }: { label: string; value: string }) {
-  const colors = NPK_COLORS[value] ?? NPK_COLORS['N/A'];
-  return (
-    <View style={[styles.statChip, { backgroundColor: colors.bg }]}>
-      <Text style={[styles.statChipValue, { color: colors.text }]}>{value}</Text>
-      <Text style={styles.statChipLabel}>{label}</Text>
-    </View>
-  );
-}
-
-// ── Task card ─────────────────────────────────────────────────────────────────
-const TASK_TYPE_META: Record<string, { icon: any; color: string }> = {
-  fertilizer_application: { icon: 'science',    color: Colors.tertiaryFixed },
-  pest_scan:              { icon: 'bug-report',  color: Colors.errorContainer },
-  irrigation:             { icon: 'water-drop',  color: Colors.primaryFixed },
-  sowing:                 { icon: 'agriculture', color: Colors.secondaryContainer },
-  harvesting:             { icon: 'grass',       color: Colors.secondaryContainer },
-  soil_prep:              { icon: 'terrain',     color: Colors.surfaceContainerHigh },
-  market_prep:            { icon: 'store',       color: Colors.primaryFixed },
+const TASK_ICON: Record<string, IconName> = {
+  fertilizer_application: 'science',
+  pest_scan: 'pest-control',
+  irrigation: 'water-drop',
+  sowing: 'agriculture',
+  harvesting: 'grass',
+  soil_prep: 'terrain',
+  market_prep: 'storefront',
 };
 
-function isOverdue(task: FarmTask): boolean {
-  return task.status === 'overdue';
-}
-
-function isDueToday(task: FarmTask): boolean {
-  const today = new Date().toISOString().split('T')[0];
-  return task.due_date === today && task.status !== 'overdue';
-}
-
-function TaskCard({ task, onComplete }: { task: FarmTask; onComplete: () => void }) {
-  const meta = TASK_TYPE_META[task.task_type ?? ''] ?? { icon: 'event-note', color: Colors.surfaceContainerHigh };
-  const overdue = isOverdue(task);
-  const today   = isDueToday(task);
-
+function NutrientTile({ label, level }: { label: string; level: NutrientLevel }) {
+  const tone = NUTRIENT_TONE[level];
   return (
-    <View style={styles.taskCard}>
-      <View style={[styles.taskIconWrap, { backgroundColor: meta.color }]}>
-        <MaterialIcons name={meta.icon} size={22} color={Colors.primary} />
-      </View>
-      <View style={styles.taskCardLeft}>
-        {(overdue || today) && (
-          <View style={[styles.taskTag, { backgroundColor: overdue ? Colors.errorContainer : Colors.tertiaryFixed }]}>
-            <Text style={styles.taskTagText}>{overdue ? 'OVERDUE' : 'DUE TODAY'}</Text>
-          </View>
-        )}
-        <Text style={styles.taskTitle}>{task.title}</Text>
-        {task.description ? (
-          <Text style={styles.taskDesc} numberOfLines={2}>{task.description}</Text>
-        ) : null}
-        <Text style={styles.taskDue}>
-          Due {new Date(task.due_date + 'T00:00:00').toLocaleDateString('en-IN', {
-            day: 'numeric', month: 'short',
-          })}
-        </Text>
-      </View>
-      <TouchableOpacity style={styles.taskDoneBtn} onPress={onComplete} activeOpacity={0.8}>
-        <MaterialIcons name="check" size={18} color="#fff" />
-      </TouchableOpacity>
+    <View style={[styles.nutrient, { backgroundColor: tone.container }]}>
+      <Text style={[styles.nutrientValue, { color: tone.on }]}>{level}</Text>
+      <Text style={[styles.nutrientLabel, { color: tone.on }]}>{label}</Text>
     </View>
   );
 }
 
-// ── Weather icon map ──────────────────────────────────────────────────────────
-function weatherIcon(icon: string): React.ComponentProps<typeof MaterialIcons>['name'] {
-  if (icon.startsWith('01')) return 'wb-sunny';
-  if (icon.startsWith('02') || icon.startsWith('03')) return 'cloud';
-  if (icon.startsWith('04')) return 'cloud';
-  if (icon.startsWith('09') || icon.startsWith('10')) return 'grain';
-  if (icon.startsWith('11')) return 'flash-on';
-  if (icon.startsWith('13')) return 'ac-unit';
-  return 'wb-cloudy';
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────────
-function EmptyFarmState({ onPress }: { onPress: () => void }) {
-  return (
-    <View style={styles.emptyWrap}>
-      <View style={styles.emptyIcon}>
-        <MaterialIcons name="agriculture" size={48} color={Colors.primary} />
-      </View>
-      <Text style={styles.emptyTitle}>No Fields Yet</Text>
-      <Text style={styles.emptyDesc}>
-        Add your first farm plot to see tasks, soil health, and weather — all in one place.
-      </Text>
-      <TouchableOpacity onPress={onPress} style={styles.emptyBtn} activeOpacity={0.88}>
-        <LinearGradient
-          colors={[Colors.primary, Colors.primaryContainer]}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={styles.emptyBtnGrad}
-        >
-          <MaterialIcons name="add-location-alt" size={20} color="#fff" />
-          <Text style={styles.emptyBtnText}>Add Your First Farm</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-// ── Dashboard ─────────────────────────────────────────────────────────────────
-export default function DashboardScreen() {
-  const router = useRouter();
-  const { activeFieldId } = useFarmStore();
-
-  const { data: farmer,  isLoading: farmerLoading }  = useFarmer();
-  const { data: fields,  isLoading: fieldsLoading }  = useFarmFields();
-  const { data: tasks,   isLoading: tasksLoading, completeTask } = useTimelineTasks();
-  const { npk, isLoading: soilLoading, isRegional } = useSoilHealth();
-
-  // Get coordinates from the active field for weather
-  const activeField = fields?.find((f) => f.id === activeFieldId);
-  const { data: weather, isLoading: weatherLoading } = useWeather(
-    activeField?.center_latitude,
-    activeField?.center_longitude,
-  );
-
-  const hasFields = fields && fields.length > 0;
-  const greeting  = farmer?.full_name ? `Hello, ${farmer.full_name.split(' ')[0]} 👋` : 'Hello 👋';
-
-  const today = new Date().toLocaleDateString('en-IN', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+function TaskRow({ task, onComplete }: { task: FarmTask; onComplete: () => void }) {
+  const overdue = task.status === 'overdue';
+  const due = new Date(`${task.dueDate}T00:00:00`).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
   });
 
-  const avatarUri = farmer?.avatar_url
-    ? farmer.avatar_url
-    : `https://api.dicebear.com/7.x/personas/png?seed=${encodeURIComponent(farmer?.full_name ?? 'farmer')}&size=200`;
+  return (
+    <Card variant="outlined" style={styles.task}>
+      <View style={[styles.taskIcon, overdue && { backgroundColor: Colors.errorContainer }]}>
+        <MaterialIcons
+          name={TASK_ICON[task.taskType ?? ''] ?? 'event-note'}
+          size={20}
+          color={overdue ? Colors.onErrorContainer : Colors.onSecondaryContainer}
+        />
+      </View>
+
+      <View style={styles.taskBody}>
+        <Text style={styles.taskTitle} numberOfLines={1}>
+          {task.title}
+        </Text>
+        <Text style={[styles.taskDue, overdue && { color: Colors.error }]}>
+          {overdue ? `Overdue since ${due}` : `Due ${due}`}
+        </Text>
+      </View>
+
+      <Pressable
+        onPress={onComplete}
+        accessibilityRole="button"
+        accessibilityLabel={`Mark ${task.title} complete`}
+        hitSlop={8}
+        style={styles.taskDone}
+      >
+        <MaterialIcons name="check" size={18} color={Colors.onPrimary} />
+      </Pressable>
+    </Card>
+  );
+}
+
+export default function DashboardScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  const activeFieldId = useFarmStore((s) => s.activeFieldId);
+  const activeFarmId = useFarmStore((s) => s.activeFarmId);
+  const setActiveField = useFarmStore((s) => s.setActiveField);
+
+  const [pestAlert, setPestAlert] = useState<PestAlertEvent | null>(null);
+
+  const { data: farmer, isLoading: farmerLoading } = useFarmer();
+  const { data: fields, isLoading: fieldsLoading, refetch: refetchFields } = useFarmFields();
+  const { data: tasks, isLoading: tasksLoading, completeTask } = useTimelineTasks();
+  const { levels, isLoading: soilLoading, isRegional } = useSoilHealth();
+  const { current, forecast, isLoading: weatherLoading, isStale } = useWeather(activeFarmId);
+  const { topUnread, unreadCount, isLoading: advisoryLoading, markRead, refresh } = useAdvisories();
+  const { unreadCount: notificationCount } = useNotifications();
+
+  const activeField = useMemo(
+    () => fields?.find((field) => field.id === activeFieldId) ?? null,
+    [fields, activeFieldId],
+  );
+
+  const { data: prices, isLoading: pricesLoading } = useMarketPrices(
+    farmer?.state,
+    farmer?.primaryCrops?.length ? farmer.primaryCrops : undefined,
+  );
+
+  const socket = useWebSocket({
+    farmId: activeFarmId ?? undefined,
+    district: farmer?.district ?? undefined,
+    state: farmer?.state ?? undefined,
+    onPestAlert: setPestAlert,
+  });
+
+  const onRefresh = useCallback(async () => {
+    await Promise.all([refetchFields(), activeFarmId ? refresh.mutateAsync() : Promise.resolve()]);
+  }, [refetchFields, refresh, activeFarmId]);
+
+  const hasFields = (fields?.length ?? 0) > 0;
+  const firstName = farmer?.fullName?.split(' ')[0];
+  const today = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
 
   return (
     <View style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
 
-      {/* Top Bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.push('/profile' as any)} activeOpacity={0.85}>
-          {farmerLoading
-            ? <Skeleton width={40} height={40} borderRadius={20} />
-            : <Image source={{ uri: avatarUri }} style={styles.avatar} />
-          }
-        </TouchableOpacity>
-        <Text style={styles.logo}>Agronavis</Text>
-        <TouchableOpacity style={styles.notifBtn} activeOpacity={0.8}>
-          <MaterialIcons name="notifications-none" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-      </View>
+      <PestAlertBanner
+        alert={pestAlert}
+        onDismiss={() => setPestAlert(null)}
+        onViewDetails={() => router.push('/(tabs)/scan' as never)}
+      />
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <View style={[styles.appBar, { paddingTop: insets.top + Spacing.sm }]}>
+        <Pressable
+          onPress={() => router.push('/profile' as never)}
+          accessibilityRole="button"
+          accessibilityLabel="Open profile"
+        >
+          {farmerLoading ? (
+            <Skeleton width={40} height={40} radius={Shape.full} />
+          ) : farmer?.avatarUrl ? (
+            <Image source={{ uri: farmer.avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarInitial}>{(firstName ?? 'F').charAt(0).toUpperCase()}</Text>
+            </View>
+          )}
+        </Pressable>
 
-        {/* Greeting + Weather */}
-        <View style={styles.greetRow}>
-          <View style={styles.greetLeft}>
-            {farmerLoading
-              ? <Skeleton width={200} height={28} borderRadius={8} />
-              : <Text style={styles.greetName}>{greeting}</Text>
-            }
-            <Text style={styles.greetDate}>{today}</Text>
-          </View>
-
-          {/* Weather chip */}
-          <View style={styles.weatherCard}>
-            {weatherLoading || !weather ? (
-              <View style={{ gap: 4 }}>
-                <Skeleton width={60} height={28} />
-                <Skeleton width={50} height={14} />
-              </View>
-            ) : (
-              <>
-                <View>
-                  <Text style={styles.weatherTitle}>WEATHER</Text>
-                  <Text style={styles.weatherTemp}>{weather.temp}°C</Text>
-                  <Text style={styles.weatherCond} numberOfLines={1}>
-                    {weather.description}
-                  </Text>
-                </View>
-                <MaterialIcons
-                  name={weatherIcon(weather.icon)}
-                  size={40}
-                  color={Colors.tertiaryContainer}
-                />
-              </>
-            )}
-            {!weather && !weatherLoading && (
-              <>
-                <View>
-                  <Text style={styles.weatherTitle}>WEATHER</Text>
-                  <Text style={styles.weatherTemp}>--°C</Text>
-                  <Text style={styles.weatherCond}>Add a field to see weather</Text>
-                </View>
-                <MaterialIcons name="wb-cloudy" size={40} color={Colors.outline} />
-              </>
-            )}
-          </View>
+        <View style={styles.appBarTitle}>
+          <Text style={styles.wordmark}>Agronavis</Text>
+          {socket.connected ? (
+            <View style={styles.liveDot} accessibilityLabel="Live updates connected" />
+          ) : null}
         </View>
 
-        {/* Empty State or Field Content */}
-        {fieldsLoading ? (
-          <View style={{ gap: 12 }}>
-            <Skeleton width="100%" height={140} borderRadius={Radii.xxl} />
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Skeleton width="32%" height={60} borderRadius={Radii.lg} />
-              <Skeleton width="32%" height={60} borderRadius={Radii.lg} />
-              <Skeleton width="32%" height={60} borderRadius={Radii.lg} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+          style={styles.iconButton}
+        >
+          <MaterialIcons name="notifications-none" size={24} color={Colors.onSurfaceVariant} />
+          {notificationCount > 0 ? (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationCount}>
+                {notificationCount > 9 ? '9+' : notificationCount}
+              </Text>
             </View>
+          ) : null}
+        </Pressable>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 96 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refresh.isPending}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
+      >
+        <View style={styles.greeting}>
+          {farmerLoading ? (
+            <Skeleton width={220} height={30} />
+          ) : (
+            <Text style={styles.greetingText}>
+              {firstName ? `Good day, ${firstName}` : 'Good day'}
+            </Text>
+          )}
+          <Text style={styles.greetingDate}>{today}</Text>
+        </View>
+
+        <Card variant="filled" style={styles.weatherCard}>
+          {weatherLoading ? (
+            <View style={styles.weatherLoading}>
+              <Skeleton width={110} height={44} />
+              <Skeleton width={140} height={16} />
+            </View>
+          ) : current ? (
+            <>
+              <View style={styles.weatherTop}>
+                <View style={styles.weatherReading}>
+                  <Text style={styles.temperature}>{current.temp}°</Text>
+                  <Text style={styles.condition}>{current.description}</Text>
+                </View>
+                <MaterialIcons
+                  name={weatherIcon(current.icon)}
+                  size={56}
+                  color={Colors.onPrimaryContainer}
+                />
+              </View>
+
+              <View style={styles.weatherMetrics}>
+                <View style={styles.metric}>
+                  <MaterialIcons name="water-drop" size={15} color={Colors.onPrimaryContainer} />
+                  <Text style={styles.metricText}>{current.humidity}%</Text>
+                </View>
+                <View style={styles.metric}>
+                  <MaterialIcons name="air" size={15} color={Colors.onPrimaryContainer} />
+                  <Text style={styles.metricText}>{current.windSpeed} km/h</Text>
+                </View>
+                <View style={styles.metric}>
+                  <MaterialIcons name="thermostat" size={15} color={Colors.onPrimaryContainer} />
+                  <Text style={styles.metricText}>Feels {current.feelsLike}°</Text>
+                </View>
+              </View>
+
+              {isStale ? <Text style={styles.staleNote}>Showing the last saved reading</Text> : null}
+            </>
+          ) : (
+            <View style={styles.weatherTop}>
+              <View style={styles.weatherReading}>
+                <Text style={styles.temperature}>--°</Text>
+                <Text style={styles.condition}>Map a field to see local weather</Text>
+              </View>
+              <MaterialIcons name="wb-cloudy" size={56} color={Colors.onPrimaryContainer} />
+            </View>
+          )}
+        </Card>
+
+        <ForecastStrip forecast={forecast} loading={weatherLoading} />
+
+        {fieldsLoading ? (
+          <View style={styles.loadingBlock}>
+            <Skeleton height={132} radius={Shape.large} />
+            <Skeleton height={92} radius={Shape.large} />
           </View>
         ) : !hasFields ? (
-          <EmptyFarmState onPress={() => router.push('/(tabs)/farm' as any)} />
+          <EmptyState
+            icon="agriculture"
+            title="No fields mapped yet"
+            description="Walk your boundary once and Agronavis can watch the weather, soil and market for that exact plot."
+            actionLabel="Map your first field"
+            onAction={() => router.push('/(tabs)/farm' as never)}
+          />
         ) : (
           <>
-            {/* Field selector (if multiple fields) */}
-            {fields.length > 1 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.fieldScroll}>
-                {fields.map((f) => (
-                  <TouchableOpacity
-                    key={f.id}
-                    style={[styles.fieldChip, f.id === activeFieldId && styles.fieldChipActive]}
-                    onPress={() => useFarmStore.getState().setActiveField(f.id, f.farm_id)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.fieldChipText, f.id === activeFieldId && styles.fieldChipTextActive]}>
-                      {f.name}
-                    </Text>
-                    <Text style={styles.fieldChipArea}>{f.area_acres} acres</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
+            <AdvisoryCard
+              advisory={topUnread}
+              unreadCount={unreadCount}
+              loading={advisoryLoading}
+              onMarkRead={(id) => markRead.mutate(id)}
+            />
 
-            {/* NPK Stats */}
-            <View style={{ gap: 6 }}>
-              <View style={styles.statRow}>
-                {soilLoading ? (
-                  <>
-                    <Skeleton width="31%" height={60} borderRadius={Radii.lg} />
-                    <Skeleton width="31%" height={60} borderRadius={Radii.lg} />
-                    <Skeleton width="31%" height={60} borderRadius={Radii.lg} />
-                  </>
-                ) : (
-                  <>
-                    <StatChip label="Nitrogen"   value={npk.nitrogen}   />
-                    <StatChip label="Phosphorus" value={npk.phosphorus} />
-                    <StatChip label="Potassium"  value={npk.potassium}  />
-                  </>
-                )}
+            {fields!.length > 1 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.fieldRow}
+              >
+                {fields!.map((field) => {
+                  const selected = field.id === activeFieldId;
+                  return (
+                    <Pressable
+                      key={field.id}
+                      onPress={() => setActiveField(field.id, field.farmId)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      style={[styles.fieldChip, selected && styles.fieldChipSelected]}
+                    >
+                      <Text style={[styles.fieldName, selected && styles.fieldNameSelected]}>
+                        {field.name}
+                      </Text>
+                      <Text style={[styles.fieldArea, selected && styles.fieldAreaSelected]}>
+                        {field.areaAcres.toFixed(2)} acres
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            ) : null}
+
+            <Surface level={1} style={styles.soilCard}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Soil nutrients</Text>
+                {activeField ? (
+                  <Text style={styles.sectionMeta}>{activeField.name}</Text>
+                ) : null}
               </View>
-              {isRegional && !soilLoading && (
-                <View style={styles.regionalBadge}>
-                  <MaterialIcons name="info-outline" size={13} color={Colors.primary} />
-                  <Text style={styles.regionalText}>District baseline — add a soil test for precise data</Text>
+
+              {soilLoading ? (
+                <View style={styles.nutrientRow}>
+                  <Skeleton height={66} radius={Shape.medium} />
+                  <Skeleton height={66} radius={Shape.medium} />
+                  <Skeleton height={66} radius={Shape.medium} />
                 </View>
+              ) : (
+                <View style={styles.nutrientRow}>
+                  <NutrientTile label="Nitrogen" level={levels.nitrogen} />
+                  <NutrientTile label="Phosphorus" level={levels.phosphorus} />
+                  <NutrientTile label="Potassium" level={levels.potassium} />
+                </View>
+              )}
+
+              {isRegional && !soilLoading ? (
+                <View style={styles.note}>
+                  <MaterialIcons name="info-outline" size={14} color={Colors.onSurfaceVariant} />
+                  <Text style={styles.noteText}>
+                    District averages. Add a soil test for figures from your own plot.
+                  </Text>
+                </View>
+              ) : null}
+            </Surface>
+
+            <MarketPrices
+              prices={prices ?? []}
+              loading={pricesLoading}
+              live={socket.connected}
+              onPressCommodity={() => router.push('/crops' as never)}
+            />
+
+            <View style={styles.tasksSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Tasks</Text>
+                {tasks?.length ? <Text style={styles.sectionMeta}>{tasks.length} open</Text> : null}
+              </View>
+
+              {tasksLoading ? (
+                <View style={styles.loadingBlock}>
+                  <Skeleton height={72} radius={Shape.large} />
+                  <Skeleton height={72} radius={Shape.large} />
+                </View>
+              ) : tasks?.length ? (
+                <View style={styles.taskList}>
+                  {tasks.slice(0, 5).map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      onComplete={() => completeTask.mutate(task.id)}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <Card variant="outlined" style={styles.noTasks}>
+                  <MaterialIcons name="task-alt" size={20} color={Colors.primary} />
+                  <Text style={styles.noTasksText}>Everything on your list is done.</Text>
+                </Card>
               )}
             </View>
 
-            {/* Active Field info card */}
-            {activeField && (
-              <View style={styles.fieldInfoCard}>
-                <View style={styles.fieldInfoLeft}>
-                  <Text style={styles.fieldInfoName}>{activeField.name}</Text>
-                  <Text style={styles.fieldInfoArea}>{activeField.area_acres} acres</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.fieldInfoBtn}
-                  onPress={() => router.push('/(tabs)/farm' as any)}
-                  activeOpacity={0.8}
-                >
-                  <MaterialIcons name="arrow-forward" size={18} color={Colors.primary} />
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Tasks Section */}
-            <Text style={styles.sectionTitle}>
-              <MaterialIcons name="event-note" size={18} color={Colors.onSurface} />
-              {'  '}UPCOMING TASKS
-            </Text>
-
-            {tasksLoading ? (
-              <View style={{ gap: 12 }}>
-                <Skeleton width="100%" height={100} borderRadius={Radii.xxl} />
-                <Skeleton width="100%" height={100} borderRadius={Radii.xxl} />
-              </View>
-            ) : tasks && tasks.length > 0 ? (
-              <View style={{ gap: 12 }}>
-                {tasks.slice(0, 5).map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onComplete={() => completeTask.mutate(task.id)}
-                  />
-                ))}
-              </View>
-            ) : (
-              <View style={styles.noTasksBox}>
-                <MaterialIcons name="check-circle-outline" size={36} color={Colors.primary} />
-                <Text style={styles.noTasksText}>All tasks completed! 🎉</Text>
-                <Text style={styles.noTasksSub}>New tasks appear when you add crops.</Text>
-              </View>
-            )}
+            <Button
+              label="Scan a crop for disease"
+              icon="photo-camera"
+              variant="tonal"
+              fullWidth
+              onPress={() => router.push('/(tabs)/scan' as never)}
+            />
           </>
         )}
-
-        {/* Aerial Monitoring — always visible */}
-        <TouchableOpacity
-          style={styles.aerialCard}
-          onPress={() => router.push('/(tabs)/farm' as any)}
-          activeOpacity={0.9}
-        >
-          <Image source={{ uri: FARM_URL }} style={styles.aerialImage} resizeMode="cover" />
-          <LinearGradient
-            colors={['transparent', 'rgba(11,28,48,0.75)']}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.aerialLiveBadge}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveBadgeText}>SATELLITE VIEW</Text>
-          </View>
-          <View style={styles.aerialBottom}>
-            <Text style={styles.aerialTitle}>Farm Monitoring</Text>
-            <Text style={styles.aerialSub}>Open farm map →</Text>
-          </View>
-        </TouchableOpacity>
-
-        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:          { flex: 1, backgroundColor: Colors.surface },
-  topBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 52, paddingBottom: 14,
-    backgroundColor: 'rgba(248,249,255,0.92)',
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06, shadowRadius: 16, elevation: 8,
-  },
-  avatar:        { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: Colors.primaryFixed },
-  logo:          { fontSize: 24, fontWeight: '900', letterSpacing: -0.8, color: Colors.primary },
-  notifBtn:      { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  scroll:        { paddingHorizontal: 20, paddingTop: 20, gap: 16 },
-  skeleton:      { backgroundColor: Colors.surfaceContainerHigh },
+  root: { flex: 1, backgroundColor: Colors.surface },
 
-  // Greeting
-  greetRow:      { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  greetLeft:     { flex: 1, gap: 4 },
-  greetName:     { fontSize: 24, fontWeight: '800', letterSpacing: -0.5, color: Colors.onSurface },
-  greetDate:     { fontSize: 13, color: Colors.onSurfaceVariant },
+  appBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+    backgroundColor: Colors.surface,
+  },
+  avatar: { width: 40, height: 40, borderRadius: Shape.full },
+  avatarFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: Shape.full,
+    backgroundColor: Colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: { ...Type.titleMedium, color: Colors.onPrimaryContainer },
+  appBarTitle: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  wordmark: { ...Type.titleLarge, color: Colors.onSurface },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary },
+  iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  notificationBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 4,
+    borderRadius: Shape.full,
+    backgroundColor: Colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationCount: { ...Type.labelSmall, fontSize: 10, color: Colors.onError },
+
+  scroll: { paddingHorizontal: Spacing.lg, gap: Spacing.xl },
+  greeting: { gap: 2 },
+  greetingText: { ...Type.headlineSmall, color: Colors.onSurface },
+  greetingDate: { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
+
   weatherCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: Colors.surfaceContainerHigh, borderRadius: Radii.xl,
-    paddingHorizontal: 14, paddingVertical: 12, minWidth: 140,
+    backgroundColor: Colors.primaryContainer,
+    padding: Spacing.xl,
+    gap: Spacing.lg,
+    ...Elevation.level1,
   },
-  weatherTitle:  { fontSize: 9, fontWeight: '800', letterSpacing: 1.5, color: Colors.onSurfaceVariant },
-  weatherTemp:   { fontSize: 24, fontWeight: '900', color: Colors.onSurface },
-  weatherCond:   { fontSize: 12, fontWeight: '600', color: Colors.onSurfaceVariant, maxWidth: 80 },
+  weatherLoading: { gap: Spacing.sm },
+  weatherTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  weatherReading: { flex: 1, gap: 2 },
+  temperature: { ...Type.displaySmall, color: Colors.onPrimaryContainer, fontWeight: '500' },
+  condition: {
+    ...Type.bodyLarge,
+    color: Colors.onPrimaryContainer,
+    textTransform: 'capitalize',
+    opacity: 0.85,
+  },
+  weatherMetrics: { flexDirection: 'row', gap: Spacing.xl },
+  metric: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  metricText: { ...Type.labelLarge, color: Colors.onPrimaryContainer },
+  staleNote: { ...Type.bodySmall, color: Colors.onPrimaryContainer, opacity: 0.7 },
 
-  // Field selector
-  fieldScroll:   { marginHorizontal: -4 },
+  loadingBlock: { gap: Spacing.md },
+
+  fieldRow: { flexDirection: 'row', gap: Spacing.sm, paddingRight: Spacing.lg },
   fieldChip: {
-    paddingHorizontal: 16, paddingVertical: 10, borderRadius: Radii.xl,
-    backgroundColor: Colors.surfaceContainerHigh, marginHorizontal: 4, alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: Shape.medium,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    gap: 2,
   },
-  fieldChipActive:    { backgroundColor: Colors.primary },
-  fieldChipText:      { fontSize: 14, fontWeight: '700', color: Colors.onSurface },
-  fieldChipTextActive:{ color: '#fff' },
-  fieldChipArea:      { fontSize: 11, color: Colors.onSurfaceVariant, marginTop: 2 },
+  fieldChipSelected: { backgroundColor: Colors.secondaryContainer, borderColor: 'transparent' },
+  fieldName: { ...Type.labelLarge, color: Colors.onSurfaceVariant },
+  fieldNameSelected: { color: Colors.onSecondaryContainer },
+  fieldArea: { ...Type.bodySmall, color: Colors.outline },
+  fieldAreaSelected: { color: Colors.onSecondaryContainer, opacity: 0.75 },
 
-  // NPK stats
-  statRow:       { flexDirection: 'row', gap: 8 },
-  statChip:      { flex: 1, borderRadius: Radii.lg, paddingVertical: 10, paddingHorizontal: 12, alignItems: 'center', gap: 2 },
-  statChipValue: { fontSize: 13, fontWeight: '800' },
-  statChipLabel: { fontSize: 10, fontWeight: '600', color: Colors.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.sm },
+  sectionTitle: { ...Type.titleMedium, color: Colors.onSurface, flex: 1 },
+  sectionMeta: { ...Type.bodySmall, color: Colors.onSurfaceVariant },
 
-  // Field info card
-  fieldInfoCard: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radii.xl,
-    padding: 16,
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04, shadowRadius: 12, elevation: 2,
+  soilCard: { padding: Spacing.lg, gap: Spacing.md },
+  nutrientRow: { flexDirection: 'row', gap: Spacing.sm },
+  nutrient: {
+    flex: 1,
+    paddingVertical: Spacing.md,
+    borderRadius: Shape.medium,
+    alignItems: 'center',
+    gap: 2,
   },
-  fieldInfoLeft:  { gap: 2 },
-  fieldInfoName:  { fontSize: 16, fontWeight: '700', color: Colors.onSurface },
-  fieldInfoArea:  { fontSize: 13, color: Colors.onSurfaceVariant },
-  fieldInfoBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: Colors.primaryFixed, alignItems: 'center', justifyContent: 'center',
-  },
-  regionalBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: Colors.primaryFixed, borderRadius: Radii.lg,
-    paddingHorizontal: 10, paddingVertical: 6,
-  },
-  regionalText: { fontSize: 12, color: Colors.onSurface, flex: 1, lineHeight: 16 },
+  nutrientValue: { ...Type.titleMedium },
+  nutrientLabel: { ...Type.labelSmall, opacity: 0.8 },
+  note: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  noteText: { ...Type.bodySmall, color: Colors.onSurfaceVariant, flex: 1 },
 
-  // Tasks
-  sectionTitle:  { fontSize: 13, fontWeight: '900', letterSpacing: 1.2, color: Colors.onSurface, textTransform: 'uppercase', marginTop: 4 },
-  taskCard: {
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radii.xxl,
-    padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12,
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.05, shadowRadius: 16, elevation: 3,
+  tasksSection: { gap: Spacing.md },
+  taskList: { gap: Spacing.sm },
+  task: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.md },
+  taskIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: Shape.medium,
+    backgroundColor: Colors.secondaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  taskIconWrap: {
-    width: 48, height: 48, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center',
+  taskBody: { flex: 1, gap: 2 },
+  taskTitle: { ...Type.titleSmall, color: Colors.onSurface },
+  taskDue: { ...Type.bodySmall, color: Colors.onSurfaceVariant },
+  taskDone: {
+    width: 36,
+    height: 36,
+    borderRadius: Shape.full,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  taskCardLeft:  { flex: 1, gap: 4 },
-  taskTag:       { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  taskTagText:   { fontSize: 10, fontWeight: '900', color: Colors.onErrorContainer, letterSpacing: 0.5 },
-  taskTitle:     { fontSize: 15, fontWeight: '700', color: Colors.onSurface },
-  taskDesc:      { fontSize: 13, color: Colors.onSurfaceVariant, lineHeight: 18 },
-  taskDue:       { fontSize: 12, color: Colors.outline, fontStyle: 'italic' },
-  taskDoneBtn: {
-    width: 44, height: 44, borderRadius: 14,
-    backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center',
-  },
-
-  // No tasks
-  noTasksBox: {
-    alignItems: 'center', gap: 8, paddingVertical: 32,
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radii.xxl,
-  },
-  noTasksText:  { fontSize: 18, fontWeight: '800', color: Colors.onSurface },
-  noTasksSub:   { fontSize: 13, color: Colors.onSurfaceVariant },
-
-  // Aerial
-  aerialCard: {
-    height: 200, borderRadius: Radii.xxl, overflow: 'hidden',
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12, shadowRadius: 24, elevation: 8,
-  },
-  aerialImage:      { width: '100%', height: '100%' },
-  aerialLiveBadge: {
-    position: 'absolute', top: 16, left: 16,
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: Radii.full,
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
-  },
-  liveDot:          { width: 7, height: 7, borderRadius: 4, backgroundColor: '#22c55e' },
-  liveBadgeText:    { fontSize: 10, fontWeight: '900', letterSpacing: 1.5, color: '#fff' },
-  aerialBottom:     { position: 'absolute', bottom: 16, left: 16 },
-  aerialTitle:      { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: -0.4 },
-  aerialSub:        { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
-
-  // Empty state
-  emptyWrap: {
-    alignItems: 'center', gap: 12, paddingVertical: 32,
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radii.xxl, padding: 24,
-  },
-  emptyIcon: {
-    width: 88, height: 88, borderRadius: Radii.xl,
-    backgroundColor: Colors.primaryFixed, alignItems: 'center', justifyContent: 'center',
-  },
-  emptyTitle:    { fontSize: 22, fontWeight: '800', color: Colors.onSurface },
-  emptyDesc: {
-    fontSize: 14, color: Colors.onSurfaceVariant, textAlign: 'center',
-    lineHeight: 20, maxWidth: 280,
-  },
-  emptyBtn:      { width: '100%', borderRadius: Radii.xl, overflow: 'hidden', marginTop: 4 },
-  emptyBtnGrad: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: 52, gap: 8,
-  },
-  emptyBtnText:  { fontSize: 16, fontWeight: '700', color: '#fff' },
+  noTasks: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, padding: Spacing.lg },
+  noTasksText: { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
 });

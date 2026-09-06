@@ -4,10 +4,18 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: EAS build profile
+        required: true
+        default: production
+        type: choice
+        options: [preview, production]
 
 jobs:
   build:
-    name: EAS Build (android)
+    name: Android build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,21 +23,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: npm
 
-      - name: Install dependencies
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install
         run: npm ci --legacy-peer-deps
 
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
-
-      - name: EAS Build
+      - name: Build
         working-directory: apps/mobile
-        run: eas build --platform android --non-interactive --profile production
+        run: eas build --platform android --non-interactive --profile ${{ inputs.profile || 'production' }}
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # app.config.js falls back to process.env when the root .env is absent,
+          # which is always the case in CI.
+          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
-          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
-          EXPO_PUBLIC_OWM_KEY: ${{ secrets.EXPO_PUBLIC_OWM_KEY }}
           EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY }}
