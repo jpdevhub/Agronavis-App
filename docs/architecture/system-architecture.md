@@ -86,15 +86,24 @@ Agronavis/
 │       ├── websocket/       Socket.IO server and emitters
 │       └── jobs/            weather and market pollers
 │
-├── apps/mobile/             Expo app
-│   ├── services/            api client + typed endpoints
-│   ├── hooks/               React Query hooks, one per domain
-│   ├── components/ui/       Material 3 primitives
-│   └── app/                 expo-router screens
+├── app/                     expo-router screens — the app's routes
+├── components/              shared UI
+├── hooks/                   React Query hooks, one per domain
+├── services/                api client + typed endpoints
+├── constants/               theme tokens and env
+├── store/                   Zustand stores
+├── features/                self-contained flows (2FA)
+├── assets/                  icons, splash, brand
+├── app.config.js            the Expo app's config
 │
 ├── docs/                    Architecture, API, deployment, external services
 └── render.yaml              Render blueprint for the API
 ```
+
+The repo root **is** the Expo project: `app/` is expo-router's routes directory
+and the root `package.json` carries the app's dependencies. `backend` and
+`packages/*` are npm workspaces underneath it, so one `npm install` sets up
+everything and the API imports `@agronavis/shared-types` as a normal dependency.
 
 Each workspace keeps its own `package.json` because npm workspaces and Expo
 require it. Everything else — scripts, formatting, TypeScript config, env,

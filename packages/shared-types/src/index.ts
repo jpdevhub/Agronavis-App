@@ -1,4 +1,3 @@
-// ─── @agronavis/shared-types ─────────────────────────────────────────────────
 // The single contract shared by the API, the mobile app and (later) the
 // enterprise web console.
 //

@@ -44,8 +44,6 @@ interface DraftAdvisory {
 const today = (): string => new Date().toISOString().slice(0, 10);
 const hoursFromNow = (h: number): string => new Date(Date.now() + h * 3_600_000).toISOString();
 
-// ── Rules ────────────────────────────────────────────────────────────────────
-
 /**
  * Irrigation advice from the FAO-56 water balance: ET₀ leaving the field minus
  * rainfall entering it, accumulated over the last three days.
@@ -174,8 +172,6 @@ export function buildPestAdvisory(disease: string, confidence: number): DraftAdv
     metadata: { disease, confidence },
   };
 }
-
-// ── Persistence ──────────────────────────────────────────────────────────────
 
 async function insertDrafts(
   farmerId: string,

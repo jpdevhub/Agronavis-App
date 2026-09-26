@@ -15,10 +15,11 @@ services:
     branch: main
     healthCheckPath: /health
 
-    # Only the API's dependency tree — the Expo app's native packages would add
-    # ~700 MB and several minutes to every build for no benefit.
-    buildCommand: npm ci --workspace=@agronavis/backend --include-workspace-root && npm run build --workspace=@agronavis/backend
-    startCommand: npm run start --workspace=@agronavis/backend
+    # Only the API's dependency tree. The repo root is the Expo project, so a
+    # bare `npm ci` would also pull in React Native — hundreds of megabytes the
+    # server never loads. `--workspace=backend` installs that workspace alone.
+    buildCommand: npm ci --workspace=backend && npm run build --prefix backend
+    startCommand: npm run start --prefix backend
 
     envVars:
       - key: NODE_ENV

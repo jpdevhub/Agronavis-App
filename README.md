@@ -23,18 +23,24 @@ still blank.
 
 ## Layout
 
+The repo root **is** the React Native project. `app/` is expo-router's routes
+directory; `backend` and `packages/*` are npm workspaces underneath it.
+
 | Path | What it is |
 |---|---|
-| `apps/mobile` | Expo React Native app (Expo Router, React Query, Material 3) |
-| `backend` | Express REST API, Socket.IO and the cron pollers |
-| `packages/shared-types` | Type contracts shared by both — no runtime code |
-| `supabase/migrations` | The only schema definition |
-| `docs` | Architecture, API reference, deployment, external services |
+| `app/` | Expo Router screens — the app's routes |
+| `components/` `hooks/` `services/` `store/` `constants/` `features/` | App source |
+| `assets/` | Icons, splash and brand images |
+| `backend/` | Express REST API, Socket.IO and the cron pollers |
+| `packages/shared-types/` | Type contracts shared by the app and the API |
+| `supabase/migrations/` | The only schema definition |
+| `docs/` | Architecture, API reference, deployment, external services |
+| `.env` | The one environment file, read by both the app and the API |
 | `render.yaml` | Render blueprint for the API |
 
-One `package.json` with the scripts, one `.env`, one `.gitignore`, one
-TypeScript base config — all at the root. Each workspace keeps a minimal
-`package.json` for its own dependencies, which npm workspaces and Expo require.
+One `package.json`, one `.env`, one `.gitignore`, one `tsconfig` — all at the
+root. `backend` and `packages/shared-types` keep a minimal `package.json` each,
+which npm workspaces require. A single `npm install` sets up everything.
 
 ## Documentation
 
@@ -51,9 +57,11 @@ TypeScript base config — all at the root. Each workspace keeps a minimal
 ```bash
 npm run dev            # API and app together
 npm run dev:api        # API only
-npm run dev:mobile     # Expo only
+npm start              # Expo only (alias: npm run dev:app)
+npm run web            # Expo in the browser
+npm run android        # native Android build and run
 
-npm run verify         # typecheck + lint + test
+npm run verify         # typecheck + lint + test, app and API
 npm run typecheck
 npm run lint
 npm test
@@ -62,8 +70,9 @@ npm run db:link        # link the Supabase project named in .env
 npm run db:push        # apply pending migrations
 npm run db:types       # regenerate database.types.ts from the live schema
 
-npm run build          # compile the API
-npm run mobile:build   # EAS Android build
+npm run build:api      # compile the API to backend/dist
+npm run start:api      # run the compiled API (what Render runs)
+npm run build:android  # EAS Android build
 ```
 
 ## How it fits together

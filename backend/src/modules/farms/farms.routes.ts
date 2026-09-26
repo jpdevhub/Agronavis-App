@@ -9,7 +9,6 @@ export const farmRoutes = Router();
 
 farmRoutes.use(requireAuth);
 
-// ── Fields. Declared before /:id so "fields" is never read as a farm id. ─────
 farmRoutes.get('/fields', handler(farmsController.listFields));
 farmRoutes.post('/fields', validate(createFieldSchema), handler(farmsController.createField));
 farmRoutes.get('/fields/:id', validate(idParamSchema, 'params'), handler(farmsController.getField));
@@ -25,7 +24,6 @@ farmRoutes.delete(
   handler(farmsController.deleteField),
 );
 
-// ── Farms ────────────────────────────────────────────────────────────────────
 farmRoutes.get('/', handler(farmsController.listFarms));
 farmRoutes.get('/:id', validate(idParamSchema, 'params'), handler(farmsController.getFarm));
 farmRoutes.patch(

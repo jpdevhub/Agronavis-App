@@ -42,8 +42,6 @@ function requireOwmKey(): string {
   return env.OPENWEATHER_API_KEY;
 }
 
-// ── Current conditions ───────────────────────────────────────────────────────
-
 async function getCurrent(lat: number, lon: number): Promise<CurrentWeather> {
   return currentCache.wrap(coordKey(lat, lon), async () => {
     try {
@@ -72,8 +70,6 @@ async function getCurrent(lat: number, lon: number): Promise<CurrentWeather> {
     }
   });
 }
-
-// ── 5-day forecast ───────────────────────────────────────────────────────────
 
 async function getForecast(lat: number, lon: number): Promise<ForecastDay[]> {
   return forecastCache.wrap(coordKey(lat, lon), async () => {
@@ -120,8 +116,6 @@ async function getForecast(lat: number, lon: number): Promise<ForecastDay[]> {
     }
   });
 }
-
-// ── NASA POWER + FAO-56 ET₀ (free, no API key) ───────────────────────────────
 
 const yyyymmdd = (d: Date): string => d.toISOString().slice(0, 10).replace(/-/g, '');
 
@@ -206,8 +200,6 @@ export function waterDeficit(solar: SolarDay[], days = 3): number | null {
   const deficit = recent.reduce((sum, d) => sum + (d.et0 - d.precipitation), 0);
   return Math.round(deficit * 10) / 10;
 }
-
-// ── Public surface ───────────────────────────────────────────────────────────
 
 export const weatherService = {
   getCurrent,

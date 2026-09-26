@@ -39,7 +39,6 @@ const envSchema = z
     RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
 
-    // ── Supabase — the only datastore ──────────────────────────────────────
     SUPABASE_URL: z.string().url('SUPABASE_URL must be your https://<ref>.supabase.co URL'),
     SUPABASE_SERVICE_ROLE_KEY: z
       .string()
@@ -47,12 +46,10 @@ const envSchema = z
     /** Only needed by projects still issuing legacy HS256 access tokens. */
     SUPABASE_JWT_SECRET: z.string().optional(),
 
-    // ── Third-party APIs (secrets — never reach the client) ────────────────
     OPENWEATHER_API_KEY: z.string().optional(),
     AGMARKNET_API_KEY: z.string().optional(),
     TOTP_ENCRYPTION_KEY: z.string().optional(),
 
-    // ── Background jobs ───────────────────────────────────────────────────
     ENABLE_JOBS: z
       .enum(['true', 'false'])
       .default('true')

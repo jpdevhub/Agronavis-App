@@ -121,8 +121,6 @@ export function initSocketServer(httpServer: HttpServer): AgronavisServer {
   return io;
 }
 
-// ── Emitters ─────────────────────────────────────────────────────────────────
-
 export function emitWeatherUpdate(farmId: string, payload: Omit<WeatherUpdateEvent, 'farmId'>): void {
   io?.to(Rooms.farm(farmId)).emit('weather:update', { ...payload, farmId });
 }

@@ -160,8 +160,6 @@ export const cropsService = {
     if (error) throw fromPostgrest(error, 'Delete crop');
   },
 
-  // ── Disease scans ─────────────────────────────────────────────────────────
-
   async listScans(farmerId: string, limit = 20): Promise<CropScan[]> {
     const farmIds = await listOwnedFarmIds(farmerId);
     if (farmIds.length === 0) return [];
@@ -206,8 +204,6 @@ export const cropsService = {
     if (error) throw fromPostgrest(error, 'Save scan');
     return toScan(data as CropScanRow);
   },
-
-  // ── Reference data ────────────────────────────────────────────────────────
 
   /** The agronomy catalogue: what can be grown, and what each variety needs. */
   async listVarieties(cropType?: string): Promise<CropVariety[]> {

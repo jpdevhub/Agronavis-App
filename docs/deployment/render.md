@@ -22,13 +22,14 @@ it and provisions the service; you supply four secrets.
 4. Deploy. The build runs:
 
    ```
-   npm ci --workspace=@agronavis/backend --include-workspace-root
-   npm run build --workspace=@agronavis/backend
+   npm ci --workspace=backend
+   npm run build --prefix backend
    ```
 
-   That installs only the API's dependency tree — roughly 285 MB and under a
-   minute. Installing the whole workspace would pull in Expo's native packages,
-   about 700 MB the server never loads.
+   The repo root is the Expo project, so a bare `npm ci` would install React
+   Native too — hundreds of megabytes the server never loads.
+   `--workspace=backend` installs that workspace and its `packages/*`
+   dependencies and nothing else.
 
 Render sets `PORT`; the server reads it and binds all interfaces. `/health` is
 the health check and is exempt from rate limiting.
