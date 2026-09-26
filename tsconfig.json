@@ -1,9 +1,73 @@
 {
-  "extends": "./tsconfig.base.json",
-  "files": [],
-  "references": [
-    { "path": "./packages/shared-types" },
-    { "path": "./backend" },
-    { "path": "./apps/mobile" }
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
+    "allowJs": true,
+    "jsx": "react-native",
+    "noEmit": true,
+    "strict": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@app/*": [
+        "./app/*"
+      ],
+      "@components/*": [
+        "./components/*"
+      ],
+      "@features/*": [
+        "./features/*"
+      ],
+      "@store/*": [
+        "./store/*"
+      ],
+      "@services/*": [
+        "./services/*"
+      ],
+      "@hooks/*": [
+        "./hooks/*"
+      ],
+      "@constants/*": [
+        "./constants/*"
+      ],
+      "@utils/*": [
+        "./utils/*"
+      ],
+      "@assets/*": [
+        "./assets/*"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "expo-env.d.ts",
+    ".expo/types/**/*.d.ts",
+    ".expo/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "backend",
+    "packages",
+    "supabase",
+    "scripts",
+    "docs",
+    "notebooks",
+    "android",
+    "ios",
+    "dist",
+    "krishi-sathi-ai",
+    "KrishiSaathi-AI"
   ]
 }
