@@ -5,6 +5,8 @@ import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { setAppLanguage } from '@/i18n';
+import { useFarmer } from '@/hooks/useFarmer';
 import { Colors, Spacing, Type } from '@/constants/theme';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { ConnectivityProvider, NetworkBanner } from '@/shared/network';
@@ -38,6 +40,10 @@ function AppShell() {
 
   usePushNotifications();
   useSyncOnReconnect();
+
+  // The farmer's stored language beats the device locale.
+  const { data: profile } = useFarmer();
+  useEffect(() => setAppLanguage(profile?.language), [profile?.language]);
 
   useEffect(() => initialize(), [initialize]);
 
@@ -80,7 +86,7 @@ function AppShell() {
         if (twoFactor.enabled && inAuth) {
           router.replace('/(auth)/two-factor' as never);
         } else if (!profile.onboardingComplete) {
-          router.replace('/(onboarding)/step1');
+          router.replace('/(onboarding)/language' as never);
         } else if (inAuth) {
           router.replace('/(tabs)/dashboard');
         }

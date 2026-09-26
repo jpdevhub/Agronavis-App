@@ -37,6 +37,7 @@ export function useSahayak() {
   const [modelPath, setModelPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [language, setLanguage] = useState<string | null>(null);
   const [messages, setMessages] = useState<SahayakMessage[]>([]);
   const [streaming, setStreaming] = useState(false);
   const streamRef = useRef('');
@@ -53,7 +54,11 @@ export function useSahayak() {
     () => ({ farmer, fields, weather, soil: soil ?? undefined, advisories, pathname }),
     [farmer, fields, weather, soil, advisories, pathname],
   );
-  const systemPrompt = useMemo(() => buildSahayakPrompt(context), [context]);
+  const replyLanguage = language ?? farmer?.language ?? 'en';
+  const systemPrompt = useMemo(
+    () => buildSahayakPrompt({ ...context, replyLanguage }),
+    [context, replyLanguage],
+  );
   const summary = useMemo(() => contextSummary(context), [context]);
 
   useEffect(() => {
@@ -144,6 +149,8 @@ export function useSahayak() {
   }, []);
 
   return {
+    language: replyLanguage,
+    setLanguage,
     variant,
     status,
     error,

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, Image, ActivityIndicator,
@@ -7,7 +8,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useFarmer } from '@/hooks/useFarmer';
+import { useFarmer, useUpdateFarmer } from '@/hooks/useFarmer';
+import { LANGUAGES } from '@/constants';
+import { setAppLanguage } from '@/i18n';
 
 function initialsOf(name: string | undefined, email: string | undefined): string {
   const source = (name || email || 'A').trim();
@@ -19,6 +22,8 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const signOut = useAuthStore((state) => state.signOut);
   const { data: farmer, isLoading } = useFarmer();
+  const updateFarmer = useUpdateFarmer();
+  const [langOpen, setLangOpen] = useState(false);
 
   const locationLabel = [farmer?.district, farmer?.state].filter(Boolean).join(', ');
 
@@ -75,6 +80,38 @@ export default function ProfileScreen() {
             <Row icon="map" label="State" value={farmer?.state ?? 'Not set'} />
             <Row icon="location-city" label="District" value={farmer?.district ?? 'Not set'} />
           </View>
+
+          <TouchableOpacity
+            style={styles.securityBtn}
+            onPress={() => setLangOpen((v) => !v)}
+            activeOpacity={0.85}
+          >
+            <MaterialIcons name="translate" size={20} color={Colors.primary} />
+            <Text style={styles.securityText}>
+              {LANGUAGES.find((l) => l.code === farmer?.language)?.label ?? 'English'}
+            </Text>
+            <MaterialIcons name={langOpen ? 'expand-less' : 'expand-more'} size={22} color={Colors.outline} />
+          </TouchableOpacity>
+
+          {langOpen && (
+            <View style={styles.langList}>
+              {LANGUAGES.map((l) => (
+                <TouchableOpacity
+                  key={l.code}
+                  onPress={() => {
+                    setAppLanguage(l.code);
+                    updateFarmer.mutate({ language: l.code } as never);
+                    setLangOpen(false);
+                  }}
+                  style={[styles.langRow, l.code === farmer?.language && styles.langRowActive]}
+                >
+                  <Text style={[styles.langRowText, l.code === farmer?.language && styles.langRowTextActive]}>
+                    {l.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           <TouchableOpacity
             style={styles.securityBtn}
@@ -161,6 +198,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceContainerLowest,
   },
   securityText: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.onSurface },
+  langList: { gap: 8 },
+  langRow: {
+    paddingHorizontal: 18, paddingVertical: 14, borderRadius: Radii.xl,
+    backgroundColor: Colors.surfaceContainerLowest,
+  },
+  langRowActive: { backgroundColor: Colors.primary },
+  langRowText: { fontSize: 15, color: Colors.onSurface },
+  langRowTextActive: { color: Colors.onPrimary, fontWeight: '700' },
 
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',

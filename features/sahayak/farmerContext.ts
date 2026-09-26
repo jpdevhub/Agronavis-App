@@ -1,5 +1,18 @@
 import type { Advisory, CurrentWeather, FarmField, FarmerProfile, SoilHealth } from '@agronavis/shared-types';
 import { isPlausibleField } from '@/constants/field';
+
+const LANGUAGE_NAME: Record<string, string> = {
+  en: 'English', hi: 'Hindi', mr: 'Marathi', pa: 'Punjabi',
+  gu: 'Gujarati', te: 'Telugu', kn: 'Kannada',
+};
+
+/** Stated as a hard instruction — models drift back to English otherwise. */
+const LANGUAGE_RULE = (code: string | undefined): string => {
+  const name = LANGUAGE_NAME[code ?? 'en'] ?? 'English';
+  return name === 'English'
+    ? '- Write the entire answer in simple English.'
+    : `- Write the entire answer in ${name}, in its own script. Do not answer in English.`;
+};
 import { platformSection, screenInfoFor } from './screenContext';
 
 export interface FarmerContext {
@@ -10,6 +23,8 @@ export interface FarmerContext {
   advisories: Advisory[];
   /** Route the farmer is on, so directions match what is in front of them. */
   pathname?: string;
+  /** Language code the answer must be written in. */
+  replyLanguage?: string;
 }
 
 const line = (label: string, value: string | number | null | undefined): string | null =>
@@ -55,7 +70,7 @@ export function buildSahayakPrompt(context: FarmerContext): string {
     'You are Sahayak, an agricultural assistant for Indian smallholder farmers.',
     '',
     'How to answer:',
-    '- Reply in the farmer\'s preferred language when one is given, otherwise in simple English.',
+    LANGUAGE_RULE(context.replyLanguage),
     '- Be specific and practical. Name quantities, timings and locally available inputs.',
     '- Ground every answer in the farm details below. Never invent a measurement.',
     '- If the details do not cover the question, say what you would need to know.',
