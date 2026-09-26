@@ -2,6 +2,8 @@ import axios from 'axios';
 import type {
   DashboardPrice,
   MandiPrice,
+  MandiSearchResult,
+  MandiSource,
   PriceDirection,
   PriceTrend,
 } from '@agronavis/shared-types';
@@ -16,6 +18,8 @@ import { TtlCache } from '../../shared/cache';
  * in-process for an hour and mirrored into `market_prices` for offline reads.
  */
 const AGMARKNET_RESOURCE = 'https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070';
+/** eNAM trade data. Covers mandis Agmarknet reports late or not at all. */
+const ENAM_RESOURCE = 'https://api.data.gov.in/resource/5d623a19-f2ca-4b1f-9e3e-24e340f86ef2';
 
 const priceCache = new TtlCache<MandiPrice[]>(60 * 60_000);
 
@@ -101,7 +105,11 @@ function toMandiPrice(record: Record<string, unknown>, fallbackCommodity: string
   };
 }
 
-async function queryAgmarknet(filters: Record<string, string>, limit: number): Promise<Record<string, unknown>[]> {
+async function queryDataGov(
+  resource: string,
+  filters: Record<string, string>,
+  limit: number,
+): Promise<Record<string, unknown>[]> {
   if (!env.AGMARKNET_API_KEY) {
     logger.warn('AGMARKNET_API_KEY is not set — returning no mandi prices');
     return [];
@@ -115,9 +123,12 @@ async function queryAgmarknet(filters: Record<string, string>, limit: number): P
     params[`filters[${field}]`] = value;
   }
 
-  const { data } = await axios.get(AGMARKNET_RESOURCE, { params, timeout: 15_000 });
+  const { data } = await axios.get(resource, { params, timeout: 15_000 });
   return (data?.records ?? []) as Record<string, unknown>[];
 }
+
+const queryAgmarknet = (filters: Record<string, string>, limit: number) =>
+  queryDataGov(AGMARKNET_RESOURCE, filters, limit);
 
 async function getLivePrices(commodity: string, state: string, limit = 30): Promise<MandiPrice[]> {
   const normState = normaliseState(state);
@@ -226,7 +237,161 @@ async function persist(state: string, trend: PriceTrend, sample: MandiPrice | un
   if (error) logger.warn('Market price not cached', { error: error.message });
 }
 
+/** eNAM publishes different field names for the same idea. */
+function toEnamPrice(record: Record<string, unknown>, state: string): MandiPrice | null {
+  const modal = Number(pick(record, 'modal_price', 'Modal_Price', 'modal_price_rs', 'price'));
+  if (!Number.isFinite(modal) || modal <= 0) return null;
+
+  const rawDate = pick(record, 'arrival_date', 'Arrival_Date', 'created_at', 'date');
+  const [dd, mm, yyyy] = rawDate.split('/');
+  const arrivalDate =
+    yyyy && mm && dd
+      ? `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
+      : rawDate || new Date().toISOString().slice(0, 10);
+
+  return {
+    commodity: pick(record, 'commodity', 'Commodity', 'commodity_name', 'crop_name') || 'Unknown',
+    variety: pick(record, 'variety', 'Variety') || 'Common',
+    state: pick(record, 'state', 'State') || state,
+    district: pick(record, 'district', 'District', 'apmc_district') || '',
+    market: pick(record, 'market', 'Market', 'apmc_name', 'APMC_Name', 'mandi') || '',
+    minPrice: Number(pick(record, 'min_price', 'Min_Price', 'min_price_rs')) || 0,
+    maxPrice: Number(pick(record, 'max_price', 'Max_Price', 'max_price_rs')) || 0,
+    modalPrice: modal,
+    unit: 'Quintal',
+    arrivalDate,
+  };
+}
+
+/** Mirrors fetched rows so a later outage has something to serve. */
+async function cacheRows(rows: MandiPrice[]): Promise<void> {
+  if (rows.length === 0) return;
+  const { error } = await db.from('market_prices').upsert(
+    rows.map((row) => ({
+      commodity: row.commodity,
+      state: row.state,
+      district: row.district,
+      market: row.market,
+      variety: row.variety,
+      min_price: row.minPrice,
+      max_price: row.maxPrice,
+      modal_price: row.modalPrice,
+      unit: row.unit,
+      arrival_date: row.arrivalDate,
+      fetched_at: new Date().toISOString(),
+    })),
+    { onConflict: 'commodity,state,market,arrival_date' },
+  );
+  if (error) logger.warn('Mandi rows not cached', { error: error.message });
+}
+
+/** Rows already mirrored into `market_prices`, used when every upstream is dry. */
+async function fromCache(state: string, district: string, limit: number): Promise<MandiPrice[]> {
+  let query = db
+    .from('market_prices')
+    .select('*')
+    .eq('state', normaliseState(state))
+    .order('arrival_date', { ascending: false })
+    .limit(limit);
+  if (district) query = query.ilike('district', district);
+
+  const { data, error } = await query;
+  if (error) {
+    logger.warn('Cached mandi read failed', { error: error.message });
+    return [];
+  }
+  return (data ?? []).map((row) => ({
+    commodity: row.commodity,
+    variety: row.variety,
+    state: row.state,
+    district: row.district,
+    market: row.market,
+    minPrice: Number(row.min_price),
+    maxPrice: Number(row.max_price),
+    modalPrice: Number(row.modal_price),
+    unit: row.unit,
+    arrivalDate: row.arrival_date,
+  }));
+}
+
+/**
+ * Mandi prices for a place, narrowing outward until something answers:
+ * Agmarknet district, Agmarknet state, eNAM district, eNAM state, then the
+ * rows we already mirrored. A district often reports nothing on a given day,
+ * and a silent empty list reads as a broken screen.
+ */
+async function searchMandi(opts: {
+  state: string;
+  district?: string;
+  commodity?: string;
+  limit?: number;
+}): Promise<MandiSearchResult> {
+  const state = normaliseState(opts.state);
+  const district = opts.district?.trim() ?? '';
+  const limit = opts.limit ?? 60;
+
+  const commodityFilters = opts.commodity
+    ? synonymsFor(opts.commodity).map((name) => ({ Commodity: name }))
+    : [{}];
+
+  const attempts: { source: MandiSource; resource: string; filters: Record<string, string> }[] = [];
+  for (const commodity of commodityFilters) {
+    if (district) {
+      attempts.push({
+        source: 'agmarknet_district',
+        resource: AGMARKNET_RESOURCE,
+        filters: { State: state, District: district, ...commodity },
+      });
+    }
+    attempts.push({
+      source: 'agmarknet_state',
+      resource: AGMARKNET_RESOURCE,
+      filters: { State: state, ...commodity },
+    });
+  }
+  if (district) {
+    attempts.push({
+      source: 'enam_district',
+      resource: ENAM_RESOURCE,
+      filters: { state, district },
+    });
+  }
+  attempts.push({ source: 'enam_state', resource: ENAM_RESOURCE, filters: { state } });
+
+  for (const attempt of attempts) {
+    try {
+      const records = await queryDataGov(attempt.resource, attempt.filters, limit);
+      const rows = records
+        .map((record) =>
+          attempt.resource === ENAM_RESOURCE
+            ? toEnamPrice(record, state)
+            : toMandiPrice(record, opts.commodity ?? ''),
+        )
+        .filter((row): row is MandiPrice => row !== null);
+      if (rows.length > 0) {
+        // Fire-and-forget: a slow write must not delay the farmer's screen.
+        void cacheRows(rows);
+        return { rows, source: attempt.source, state, district };
+      }
+    } catch (error) {
+      logger.warn('Mandi source failed', {
+        source: attempt.source,
+        error: (error as Error).message,
+      });
+    }
+  }
+
+  const cached = await fromCache(state, district, limit);
+  return {
+    rows: cached,
+    source: cached.length > 0 ? 'cache' : 'none',
+    state,
+    district,
+  };
+}
+
 export const marketService = {
+  searchMandi,
   getLivePrices,
   getPriceTrend,
   getDashboardPrices,

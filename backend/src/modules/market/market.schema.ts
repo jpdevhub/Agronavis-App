@@ -27,3 +27,10 @@ export const dashboardSchema = z.object({
   state: z.string().trim().min(1).max(60),
   crops: cropList,
 });
+
+export const mandiSearchSchema = z.object({
+  state: z.string().trim().min(1).max(60),
+  district: z.string().trim().max(60).optional(),
+  commodity: z.string().trim().max(60).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(60),
+});

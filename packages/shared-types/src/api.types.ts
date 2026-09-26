@@ -13,7 +13,6 @@ import type {
   TaskStatus,
 } from './database.types';
 
-// ── Envelope ─────────────────────────────────────────────────────────────────
 // Every endpoint returns this shape, success or failure. No exceptions.
 
 export interface ApiSuccess<T> {
@@ -30,8 +29,6 @@ export interface ApiFailure {
 }
 
 export type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
-
-// ── Farmer ───────────────────────────────────────────────────────────────────
 
 export interface FarmerProfile {
   id: string;
@@ -68,8 +65,6 @@ export interface UpdateFarmerPayload {
   yearsOfExperience?: number | null;
   onboardingComplete?: boolean;
 }
-
-// ── Farms & fields ───────────────────────────────────────────────────────────
 
 export interface Farm {
   id: string;
@@ -113,8 +108,6 @@ export interface CreateFieldPayload {
   centerLongitude?: number;
 }
 
-// ── Crops & scans ────────────────────────────────────────────────────────────
-
 export interface Crop {
   id: string;
   farmId: string;
@@ -138,8 +131,6 @@ export interface CropScan {
   recommendation: string | null;
   scannedAt: string;
 }
-
-// ── Reference data ───────────────────────────────────────────────────────────
 
 export interface CropVariety {
   id: string;
@@ -168,8 +159,6 @@ export interface DiseaseReference {
   imageUrl: string | null;
 }
 
-// ── Tasks ────────────────────────────────────────────────────────────────────
-
 export interface FarmTask {
   id: string;
   farmId: string;
@@ -183,8 +172,6 @@ export interface FarmTask {
   actionData: Json | null;
   createdAt: string;
 }
-
-// ── Soil ─────────────────────────────────────────────────────────────────────
 
 export type NutrientLevel = 'High' | 'Medium' | 'Low' | 'N/A';
 
@@ -200,8 +187,6 @@ export interface SoilHealth {
   testedDate: string | null;
   levels: { nitrogen: NutrientLevel; phosphorus: NutrientLevel; potassium: NutrientLevel };
 }
-
-// ── Weather ──────────────────────────────────────────────────────────────────
 
 export interface CurrentWeather {
   temp: number;
@@ -246,8 +231,6 @@ export interface WeatherBundle {
   fetchedAt: string;
 }
 
-// ── Market ───────────────────────────────────────────────────────────────────
-
 export interface MandiPrice {
   commodity: string;
   variety: string;
@@ -259,6 +242,22 @@ export interface MandiPrice {
   modalPrice: number;
   unit: string;
   arrivalDate: string;
+}
+
+/** Which upstream answered, so the UI can be honest about the source. */
+export type MandiSource =
+  | 'agmarknet_district'
+  | 'agmarknet_state'
+  | 'enam_district'
+  | 'enam_state'
+  | 'cache'
+  | 'none';
+
+export interface MandiSearchResult {
+  rows: MandiPrice[];
+  source: MandiSource;
+  state: string;
+  district: string;
 }
 
 export interface PriceTrend {
@@ -281,8 +280,6 @@ export interface DashboardPrice {
   arrivalDate: string;
 }
 
-// ── Advisory ─────────────────────────────────────────────────────────────────
-
 export interface Advisory {
   id: string;
   farmId: string | null;
@@ -297,8 +294,6 @@ export interface Advisory {
   metadata: Json;
   createdAt: string;
 }
-
-// ── Community ────────────────────────────────────────────────────────────────
 
 export interface PostAuthor {
   id: string;
@@ -331,8 +326,6 @@ export interface CommunityReply {
   isOwn: boolean;
 }
 
-// ── Notifications ────────────────────────────────────────────────────────────
-
 export interface AppNotification {
   id: string;
   title: string;
@@ -342,8 +335,6 @@ export interface AppNotification {
   read: boolean;
   createdAt: string;
 }
-
-// ── Two-factor auth ──────────────────────────────────────────────────────────
 
 export interface TwoFactorSetup {
   qrCodeDataUrl: string;
@@ -355,8 +346,6 @@ export interface TwoFactorStatus {
   enabled: boolean;
   backupCodesRemaining: number;
 }
-
-// ── Storage ──────────────────────────────────────────────────────────────────
 
 export type UploadBucket = 'avatars' | 'community-media' | 'crop-scans';
 

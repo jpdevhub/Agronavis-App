@@ -3,6 +3,17 @@ import { ok } from '../../shared/http';
 import { marketService } from './market.service';
 
 export const marketController = {
+  async searchMandi(req: Request, res: Response) {
+    const query = req.query as unknown as {
+      state: string;
+      district?: string;
+      commodity?: string;
+      limit: number;
+    };
+    const result = await marketService.searchMandi(query);
+    ok(res, result, { count: result.rows.length });
+  },
+
   async getLivePrices(req: Request, res: Response) {
     const { commodity, state, limit } = req.query as unknown as {
       commodity: string;
