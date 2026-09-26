@@ -9,7 +9,7 @@ function toFarm(row: FarmRow): Farm {
     name: row.name,
     areaAcres: row.area_acres,
     soilType: row.soil_type,
-    irrigation: row.irrigation_type,
+    irrigation: row.irrigation,
     latitude: row.latitude,
     longitude: row.longitude,
     state: row.state,
@@ -82,7 +82,7 @@ export const farmsService = {
     if (patch.name !== undefined) update.name = patch.name;
     if (patch.areaAcres !== undefined) update.area_acres = patch.areaAcres;
     if (patch.soilType !== undefined) update.soil_type = patch.soilType;
-    if (patch.irrigation !== undefined) update.irrigation_type = patch.irrigation;
+    if (patch.irrigation !== undefined) update.irrigation = patch.irrigation;
     if (patch.latitude !== undefined) update.latitude = patch.latitude;
     if (patch.longitude !== undefined) update.longitude = patch.longitude;
     if (patch.state !== undefined) update.state = patch.state;
@@ -99,8 +99,6 @@ export const farmsService = {
     if (error) throw fromPostgrest(error, 'Update farm');
     return toFarm(data);
   },
-
-  // ── Fields ────────────────────────────────────────────────────────────────
 
   /** Every field across every farm the caller owns. Drives the field switcher. */
   async listFields(farmerId: string): Promise<FarmField[]> {

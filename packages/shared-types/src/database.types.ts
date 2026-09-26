@@ -2,8 +2,6 @@
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-// ── Column value unions (mirror the SQL CHECK constraints) ───────────────────
-
 export type Language = 'en' | 'hi' | 'mr' | 'pa' | 'gu' | 'te' | 'kn';
 export type IrrigationType = 'drip' | 'sprinkler' | 'flood' | 'furrow' | 'rainfed';
 export type SoilType =
@@ -26,8 +24,6 @@ export type AdvisoryCategory =
 export type AdvisorySeverity = 'low' | 'medium' | 'high' | 'critical';
 export type PriceDirection = 'up' | 'down' | 'stable';
 export type MediaType = 'image' | 'video';
-
-// ── Row shapes ───────────────────────────────────────────────────────────────
 
 export type FarmerRow = {
   id: string;
@@ -64,7 +60,7 @@ export type FarmRow = {
   area_acres: number | null;
   address: string | null;
   soil_type: string | null;
-  irrigation_type: string | null;
+  irrigation: string | null;
   ownership_type: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -72,6 +68,7 @@ export type FarmRow = {
   district: string | null;
   village: string | null;
   water_source: string | null;
+  is_default: boolean;
   /** Legacy blob that held the coordinates before migration 0006 promoted them. */
   location: Json | null;
   created_at: string;
@@ -187,21 +184,39 @@ export type RegionalSoilRow = {
   id: number;
   State: string;
   District: string;
-  n_High: number;
-  n_Medium: number;
-  n_Low: number;
-  p_High: number;
-  p_Medium: number;
-  p_Low: number;
-  k_High: number;
-  k_Medium: number;
-  k_Low: number;
-  pH_Alkaline: number;
-  pH_Acidic: number;
-  pH_Neutral: number;
-  OC_High: number;
-  OC_Medium: number;
-  OC_Low: number;
+  Block: string | null;
+  Scheme: string | null;
+  Cycle: string | null;
+  /** Macronutrient sufficiency percentages. Lower-case by upstream convention. */
+  n_high: number | null;
+  n_medium: number | null;
+  n_low: number | null;
+  p_high: number | null;
+  p_medium: number | null;
+  p_low: number | null;
+  k_high: number | null;
+  k_medium: number | null;
+  k_low: number | null;
+  OC_High: number | null;
+  OC_Medium: number | null;
+  OC_Low: number | null;
+  pH_Acidic: number | null;
+  pH_Neutral: number | null;
+  pH_Alkaline: number | null;
+  EC_Saline: number | null;
+  EC_NonSaline: number | null;
+  S_Deficient: number | null;
+  S_Sufficient: number | null;
+  Fe_Deficient: number | null;
+  Fe_Sufficient: number | null;
+  Zn_Deficient: number | null;
+  Zn_Sufficient: number | null;
+  Cu_Deficient: number | null;
+  Cu_Sufficient: number | null;
+  Mn_Deficient: number | null;
+  Mn_Sufficient: number | null;
+  B_Deficient: number | null;
+  B_Sufficient: number | null;
   created_at: string;
 };
 
@@ -289,8 +304,6 @@ export type CropDiseaseRow = {
   created_at: string;
 };
 
-// ── Supabase client generic ──────────────────────────────────────────────────
-
 /** Insert shape: PK, defaulted and generated columns are optional. */
 type Insertable<T, Optional extends keyof T> = Omit<T, Optional> & Partial<Pick<T, Optional>>;
 type Table<Row, InsertOptional extends keyof Row> = {
@@ -336,7 +349,7 @@ export interface Database {
         | 'area_acres'
         | 'address'
         | 'soil_type'
-        | 'irrigation_type'
+        | 'irrigation'
         | 'ownership_type'
         | 'latitude'
         | 'longitude'
@@ -345,6 +358,7 @@ export interface Database {
         | 'village'
         | 'water_source'
         | 'location'
+        | 'is_default'
       >;
       farm_fields: Table<
         FarmFieldRow,

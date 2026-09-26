@@ -32,6 +32,7 @@
     "socket.io": "^4.8.1",
     "speakeasy": "^2.0.0",
     "winston": "^3.17.0",
+    "ws": "^8.18.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -47,6 +48,7 @@
     "@types/qrcode": "^1.5.5",
     "@types/speakeasy": "^2.0.10",
     "@types/supertest": "^6.0.2",
+    "@types/ws": "^8.5.13",
     "@typescript-eslint/eslint-plugin": "^8.20.0",
     "@typescript-eslint/parser": "^8.20.0",
     "eslint": "^9.18.0",

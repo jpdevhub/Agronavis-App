@@ -1,12 +1,25 @@
+"""Aggregates block-level Soil Health Card rows into district totals.
+
+The source CSV currently covers Bihar, Haryana, Jharkhand, Punjab and Uttar
+Pradesh. Districts outside those states fall back to the state average, and
+states outside them have no estimate at all.
+
+    python supabase/seed/generate_seed.py
+"""
 import csv
 from collections import defaultdict
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+SOURCE = HERE / 'all_states.csv'
+OUTPUT = HERE.parent / 'migrations' / '0009_regional_soil_seed.sql'
 
 data = defaultdict(lambda: defaultdict(int))
 
-with open('/Volumes/T7/Agronavis/backend/db/all_states.csv', 'r') as f:
+with SOURCE.open() as f:
     reader = csv.DictReader(f)
     for row in reader:
-        state = row['State'].title()
+        state = row['State'].title().replace('Prradesh', 'Pradesh')
         district = row['District'].title()
         key = (state, district)
         
@@ -37,7 +50,7 @@ sql_statements = []
 sql_statements.append("-- v3: Seed regional_soil_data with real data aggregated by District")
 sql_statements.append("DELETE FROM public.regional_soil_data;")
 sql_statements.append("INSERT INTO public.regional_soil_data")
-sql_statements.append('  ("State", "District", n_High, n_Medium, n_Low, p_High, p_Medium, p_Low, k_High, k_Medium, k_Low, "pH_Alkaline", "pH_Acidic", "pH_Neutral", "OC_High", "OC_Medium", "OC_Low")')
+sql_statements.append('  ("State", "District", n_high, n_medium, n_low, p_high, p_medium, p_low, k_high, k_medium, k_low, "pH_Alkaline", "pH_Acidic", "pH_Neutral", "OC_High", "OC_Medium", "OC_Low")')
 sql_statements.append("VALUES")
 
 values = []
@@ -47,7 +60,8 @@ for (state, district), counts in data.items():
 
 sql_statements.append(",\n".join(values) + ";")
 
-with open('/Volumes/T7/Agronavis/apps/mobile/supabase/migrations/v3_npk_district_seed.sql', 'w') as f:
-    f.write("\n".join(sql_statements) + "\n")
+OUTPUT.write_text("\n".join(sql_statements) + "\n")
 
-print(f"Generated {len(data)} district records.")
+states = sorted({state for state, _ in data})
+print(f"Generated {len(data)} district records across {len(states)} states: {', '.join(states)}")
+print(f"Wrote {OUTPUT}")

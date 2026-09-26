@@ -1,10 +1,12 @@
 -- ═════════════════════════════════════════════════════════════════════════════
 --  0006 — Platform alignment
 --
---  Reconciles the live `agronavis-production` schema with what the API serves.
---  Written against the deployed schema, not against an idealised one: every
---  statement below was checked against the real column list, so it is additive
---  and safe to run on a database that already holds farmer data.
+--  Reconciles the deployed schema with what the API serves. Written against the
+--  real column list of a live project, not an idealised one, and guarded so it
+--  applies cleanly to either lineage this schema has taken: it creates what is
+--  missing, renames what was named differently, and leaves the rest alone.
+--
+--  Additive and safe on a database that already holds farmer data.
 --
 --  Idempotent: safe to re-run.
 -- ═════════════════════════════════════════════════════════════════════════════
@@ -61,7 +63,14 @@ CREATE OR REPLACE VIEW public.farmer_public AS
 -- five fields the platform actually queries into real columns and backfill
 -- them; `location` is left untouched for anything still reading it.
 
+-- One lineage named this column `irrigation_type`, the other `irrigation`.
+-- Settle on `irrigation`, which is what the API reads.
+DO $$ BEGIN
+  ALTER TABLE public.farms RENAME COLUMN irrigation_type TO irrigation;
+EXCEPTION WHEN undefined_column THEN NULL; WHEN duplicate_column THEN NULL; END $$;
+
 ALTER TABLE public.farms
+  ADD COLUMN IF NOT EXISTS irrigation   text,
   ADD COLUMN IF NOT EXISTS latitude     numeric(10, 7),
   ADD COLUMN IF NOT EXISTS longitude    numeric(10, 7),
   ADD COLUMN IF NOT EXISTS state        text,
@@ -162,20 +171,41 @@ CREATE INDEX IF NOT EXISTS idx_advisories_farm_unread
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 4. MARKET_PRICES — trend columns and an idempotent upsert key
+-- 4. MARKET_PRICES — cached Agmarknet mandi prices
 -- ─────────────────────────────────────────────────────────────────────────────
--- The table already holds Agmarknet rows keyed on `price_date`. Rename it to
--- the upstream's own field name so the mapping layer is one-to-one, and add the
--- day-on-day trend the dashboard renders.
+-- Cached server-side so the dashboard is instant and data.gov.in sees one
+-- request per state, commodity and day rather than one per app launch.
 
+CREATE TABLE IF NOT EXISTS public.market_prices (
+  id           uuid           NOT NULL DEFAULT gen_random_uuid(),
+  commodity    text           NOT NULL,
+  state        text           NOT NULL,
+  district     text           NOT NULL DEFAULT '',
+  market       text           NOT NULL DEFAULT '',
+  variety      text           NOT NULL DEFAULT 'Common',
+  min_price    numeric(12, 2) NOT NULL,
+  max_price    numeric(12, 2) NOT NULL,
+  modal_price  numeric(12, 2) NOT NULL,
+  unit         text           NOT NULL DEFAULT 'Quintal',
+  direction    text           NOT NULL DEFAULT 'stable',
+  change_pct   numeric(8, 2)  NOT NULL DEFAULT 0,
+  source       text           NOT NULL DEFAULT 'agmarknet',
+  arrival_date date           NOT NULL,
+  fetched_at   timestamptz    NOT NULL DEFAULT now(),
+  created_at   timestamptz    NOT NULL DEFAULT now(),
+  CONSTRAINT market_prices_pkey PRIMARY KEY (id)
+);
+
+-- An earlier lineage called this `price_date`. Agmarknet's own field name is
+-- arrival date, and keeping them identical removes a mapping step.
 DO $$ BEGIN
   ALTER TABLE public.market_prices RENAME COLUMN price_date TO arrival_date;
-EXCEPTION WHEN undefined_column THEN NULL; END $$;
+EXCEPTION WHEN undefined_column THEN NULL; WHEN duplicate_column THEN NULL; END $$;
 
 ALTER TABLE public.market_prices
-  ADD COLUMN IF NOT EXISTS direction  text           NOT NULL DEFAULT 'stable',
-  ADD COLUMN IF NOT EXISTS change_pct numeric(8, 2)  NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS fetched_at timestamptz    NOT NULL DEFAULT now();
+  ADD COLUMN IF NOT EXISTS direction  text          NOT NULL DEFAULT 'stable',
+  ADD COLUMN IF NOT EXISTS change_pct numeric(8, 2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS fetched_at timestamptz   NOT NULL DEFAULT now();
 
 ALTER TABLE public.market_prices DROP CONSTRAINT IF EXISTS market_prices_direction_check;
 UPDATE public.market_prices SET direction = 'stable' WHERE direction NOT IN ('up', 'down', 'stable');
@@ -225,12 +255,25 @@ CREATE TRIGGER trg_weather_snapshots_updated_at
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 6. NOTIFICATIONS — align the read flag with `advisories.read`
+-- 6. NOTIFICATIONS — in-app inbox, mirroring what is pushed via Expo
 -- ─────────────────────────────────────────────────────────────────────────────
 
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id         uuid        NOT NULL DEFAULT gen_random_uuid(),
+  farmer_id  uuid        NOT NULL REFERENCES public.farmers(id) ON DELETE CASCADE,
+  title      text        NOT NULL,
+  body       text        NOT NULL,
+  type       text        NOT NULL DEFAULT 'general',
+  data       jsonb       NOT NULL DEFAULT '{}'::jsonb,
+  read       boolean     NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT notifications_pkey PRIMARY KEY (id)
+);
+
+-- An earlier lineage called this `is_read`; `advisories` already uses `read`.
 DO $$ BEGIN
   ALTER TABLE public.notifications RENAME COLUMN is_read TO read;
-EXCEPTION WHEN undefined_column THEN NULL; END $$;
+EXCEPTION WHEN undefined_column THEN NULL; WHEN duplicate_column THEN NULL; END $$;
 
 CREATE INDEX IF NOT EXISTS idx_notifications_farmer_unread
   ON public.notifications (farmer_id, read, created_at DESC);

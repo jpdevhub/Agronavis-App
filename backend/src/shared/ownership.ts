@@ -76,10 +76,25 @@ export async function getOrCreateDefaultFarm(farmerId: string): Promise<string> 
       state: farmer?.state ?? null,
       district: farmer?.district ?? null,
       village: farmer?.village ?? null,
+      is_default: true,
     })
     .select('id')
     .single();
 
-  if (createError) throw fromPostgrest(createError, 'Create default farm');
+  if (createError) {
+    // 23505: another request created the default farm first. Migration 0009's
+    // partial unique index turns the old duplicate-farm race into this, so the
+    // loser just reads the winner's row.
+    if (createError.code === '23505') {
+      const { data: existing } = await db
+        .from('farms')
+        .select('id')
+        .eq('farmer_id', farmerId)
+        .eq('is_default', true)
+        .maybeSingle();
+      if (existing) return existing.id;
+    }
+    throw fromPostgrest(createError, 'Create default farm');
+  }
   return createdFarm.id;
 }
