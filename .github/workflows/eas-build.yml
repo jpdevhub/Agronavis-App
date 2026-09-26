@@ -1,9 +1,10 @@
-name: EAS Build
+name: EAS Build (Play Store AAB)
+
+# The APK for side-loading is built by android-apk.yml on GitHub's runners, for
+# free. This workflow exists for Play Store submissions, which want an AAB and
+# EAS's managed credentials. Run it by hand when you are shipping to Play.
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       profile:
@@ -34,7 +35,6 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Build
-        working-directory: apps/mobile
         run: eas build --platform android --non-interactive --profile ${{ inputs.profile || 'production' }}
         env:
           # app.config.js falls back to process.env when the root .env is absent,
