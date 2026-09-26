@@ -1,0 +1,22 @@
+apply plugin: 'com.android.library'
+
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useDefaultAndroidSdkVersions()
+useCoreDependencies()
+
+android {
+    namespace "com.gemmamodule"
+}
+
+// litertlm-android 0.11.x ships Kotlin 2.3 metadata; Expo/RN pins Kotlin 2.1.x.
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    compilerOptions {
+        freeCompilerArgs.add("-Xskip-metadata-version-check")
+    }
+}
+
+dependencies {
+    implementation "com.google.ai.edge.litertlm:litertlm-android:0.11.0"
+}
