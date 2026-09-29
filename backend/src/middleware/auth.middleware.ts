@@ -1,31 +1,120 @@
-import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '@clerk/express';
-import { AppError } from './error.middleware';
+import type { NextFunction, Request, Response } from 'express';
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
+import { env } from '../config/env';
+import { logger } from '../config/logger';
+import { unauthorized } from '../shared/errors';
 
-/** Verifies Clerk JWT from Authorization header and attaches userId to request */
-export async function authMiddleware(req: Request, _res: Response, next: NextFunction): Promise<void> {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new AppError(401, 'No authorization token provided');
-    }
+/** Supabase access-token verification. */
 
-    const token = authHeader.substring(7);
-    const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY as string });
-    const userId = payload.sub;
+const remoteJwks = createRemoteJWKSet(new URL(env.supabaseJwksUrl), {
+  cooldownDuration: 30_000,
+  cacheMaxAge: 10 * 60_000,
+});
 
-    req.userId = userId;
-    next();
-  } catch (error) {
-    if (error instanceof AppError) return next(error);
-    next(new AppError(401, 'Invalid or expired token'));
-  }
+const hmacKey = env.SUPABASE_JWT_SECRET
+  ? new TextEncoder().encode(env.SUPABASE_JWT_SECRET)
+  : null;
+
+const ISSUER = new URL('/auth/v1', env.SUPABASE_URL).toString();
+
+export interface AuthenticatedUser {
+  id: string;
+  email: string | null;
+  role: string;
+  /** Present when the session was elevated through a second factor. */
+  amr: string[];
 }
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
-      userId?: string;
+      user?: AuthenticatedUser;
+      /** The raw bearer token, forwarded when the API acts on the user's behalf. */
+      accessToken?: string;
+      id: string;
     }
   }
+}
+
+function toUser(payload: JWTPayload): AuthenticatedUser {
+  const sub = payload.sub;
+  if (!sub) throw unauthorized('Token has no subject');
+  const amr = Array.isArray(payload.amr)
+    ? (payload.amr as { method?: string }[]).map((e) =>
+        typeof e === 'string' ? e : (e.method ?? ''),
+      )
+    : [];
+  return {
+    id: sub,
+    email: typeof payload.email === 'string' ? payload.email : null,
+    role: typeof payload.role === 'string' ? payload.role : 'authenticated',
+    amr: amr.filter(Boolean),
+  };
+}
+
+async function verify(token: string): Promise<AuthenticatedUser> {
+  // Asymmetric (ES256/RS256) first — this is what current Supabase projects issue.
+  try {
+    const { payload } = await jwtVerify(token, remoteJwks, { issuer: ISSUER });
+    return toUser(payload);
+  } catch (jwksError) {
+    if (!hmacKey) {
+      logger.debug('JWKS verification failed and no SUPABASE_JWT_SECRET is configured', {
+        reason: (jwksError as Error).message,
+      });
+      throw unauthorized('Invalid or expired session');
+    }
+  }
+
+  // Legacy HS256 projects, verified with the shared project secret.
+  try {
+    const { payload } = await jwtVerify(token, hmacKey, {
+      issuer: ISSUER,
+      algorithms: ['HS256'],
+    });
+    return toUser(payload);
+  } catch (hmacError) {
+    logger.debug('HS256 verification failed', { reason: (hmacError as Error).message });
+    throw unauthorized('Invalid or expired session');
+  }
+}
+
+function readBearer(req: Request): string | null {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return null;
+  const token = header.slice(7).trim();
+  return token.length > 0 ? token : null;
+}
+
+/** Rejects the request unless it carries a valid Supabase access token. */
+export async function requireAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  try {
+    const token = readBearer(req);
+    if (!token) throw unauthorized('No authorization token provided');
+    req.user = await verify(token);
+    req.accessToken = token;
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** Attaches the user when a token is present, but never rejects. */
+export async function optionalAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  const token = readBearer(req);
+  if (!token) return next();
+  try {
+    req.user = await verify(token);
+    req.accessToken = token;
+  } catch {
+    /* anonymous */
+  }
+  next();
+}
+
+/** The authenticated farmer id, or throws. Use inside guarded handlers. */
+export function farmerId(req: Request): string {
+  if (!req.user) throw unauthorized();
+  return req.user.id;
 }

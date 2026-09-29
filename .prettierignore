@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+.expo
+package-lock.json
+android
+ios
+supabase/migrations/0004_regional_soil_seed.sql
+krishi-sathi-ai/
+KrishiSaathi-AI/

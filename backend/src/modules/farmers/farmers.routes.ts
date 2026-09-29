@@ -1,15 +1,18 @@
 import { Router } from 'express';
-import { farmerController } from './farmers.controller';
-import { authMiddleware } from '../../middleware/auth.middleware';
+import { requireAuth } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
-import { createFarmerSchema, updateFarmerSchema } from './farmers.schema';
+import { handler } from '../../shared/http';
+import { farmersController } from './farmers.controller';
+import { pushTokenSchema, updateFarmerSchema } from './farmers.schema';
 
 export const farmerRoutes = Router();
 
-// All farmer routes require authentication
-farmerRoutes.use(authMiddleware);
+farmerRoutes.use(requireAuth);
 
-farmerRoutes.get('/me', farmerController.getMe);
-farmerRoutes.post('/', validate(createFarmerSchema), farmerController.create);
-farmerRoutes.put('/:id', validate(updateFarmerSchema), farmerController.update);
-farmerRoutes.delete('/:id', farmerController.delete);
+farmerRoutes.get('/me', handler(farmersController.getMe));
+farmerRoutes.patch('/me', validate(updateFarmerSchema), handler(farmersController.updateMe));
+farmerRoutes.post(
+  '/me/push-token',
+  validate(pushTokenSchema),
+  handler(farmersController.registerPushToken),
+);

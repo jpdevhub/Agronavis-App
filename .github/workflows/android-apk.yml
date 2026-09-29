@@ -1,0 +1,144 @@
+name: Android APK
+
+# Builds a signed, install-ready APK with Gradle on GitHub's runners. No EAS
+# quota, no queue. Push a v* tag to attach the APK to a release, or run it by
+# hand from the Actions tab.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      abi:
+        description: Target ABI. arm64-v8a covers every Android phone since ~2017.
+        required: true
+        default: arm64-v8a
+        type: choice
+        options: [arm64-v8a, armeabi-v7a, 'arm64-v8a,armeabi-v7a']
+
+env:
+  NODE_VERSION: '20'
+  JAVA_VERSION: '17'
+  # Fail the build if the APK regresses past this. The target is ~50 MB.
+  MAX_APK_MB: '60'
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install
+        run: npm ci --legacy-peer-deps
+
+      - name: Restore Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('package.json') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      # app.config.js reads the root .env when present and falls back to
+      # process.env otherwise, which is the path taken here.
+      - name: Stage the signing keystore
+        run: |
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set. Run scripts/android-keystore.sh once and add the four secrets it prints."
+            exit 1
+          fi
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+
+      # app.config.js reads the root .env when present and falls back to
+      # process.env otherwise, which is the path taken here. withReleaseSigning
+      # points the release build type at the keystore staged above.
+      - name: Generate the native project
+        run: npx expo prebuild --platform android --clean --no-install
+        env:
+          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      # -PreactNativeArchitectures is React Native's own switch for which ABIs
+      # get native libraries. Dropping x86/x86_64 and, by default, armeabi-v7a
+      # is the single largest saving available.
+      - name: Assemble
+        working-directory: android
+        run: |
+          ./gradlew assembleRelease --no-daemon --stacktrace \
+            -PreactNativeArchitectures=${{ inputs.abi || 'arm64-v8a' }}
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ env.ANDROID_KEYSTORE_FILE }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Report size
+        id: size
+        working-directory: android/app/build/outputs/apk/release
+        run: |
+          APK=$(ls *.apk | head -1)
+          BYTES=$(stat -c %s "$APK")
+          MB=$(awk "BEGIN { printf \"%.1f\", $BYTES / 1048576 }")
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+          echo "mb=$MB"   >> "$GITHUB_OUTPUT"
+          {
+            echo "### APK"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| File | \`$APK\` |"
+            echo "| Size | **${MB} MB** |"
+            echo "| ABI | \`${{ inputs.abi || 'arm64-v8a' }}\` |"
+            echo ""
+            echo "Largest entries:"
+            echo ""
+            echo '```'
+            unzip -l "$APK" | sort -rn -k1 | head -15
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if awk "BEGIN { exit !($MB > ${{ env.MAX_APK_MB }}) }"; then
+            echo "::error::APK is ${MB} MB, over the ${{ env.MAX_APK_MB }} MB budget."
+            exit 1
+          fi
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: agronavis-${{ github.ref_name }}-${{ inputs.abi || 'arm64-v8a' }}
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+          compression-level: 0
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/release/*.apk
+          body: |
+            Android APK, ${{ steps.size.outputs.mb }} MB, `${{ inputs.abi || 'arm64-v8a' }}`.
+
+            Install with `adb install -r <file>.apk`, or open it on the device
+            after allowing installation from unknown sources.

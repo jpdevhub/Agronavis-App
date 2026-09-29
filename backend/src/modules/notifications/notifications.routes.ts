@@ -1,6 +1,20 @@
 import { Router } from 'express';
-import { authMiddleware } from '../../middleware/auth.middleware';
+import { z } from 'zod';
+import { requireAuth } from '../../middleware/auth.middleware';
+import { validate } from '../../middleware/validate.middleware';
+import { handler } from '../../shared/http';
+import { notificationsController } from './notifications.controller';
+
+const idParamSchema = z.object({ id: z.string().uuid() });
 
 export const notificationRoutes = Router();
-notificationRoutes.use(authMiddleware);
-// TODO: GET /notifications, PUT /notifications/:id/read
+
+notificationRoutes.use(requireAuth);
+
+notificationRoutes.get('/', handler(notificationsController.list));
+notificationRoutes.patch('/read-all', handler(notificationsController.markAllRead));
+notificationRoutes.patch(
+  '/:id/read',
+  validate(idParamSchema, 'params'),
+  handler(notificationsController.markRead),
+);

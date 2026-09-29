@@ -1,44 +1,19 @@
-import { Request, Response, NextFunction } from 'express';
-import { farmerService } from './farmers.service';
-import { CreateFarmerInput, UpdateFarmerInput } from './farmers.schema';
+import type { Request, Response } from 'express';
+import { farmerId } from '../../middleware/auth.middleware';
+import { noContent, ok } from '../../shared/http';
+import { farmersService } from './farmers.service';
 
-export const farmerController = {
-  async getMe(req: Request, res: Response, next: NextFunction) {
-    try {
-      const farmer = await farmerService.getByClerkId(req.userId!);
-      if (!farmer) {
-        return res.status(404).json({ success: false, error: 'Farmer profile not found' });
-      }
-      res.json({ success: true, data: farmer });
-    } catch (error) {
-      next(error);
-    }
+export const farmersController = {
+  async getMe(req: Request, res: Response) {
+    ok(res, await farmersService.getProfile(farmerId(req), req.user?.email ?? null));
   },
 
-  async create(req: Request, res: Response, next: NextFunction) {
-    try {
-      const farmer = await farmerService.create(req.userId!, req.body as CreateFarmerInput);
-      res.status(201).json({ success: true, data: farmer, message: 'Farmer profile created' });
-    } catch (error) {
-      next(error);
-    }
+  async updateMe(req: Request, res: Response) {
+    ok(res, await farmersService.updateProfile(farmerId(req), req.body));
   },
 
-  async update(req: Request, res: Response, next: NextFunction) {
-    try {
-      const farmer = await farmerService.update(req.params.id, req.body as UpdateFarmerInput);
-      res.json({ success: true, data: farmer, message: 'Farmer profile updated' });
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  async delete(req: Request, res: Response, next: NextFunction) {
-    try {
-      await farmerService.delete(req.params.id);
-      res.json({ success: true, message: 'Farmer profile deleted' });
-    } catch (error) {
-      next(error);
-    }
+  async registerPushToken(req: Request, res: Response) {
+    await farmersService.registerPushToken(farmerId(req), req.body.token);
+    noContent(res);
   },
 };

@@ -1,6 +1,41 @@
 import { Router } from 'express';
-import { authMiddleware } from '../../middleware/auth.middleware';
+import { requireAuth } from '../../middleware/auth.middleware';
+import { validate } from '../../middleware/validate.middleware';
+import { handler } from '../../shared/http';
+import { advisoryController } from './advisory.controller';
+import {
+  advisoryParamSchema,
+  farmParamSchema,
+  listAdvisorySchema,
+  pestAdvisorySchema,
+} from './advisory.schema';
 
 export const advisoryRoutes = Router();
-advisoryRoutes.use(authMiddleware);
-// TODO: GET /advisory?farmId=, AI advisory generation
+
+advisoryRoutes.use(requireAuth);
+
+advisoryRoutes.get('/', validate(listAdvisorySchema, 'query'), handler(advisoryController.list));
+advisoryRoutes.patch('/read-all', handler(advisoryController.markAllRead));
+
+advisoryRoutes.get(
+  '/farm/:farmId',
+  validate(farmParamSchema, 'params'),
+  handler(advisoryController.listForFarm),
+);
+advisoryRoutes.post(
+  '/farm/:farmId/generate',
+  validate(farmParamSchema, 'params'),
+  handler(advisoryController.generate),
+);
+advisoryRoutes.post(
+  '/farm/:farmId/pest',
+  validate(farmParamSchema, 'params'),
+  validate(pestAdvisorySchema),
+  handler(advisoryController.createPestAdvisory),
+);
+
+advisoryRoutes.patch(
+  '/:id/read',
+  validate(advisoryParamSchema, 'params'),
+  handler(advisoryController.markRead),
+);

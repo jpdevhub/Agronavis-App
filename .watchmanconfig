@@ -1,0 +1,13 @@
+{
+  "ignore_dirs": [
+    ".git",
+    ".expo",
+    "android",
+    "ios",
+    "dist",
+    "backend/dist",
+    "supabase",
+    "notebooks",
+    "docs"
+  ]
+}

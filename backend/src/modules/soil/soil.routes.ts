@@ -1,0 +1,23 @@
+import { Router } from 'express';
+import { requireAuth } from '../../middleware/auth.middleware';
+import { validate } from '../../middleware/validate.middleware';
+import { handler } from '../../shared/http';
+import { soilController } from './soil.controller';
+import { fieldParamSchema, recordReadingSchema } from './soil.schema';
+
+export const soilRoutes = Router();
+
+soilRoutes.use(requireAuth);
+
+soilRoutes.get('/field/:fieldId', validate(fieldParamSchema, 'params'), handler(soilController.getForField));
+soilRoutes.get(
+  '/field/:fieldId/history',
+  validate(fieldParamSchema, 'params'),
+  handler(soilController.listHistory),
+);
+soilRoutes.post(
+  '/field/:fieldId',
+  validate(fieldParamSchema, 'params'),
+  validate(recordReadingSchema),
+  handler(soilController.recordReading),
+);
