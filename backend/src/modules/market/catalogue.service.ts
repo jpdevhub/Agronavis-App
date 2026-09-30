@@ -57,10 +57,14 @@ export const catalogueService = {
 
   async listCommodities(): Promise<MandiCommodityRef[]> {
     return cache.wrap('commodities', async () => {
+      // PostgREST caps an unbounded select at 1000 rows and says nothing about
+      // it. There are 605 commodities today; asking for more than could exist
+      // means a silent truncation cannot creep in as the list grows.
       const { data, error } = await db
         .from('mandi_commodities')
         .select('id, name, group_name')
-        .order('name');
+        .order('name')
+        .limit(5000);
       if (error) throw new Error(error.message);
       return (data ?? []).map((r) => ({ id: r.id, name: r.name, groupName: r.group_name }));
     }) as Promise<MandiCommodityRef[]>;
