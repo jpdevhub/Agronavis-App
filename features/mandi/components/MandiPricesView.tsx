@@ -35,8 +35,10 @@ function PriceRow({ row }: { row: MandiPrice }) {
 }
 
 export function MandiPricesView() {
-  const { rows, filter, setFilter, sourceLabel, isLoading, isRefetching, error, refetch, needsLocation } =
-    useMandiSearch();
+  const {
+    rows, filter, setFilter, source, sourceLabel,
+    isLoading, isRefetching, error, refetch, needsLocation,
+  } = useMandiSearch();
   const [filterOpen, setFilterOpen] = useState(false);
 
   const place = [filter.district, filter.state].filter(Boolean).join(', ');
@@ -78,6 +80,12 @@ export function MandiPricesView() {
             body={(error as Error).message}
             actionLabel="Try again"
             onAction={() => refetch()}
+          />
+        ) : rows.length === 0 && source === 'unconfigured' ? (
+          <Empty
+            icon="cloud-off"
+            title="Rates unavailable"
+            body="No mandi price source is connected yet, so no district will show rates. Mandi and crop lists still work."
           />
         ) : rows.length === 0 ? (
           <Empty

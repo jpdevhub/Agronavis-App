@@ -3,6 +3,7 @@ import { env } from '../config/env';
 import { logger } from '../config/logger';
 import { runCatalogueSync } from './catalogue.job';
 import { runMarketPoll } from './market.job';
+import { runSoilSync } from './soil.job';
 import { runWeatherPoll } from './weather.job';
 
 const tasks: ScheduledTask[] = [];
@@ -38,10 +39,13 @@ export function startJobs(): void {
   tasks.push(cron.schedule(env.WEATHER_POLL_CRON, guarded('Weather poll', runWeatherPoll)));
   tasks.push(cron.schedule(env.MARKET_POLL_CRON, guarded('Market poll', runMarketPoll)));
   tasks.push(cron.schedule(env.CATALOGUE_SYNC_CRON, guarded('Catalogue sync', runCatalogueSync)));
+  tasks.push(cron.schedule(env.SOIL_SYNC_CRON, guarded('Soil sync', () => runSoilSync())));
 
   logger.info('Background jobs scheduled', {
     weather: env.WEATHER_POLL_CRON,
     market: env.MARKET_POLL_CRON,
+    catalogue: env.CATALOGUE_SYNC_CRON,
+    soil: env.SOIL_SYNC_CRON,
   });
 }
 
@@ -50,4 +54,4 @@ export function stopJobs(): void {
   tasks.length = 0;
 }
 
-export { runCatalogueSync, runMarketPoll, runWeatherPoll };
+export { runCatalogueSync, runMarketPoll, runSoilSync, runWeatherPoll };

@@ -13,6 +13,7 @@ const SOURCE_LABEL: Record<MandiSource, string> = {
   enam_state: 'Live · eNAM, state-wide',
   cache: 'Last synced prices',
   none: 'No prices reported',
+  unconfigured: 'Price source not connected',
 };
 
 export function mandiSourceLabel(source: MandiSource | undefined): string {

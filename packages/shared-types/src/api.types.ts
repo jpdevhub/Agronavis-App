@@ -251,7 +251,10 @@ export type MandiSource =
   | 'enam_district'
   | 'enam_state'
   | 'cache'
-  | 'none';
+  /** Every upstream was asked and none had a row for this place. */
+  | 'none'
+  /** No price source is configured, so nothing was asked at all. */
+  | 'unconfigured';
 
 export interface MandiSearchResult {
   rows: MandiPrice[];

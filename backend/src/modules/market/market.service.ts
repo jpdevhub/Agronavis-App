@@ -382,9 +382,13 @@ async function searchMandi(opts: {
   }
 
   const cached = await fromCache(state, district, limit);
+  if (cached.length > 0) return { rows: cached, source: 'cache', state, district };
+
+  // Distinguish "asked everyone, nobody had it" from "no source to ask": telling
+  // a farmer no mandi reported today is untrue when nothing was ever queried.
   return {
-    rows: cached,
-    source: cached.length > 0 ? 'cache' : 'none',
+    rows: [],
+    source: env.AGMARKNET_API_KEY ? 'none' : 'unconfigured',
     state,
     district,
   };
