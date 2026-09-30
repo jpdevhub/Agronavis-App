@@ -59,3 +59,25 @@ describe('buildSahayakPrompt', () => {
     expect(prompt).toContain('29°C, broken clouds, humidity 87%');
   });
 });
+
+describe('offline snapshot disclosure', () => {
+  const base = { advisories: [] } as unknown as Parameters<typeof buildSahayakPrompt>[0];
+
+  it('says nothing about syncing when the details are live', () => {
+    const prompt = buildSahayakPrompt(base);
+    expect(prompt).not.toContain('You are offline');
+  });
+
+  it('tells the model how old the details are, so it cannot report them as current', () => {
+    const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString();
+    const prompt = buildSahayakPrompt({ ...base, dataSavedAt: twoDaysAgo });
+    expect(prompt).toContain('You are offline');
+    expect(prompt).toContain('2 days ago');
+    expect(prompt).toContain('Do not present them as current conditions.');
+  });
+
+  it('reads naturally for a same-day snapshot', () => {
+    const prompt = buildSahayakPrompt({ ...base, dataSavedAt: new Date().toISOString() });
+    expect(prompt).toContain('earlier today');
+  });
+});

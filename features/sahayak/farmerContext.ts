@@ -25,6 +25,21 @@ export interface FarmerContext {
   pathname?: string;
   /** Language code the answer must be written in. */
   replyLanguage?: string;
+  /**
+   * Set when the details came from the offline snapshot rather than a live read,
+   * so the model can say how old they are instead of reporting them as current.
+   */
+  dataSavedAt?: string;
+}
+
+/** Plain wording for the prompt — the model reads this, so no ISO strings. */
+function formatSyncAge(iso: string): string {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return 'in an earlier session';
+  const days = Math.floor((Date.now() - then.getTime()) / 86_400_000);
+  if (days <= 0) return 'earlier today';
+  if (days === 1) return 'yesterday';
+  return `${days} days ago`;
 }
 
 const line = (label: string, value: string | number | null | undefined): string | null =>
@@ -79,6 +94,15 @@ export function buildSahayakPrompt(context: FarmerContext): string {
   ];
 
   sections.push('', ...platformSection());
+
+  if (context.dataSavedAt) {
+    sections.push(
+      '',
+      `You are offline. These details were last synced ${formatSyncAge(context.dataSavedAt)}.`,
+      '- Say so if the answer depends on the weather or an advisory, which may have changed.',
+      '- Do not present them as current conditions.',
+    );
+  }
 
   if (facts.length > 0) sections.push('', 'This farm:', ...facts.map((f) => `- ${f}`));
   if (conditions.length > 0) sections.push('', 'Right now:', ...conditions.map((c) => `- ${c}`));
