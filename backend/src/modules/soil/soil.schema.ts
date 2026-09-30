@@ -18,10 +18,11 @@ export const recordReadingSchema = z.object({
  */
 export const soilReportSchema = z
   .object({
+    fieldId: z.string().uuid().optional(),
     farmId: z.string().uuid().optional(),
     state: z.string().trim().min(1).max(60).optional(),
     district: z.string().trim().max(60).optional(),
   })
-  .refine((v) => Boolean(v.farmId ?? v.state), {
-    message: 'farmId or state is required',
+  .refine((v) => Boolean(v.fieldId ?? v.farmId ?? v.state), {
+    message: 'fieldId, farmId or state is required',
   });

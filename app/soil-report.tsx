@@ -98,16 +98,17 @@ function MicroRow({ name, spread }: { name: string; spread: MicronutrientSpread 
 export default function SoilReportScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { farmId, state, district } = useLocalSearchParams<{
+  const { fieldId, farmId, state, district } = useLocalSearchParams<{
+    fieldId?: string;
     farmId?: string;
     state?: string;
     district?: string;
   }>();
 
   const query = useQuery<SoilReport | null>({
-    queryKey: ['soil', 'report', farmId, state, district],
-    queryFn: () => soilApi.report({ farmId, state, district }),
-    enabled: Boolean(farmId ?? state),
+    queryKey: ['soil', 'report', fieldId, farmId, state, district],
+    queryFn: () => soilApi.report({ fieldId, farmId, state, district }),
+    enabled: Boolean(fieldId ?? farmId ?? state),
     staleTime: 1000 * 60 * 60 * 24,
   });
 

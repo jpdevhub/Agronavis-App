@@ -157,6 +157,10 @@ export default function DashboardScreen() {
    * would disagree with the weather, which follows the farm.
    */
   const openSoilReport = useCallback(() => {
+    if (activeFieldId) {
+      router.push({ pathname: '/soil-report', params: { fieldId: activeFieldId } } as never);
+      return;
+    }
     if (activeFarmId) {
       router.push({ pathname: '/soil-report', params: { farmId: activeFarmId } } as never);
       return;
@@ -169,11 +173,11 @@ export default function DashboardScreen() {
         ...(farmer.district ? { district: farmer.district } : {}),
       },
     } as never);
-  }, [router, activeFarmId, farmer?.state, farmer?.district]);
+  }, [router, activeFieldId, activeFarmId, farmer?.state, farmer?.district]);
   const { data: fields, isLoading: fieldsLoading, refetch: refetchFields } = useFarmFields();
   const { data: tasks, isLoading: tasksLoading, completeTask, refetch: refetchTasks } = useTimelineTasks();
   const { levels, isLoading: soilLoading, isRegional, hasNoCoverage } = useSoilHealth();
-  const { current: weather, isLoading: weatherLoading, refetch: refetchWeather } = useWeather(activeFarmId);
+  const { current: weather, isLoading: weatherLoading, refetch: refetchWeather } = useWeather(activeFarmId, activeFieldId);
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {

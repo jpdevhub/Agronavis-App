@@ -18,14 +18,17 @@ export const soilController = {
   },
 
   async getReport(req: Request, res: Response) {
-    const { farmId, state, district } = req.query as unknown as {
+    const { fieldId, farmId, state, district } = req.query as unknown as {
+      fieldId?: string;
       farmId?: string;
       state?: string;
       district?: string;
     };
-    const report = farmId
-      ? await soilService.getReportForFarm(farmId)
-      : await soilService.getReport(state as string, district);
+    const report = fieldId
+      ? await soilService.getReportForField(fieldId)
+      : farmId
+        ? await soilService.getReportForFarm(farmId)
+        : await soilService.getReport(state as string, district);
     ok(res, report);
   },
 };

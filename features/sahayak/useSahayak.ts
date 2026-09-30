@@ -49,9 +49,10 @@ export function useSahayak() {
   const streamRef = useRef('');
 
   const activeFarmId = useFarmStore((s) => s.activeFarmId);
+  const activeFieldId = useFarmStore((s) => s.activeFieldId);
   const { data: farmer } = useFarmer();
   const { data: fields } = useFarmFields();
-  const { current: weather } = useWeather(activeFarmId);
+  const { current: weather } = useWeather(activeFarmId, activeFieldId);
   const { data: soil } = useSoilHealth();
   const { advisories } = useAdvisories();
 

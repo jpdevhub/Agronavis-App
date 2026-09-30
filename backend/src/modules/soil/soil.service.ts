@@ -7,6 +7,7 @@ import type {
 import { logger } from '../../config/logger';
 import { db } from '../../config/supabase';
 import { fromPostgrest } from '../../shared/errors';
+import { reverseGeocode } from '../../shared/geocode';
 import { assertOwnsField } from '../../shared/ownership';
 
 /**
@@ -78,6 +79,47 @@ const sum = (rows: Record<string, unknown>[], key: string): number =>
  * same order `get_estimated_soil_health` uses — so the report always explains
  * the number the dashboard is already showing, rather than a different one.
  */
+/**
+ * The report for a mapped field.
+ *
+ * A farm stores one state and district, set at onboarding and never revisited,
+ * while its fields can be a thousand kilometres apart — one farm here holds
+ * land in Kolkata and in Ludhiana. Reading the farm gave every field the same
+ * report, and it disagreed with the weather, which follows coordinates.
+ *
+ * The field's own boundary is geocoded once and the answer kept on the row, so
+ * this costs one lookup per field ever.
+ */
+async function getReportForField(fieldId: string): Promise<SoilReport | null> {
+  const { data: field, error } = await db
+    .from('farm_fields')
+    .select('farm_id, state, district, center_latitude, center_longitude')
+    .eq('id', fieldId)
+    .maybeSingle();
+  if (error) throw fromPostgrest(error, 'Soil report');
+  if (!field) return null;
+
+  if (field.state) return getReport(field.state, field.district ?? undefined);
+
+  const lat = field.center_latitude == null ? null : Number(field.center_latitude);
+  const lon = field.center_longitude == null ? null : Number(field.center_longitude);
+
+  if (lat != null && lon != null) {
+    const place = await reverseGeocode(lat, lon);
+    if (place) {
+      await db
+        .from('farm_fields')
+        .update({ state: place.state, district: place.district })
+        .eq('id', fieldId);
+      return getReport(place.state, place.district ?? undefined);
+    }
+  }
+
+  // Unmapped, or the geocoder was unreachable: the farm is still better than
+  // nothing, and the next request will try again.
+  return getReportForFarm(field.farm_id);
+}
+
 async function getReportForFarm(farmId: string): Promise<SoilReport | null> {
   const { data, error } = await db
     .from('farms')
@@ -178,6 +220,7 @@ async function getReport(state: string, district?: string): Promise<SoilReport |
 export const soilService = {
   getReport,
   getReportForFarm,
+  getReportForField,
   /** Soil health for a field. */
   async getForField(farmerId: string, fieldId: string): Promise<SoilHealth | null> {
     const farmId = await assertOwnsField(farmerId, fieldId);

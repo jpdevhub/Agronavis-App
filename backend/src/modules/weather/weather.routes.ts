@@ -15,6 +15,8 @@ weatherRoutes.get('/', validate(coordsSchema, 'query'), handler(weatherControlle
 weatherRoutes.get('/current', validate(coordsSchema, 'query'), handler(weatherController.getCurrent));
 weatherRoutes.get('/forecast', validate(coordsSchema, 'query'), handler(weatherController.getForecast));
 weatherRoutes.get('/solar', validate(solarQuerySchema, 'query'), handler(weatherController.getSolar));
+weatherRoutes.get('/field/:fieldId', handler(weatherController.getForField));
+
 weatherRoutes.get(
   '/farm/:farmId',
   validate(farmWeatherSchema, 'params'),

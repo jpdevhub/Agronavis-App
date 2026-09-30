@@ -84,6 +84,9 @@ export type FarmFieldRow = {
   polygon: Json;
   center_latitude: number | null;
   center_longitude: number | null;
+  /** Resolved from the drawn boundary, so soil matches where the land is. */
+  state: string | null;
+  district: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -408,7 +411,13 @@ export interface Database {
       >;
       farm_fields: Table<
         FarmFieldRow,
-        'id' | Timestamps | 'area_hectares' | 'center_latitude' | 'center_longitude'
+        | 'id'
+        | Timestamps
+        | 'area_hectares'
+        | 'center_latitude'
+        | 'center_longitude'
+        | 'state'
+        | 'district'
       >;
       crops: Table<
         CropRow,

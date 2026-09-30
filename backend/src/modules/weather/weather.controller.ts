@@ -1,8 +1,9 @@
 import type { Request, Response } from 'express';
 import { farmerId } from '../../middleware/auth.middleware';
-import { badRequest } from '../../shared/errors';
+import { db } from '../../config/supabase';
+import { badRequest, fromPostgrest } from '../../shared/errors';
 import { ok } from '../../shared/http';
-import { assertOwnsFarm } from '../../shared/ownership';
+import { assertOwnsFarm, assertOwnsField } from '../../shared/ownership';
 import { weatherService } from './weather.service';
 
 export const weatherController = {
@@ -33,6 +34,45 @@ export const weatherController = {
    * Falls back to the stored snapshot when the upstream provider is down, so
    * the dashboard shows yesterday's reading instead of an error card.
    */
+  /**
+   * Weather where the field actually is.
+   *
+   * A farm holds one pair of coordinates, fixed by whichever field was mapped
+   * first, but its fields can be a thousand kilometres apart — one farm here
+   * has land in both Kolkata and Ludhiana. Reading the farm gave every field
+   * the first one's weather.
+   *
+   * The snapshot stays keyed on the farm: it exists so the dashboard can show
+   * yesterday's reading when the provider is down, and farm-level is close
+   * enough for that.
+   */
+  async getForField(req: Request, res: Response) {
+    const farmId = await assertOwnsField(farmerId(req), req.params.fieldId!);
+
+    const { data: field, error } = await db
+      .from('farm_fields')
+      .select('center_latitude, center_longitude')
+      .eq('id', req.params.fieldId!)
+      .maybeSingle();
+    if (error) throw fromPostgrest(error, 'Load field');
+
+    const lat = field?.center_latitude == null ? null : Number(field.center_latitude);
+    const lon = field?.center_longitude == null ? null : Number(field.center_longitude);
+    if (lat == null || lon == null) {
+      throw badRequest('This field has no mapped boundary yet.');
+    }
+
+    try {
+      const bundle = await weatherService.getBundle(lat, lon);
+      await weatherService.saveSnapshot(farmId, bundle);
+      ok(res, bundle);
+    } catch (failure) {
+      const snapshot = await weatherService.getSnapshot(farmId);
+      if (!snapshot) throw failure;
+      ok(res, snapshot, { cached: true });
+    }
+  },
+
   async getForFarm(req: Request, res: Response) {
     const farm = await assertOwnsFarm(farmerId(req), req.params.farmId!);
     if (farm.latitude == null || farm.longitude == null) {

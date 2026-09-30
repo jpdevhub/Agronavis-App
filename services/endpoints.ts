@@ -99,8 +99,9 @@ export const soilApi = {
    * The Soil Health Card figures behind a district estimate, unreduced. Keyed on
    * the farm so it describes the same place the weather does.
    */
-  report: (params: { farmId?: string; state?: string; district?: string }) =>
+  report: (params: { fieldId?: string; farmId?: string; state?: string; district?: string }) =>
     api.get<SoilReport | null>('/soil/report', {
+      ...(params.fieldId ? { fieldId: params.fieldId } : {}),
       ...(params.farmId ? { farmId: params.farmId } : {}),
       ...(params.state ? { state: params.state } : {}),
       ...(params.district ? { district: params.district } : {}),
@@ -112,6 +113,8 @@ export const soilApi = {
 export const weatherApi = {
   byCoords: (lat: number, lon: number) => api.get<WeatherBundle>('/weather', { lat, lon }),
   byFarm: (farmId: string) => api.getWithMeta<WeatherBundle>(`/weather/farm/${farmId}`),
+  /** Weather where the field is, which a farm's single location cannot express. */
+  byField: (fieldId: string) => api.getWithMeta<WeatherBundle>(`/weather/field/${fieldId}`),
 };
 
 export const marketApi = {
