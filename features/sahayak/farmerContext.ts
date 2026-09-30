@@ -1,5 +1,6 @@
 import type { Advisory, CurrentWeather, FarmField, FarmerProfile, SoilHealth } from '@agronavis/shared-types';
 import { isPlausibleField } from '@/constants/field';
+import { platformSection, screenInfoFor } from './screenContext';
 
 const LANGUAGE_NAME: Record<string, string> = {
   en: 'English', hi: 'Hindi', mr: 'Marathi', pa: 'Punjabi',
@@ -13,7 +14,6 @@ const LANGUAGE_RULE = (code: string | undefined): string => {
     ? '- Write the entire answer in simple English.'
     : `- Write the entire answer in ${name}, in its own script. Do not answer in English.`;
 };
-import { platformSection, screenInfoFor } from './screenContext';
 
 export interface FarmerContext {
   farmer: FarmerProfile | undefined;
