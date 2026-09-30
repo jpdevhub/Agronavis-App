@@ -9,6 +9,13 @@ import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme'
 import { soilApi } from '@/services/endpoints';
 
 const pct = (part: number, total: number): number => (total > 0 ? (part / total) * 100 : 0);
+
+/**
+ * Below this the distribution is noise. Ludhiana has ten samples in the current
+ * cycle and none in earlier ones, and "Low nitrogen" off ten tests must not read
+ * with the same authority as the same words off thirty-four thousand.
+ */
+const SPARSE_SAMPLES = 100;
 const fmt = (n: number): string => n.toLocaleString('en-IN');
 
 /** Soil Health Card ratings, in the order the card itself prints them. */
@@ -164,6 +171,13 @@ export default function SoilReportScreen() {
               <Text style={styles.provenanceWarn}>
                 No figures published for your district, so this averages the whole state. Treat it
                 as a rough guide.
+              </Text>
+            )}
+            {report.samples < SPARSE_SAMPLES && (
+              <Text style={styles.provenanceWarn}>
+                Only {fmt(report.samples)} sample{report.samples === 1 ? '' : 's'} have been
+                collected here, too few to rely on. A soil test on your own field is worth far more
+                than this.
               </Text>
             )}
           </View>
