@@ -17,7 +17,9 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warnMobile, setWarnMobile] = useState(false);
-  const handle = useRef<ReturnType<typeof createModelDownload> | null>(null);
+  const handle = useRef<Awaited<ReturnType<typeof createModelDownload>> | null>(null);
+
+  const [resumed, setResumed] = useState(false);
 
   const begin = useCallback(async () => {
     setError(null);
@@ -26,7 +28,8 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
       return;
     }
     setBusy(true);
-    handle.current = createModelDownload(variant, setProgress);
+    handle.current = await createModelDownload(variant, setProgress);
+    setResumed(handle.current.resuming);
     try {
       const path = await handle.current.start();
       onReady(path);
@@ -59,7 +62,9 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
           <Text style={styles.progressText}>
             {progress
               ? `${gb(progress.receivedBytes)}${progress.totalBytes > 0 ? ` of ${gb(progress.totalBytes)}` : ''}${pct != null ? ` · ${pct}%` : ''}`
-              : 'Starting…'}
+              : resumed
+                ? 'Continuing where it stopped…'
+                : 'Starting…'}
           </Text>
           <Pressable onPress={() => handle.current?.pause()} style={styles.secondary}>
             <Text style={styles.secondaryText}>Pause</Text>
