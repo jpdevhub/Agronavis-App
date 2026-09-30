@@ -4,6 +4,9 @@ module.exports = {
   testEnvironment: 'node',
   rootDir: '.',
   testMatch: ['**/tests/**/*.test.ts'],
+  // macOS writes AppleDouble `._` siblings on non-HFS volumes; jest would
+  // otherwise try to compile them as TypeScript.
+  testPathIgnorePatterns: ['/node_modules/', '/\\._'],
   setupFiles: ['<rootDir>/tests/setup.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',

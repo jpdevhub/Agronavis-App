@@ -56,6 +56,8 @@ const envSchema = z
       .transform((v) => v === 'true'),
     WEATHER_POLL_CRON: z.string().default('*/30 * * * *'),
     MARKET_POLL_CRON: z.string().default('15 * * * *'),
+    // Reference data; Sunday 02:30 is enough for a list that changes a few times a year.
+    CATALOGUE_SYNC_CRON: z.string().default('30 2 * * 0'),
   })
   .transform((raw) => ({
     ...raw,

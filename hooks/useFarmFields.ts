@@ -30,12 +30,6 @@ export function useFarmFields() {
   return query;
 }
 
-export function useActiveField() {
-  const activeFieldId = useFarmStore((s) => s.activeFieldId);
-  const { data } = useFarmFields();
-  return data?.find((field) => field.id === activeFieldId) ?? null;
-}
-
 export function useCreateField() {
   const queryClient = useQueryClient();
   const setActiveField = useFarmStore((s) => s.setActiveField);

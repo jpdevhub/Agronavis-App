@@ -260,6 +260,42 @@ export interface MandiSearchResult {
   district: string;
 }
 
+/**
+ * Agmarknet's own catalogue, mirrored server-side. Numeric ids are Agmarknet's,
+ * so a price query keys on an id rather than guessing a spelling.
+ */
+export interface MandiStateRef {
+  id: number;
+  name: string;
+}
+
+export interface MandiDistrictRef {
+  id: number;
+  stateId: number;
+  name: string;
+}
+
+export interface MandiMarketRef {
+  id: number;
+  stateId: number;
+  districtId: number | null;
+  name: string;
+}
+
+export interface MandiCommodityRef {
+  id: number;
+  name: string;
+  groupName: string | null;
+}
+
+export interface MandiCatalogue {
+  states: MandiStateRef[];
+  districts: MandiDistrictRef[];
+  markets: MandiMarketRef[];
+  commodities: MandiCommodityRef[];
+  syncedAt: string | null;
+}
+
 export interface PriceTrend {
   commodity: string;
   currentPrice: number;

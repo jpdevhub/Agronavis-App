@@ -46,15 +46,38 @@ Call 3.0 does ask for a card; the platform deliberately does not use it.)
 A new key takes up to two hours to activate. Until then the weather endpoints
 return 401 from upstream.
 
+### Agmarknet catalogue — no key at all
+
+The mandi catalogue comes straight from `api.agmarknet.gov.in/v1`, which serves
+reference data unauthenticated: 36 states, 750 districts, 4172 mandis and 605
+commodities. `npm run sync:catalogue` mirrors it into Supabase, and a weekly cron
+keeps it current.
+
+Two upstream quirks the job already handles, worth knowing before changing it:
+
+- Requests without a browser `User-Agent` and `Referer` have the connection
+  dropped rather than refused, so it surfaces as a timeout, not a 403.
+- `commodities` advertises a second page but ignores `page_size` and returns the
+  whole set again. Following `next_page` naively yields 1210 rows for 605
+  commodities, so the job collects by id.
+
+Only the daily *price* report is gated — `POST /v1/daily-price-arrival/report`
+answers `TOKEN_OR_CAPTCHA_REQUIRED`.
+
 ### data.gov.in — `AGMARKNET_API_KEY`
 
-1. Register at [data.gov.in](https://data.gov.in).
-2. Open your profile menu and copy the **API key** shown there.
+Registration moved to JanParichay (MeriPehchaan), India's national SSO: the login
+at `data.gov.in/backend/authmid/v1/login` redirects to
+`janparichay.meripehchaan.gov.in`. The older `/user/register` path now 404s.
+
+1. Sign in at [data.gov.in](https://data.gov.in) through JanParichay.
+2. Copy the **API key** from your profile menu.
 3. Subscribe to *Current Daily Price of Various Commodities from Various
    Markets (Mandi)*, resource `9ef84268-d588-465a-a308-a864a43d0070`.
 
-Without it the market widget renders empty and the API logs
-`AGMARKNET_API_KEY is not set — mandi prices will be empty`. Nothing else breaks.
+Without it, prices are empty and the API logs `AGMARKNET_API_KEY is not set —
+mandi prices will be empty`. The catalogue above is unaffected, so the filter
+lists still work.
 
 ### Google Maps — `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`
 
@@ -90,7 +113,7 @@ as permanent per environment. On Render it is generated once by the blueprint.
 | `OPENWEATHER_API_KEY` | set |
 | `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` | set |
 | `TOTP_ENCRYPTION_KEY` | generated |
-| `AGMARKNET_API_KEY` | **empty — the only key still needed** |
+| `AGMARKNET_API_KEY` | **empty — prices only; the catalogue needs no key** |
 | `SUPABASE_JWT_SECRET` | intentionally empty (project signs with ES256) |
 
 ## Staying inside the free tiers

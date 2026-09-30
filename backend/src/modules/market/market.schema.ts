@@ -34,3 +34,12 @@ export const mandiSearchSchema = z.object({
   commodity: z.string().trim().max(60).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(60),
 });
+
+export const districtListSchema = z.object({
+  stateId: z.coerce.number().int().positive(),
+});
+
+export const marketListSchema = z.object({
+  stateId: z.coerce.number().int().positive(),
+  districtId: z.coerce.number().int().positive().optional(),
+});

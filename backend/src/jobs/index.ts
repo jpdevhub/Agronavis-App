@@ -1,6 +1,7 @@
 import cron, { type ScheduledTask } from 'node-cron';
 import { env } from '../config/env';
 import { logger } from '../config/logger';
+import { runCatalogueSync } from './catalogue.job';
 import { runMarketPoll } from './market.job';
 import { runWeatherPoll } from './weather.job';
 
@@ -36,6 +37,7 @@ export function startJobs(): void {
 
   tasks.push(cron.schedule(env.WEATHER_POLL_CRON, guarded('Weather poll', runWeatherPoll)));
   tasks.push(cron.schedule(env.MARKET_POLL_CRON, guarded('Market poll', runMarketPoll)));
+  tasks.push(cron.schedule(env.CATALOGUE_SYNC_CRON, guarded('Catalogue sync', runCatalogueSync)));
 
   logger.info('Background jobs scheduled', {
     weather: env.WEATHER_POLL_CRON,
@@ -48,4 +50,4 @@ export function stopJobs(): void {
   tasks.length = 0;
 }
 
-export { runMarketPoll, runWeatherPoll };
+export { runCatalogueSync, runMarketPoll, runWeatherPoll };
