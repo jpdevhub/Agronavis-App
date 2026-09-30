@@ -58,3 +58,11 @@ services:
         value: "*/30 * * * *"
       - key: MARKET_POLL_CRON
         value: "15 * * * *"
+
+      # Reference data, not daily figures. Both are also runnable by hand —
+      # `npm run sync:catalogue` and `npm run sync:soil` — which is how they are
+      # first populated, since a sleeping instance fires no cron.
+      - key: CATALOGUE_SYNC_CRON
+        value: "30 2 * * 0"
+      - key: SOIL_SYNC_CRON
+        value: "0 3 1 * *"
