@@ -304,6 +304,50 @@ export type CropDiseaseRow = {
   created_at: string;
 };
 
+export type IngestionStatus = 'running' | 'ok' | 'failed';
+
+export type MandiStateRow = {
+  id: number;
+  name: string;
+  synced_at: string;
+};
+
+export type MandiDistrictRow = {
+  id: number;
+  state_id: number;
+  name: string;
+  synced_at: string;
+};
+
+export type MandiMarketRow = {
+  id: number;
+  state_id: number;
+  district_id: number | null;
+  name: string;
+  synced_at: string;
+};
+
+export type MandiCommodityRow = {
+  id: number;
+  name: string;
+  group_id: number | null;
+  group_name: string | null;
+  arrival_unit: string | null;
+  price_unit: string | null;
+  synced_at: string;
+};
+
+export type IngestionRunRow = {
+  id: string;
+  source: string;
+  status: IngestionStatus;
+  rows_written: number;
+  detail: Json | null;
+  error: string | null;
+  started_at: string;
+  finished_at: string | null;
+};
+
 /** Insert shape: PK, defaulted and generated columns are optional. */
 type Insertable<T, Optional extends keyof T> = Omit<T, Optional> & Partial<Pick<T, Optional>>;
 type Table<Row, InsertOptional extends keyof Row> = {
@@ -436,6 +480,17 @@ export interface Database {
         | 'tested_date'
       >;
       regional_soil_data: Table<RegionalSoilRow, 'id' | 'created_at'>;
+      mandi_states: Table<MandiStateRow, 'synced_at'>;
+      mandi_districts: Table<MandiDistrictRow, 'synced_at'>;
+      mandi_markets: Table<MandiMarketRow, 'synced_at' | 'district_id'>;
+      mandi_commodities: Table<
+        MandiCommodityRow,
+        'synced_at' | 'group_id' | 'group_name' | 'arrival_unit' | 'price_unit'
+      >;
+      ingestion_runs: Table<
+        IngestionRunRow,
+        'id' | 'status' | 'rows_written' | 'detail' | 'error' | 'started_at' | 'finished_at'
+      >;
       market_prices: Table<
         MarketPriceRow,
         | 'id'
