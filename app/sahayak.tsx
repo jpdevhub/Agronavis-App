@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -6,10 +6,13 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -39,9 +42,23 @@ export default function SahayakScreen() {
   const [speakReplies, setSpeakReplies] = useState(false);
   const scroller = useRef<ScrollView>(null);
 
-  useEffect(() => {
-    if (messages.length > 0) scroller.current?.scrollToEnd({ animated: true });
-  }, [messages]);
+  /**
+   * Streaming calls setMessages on every token, so an effect keyed on
+   * `messages` started a fresh animated scroll dozens of times a second and
+   * each one cancelled the last — the thread looked frozen. Following the
+   * content size fires once per layout instead, and only while the reader is
+   * already at the bottom, so scrolling up to re-read is never yanked back.
+   */
+  const stick = useRef(true);
+
+  const onContentSizeChange = useCallback(() => {
+    if (stick.current) scroller.current?.scrollToEnd({ animated: false });
+  }, []);
+
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    stick.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 80;
+  }, []);
 
   useEffect(() => {
     if (voice.heard) setDraft(voice.heard);
@@ -59,6 +76,7 @@ export default function SahayakScreen() {
     const question = (text ?? draft).trim();
     if (!question) return;
     setDraft('');
+    stick.current = true;
     void send(question);
   }
 
@@ -119,9 +137,15 @@ export default function SahayakScreen() {
         </View>
       )}
 
+      {/*
+        The manifest sets windowSoftInputMode="adjustResize", so Android already
+        shrinks the window for the keyboard. Letting this shrink it a second
+        time collapsed the thread. iOS has no equivalent and still needs it.
+      */}
       <KeyboardAvoidingView
         style={styles.fill}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
+        enabled={Platform.OS === 'ios'}
         keyboardVerticalOffset={0}
       >
         {status === 'unsupported' ? (
@@ -152,6 +176,9 @@ export default function SahayakScreen() {
               style={styles.fill}
               contentContainerStyle={styles.thread}
               keyboardShouldPersistTaps="handled"
+              onContentSizeChange={onContentSizeChange}
+              onScroll={onScroll}
+              scrollEventThrottle={16}
             >
               {messages.length === 0 ? (
                 <View style={styles.empty}>
@@ -170,17 +197,25 @@ export default function SahayakScreen() {
               ) : (
                 messages.map((m) =>
                   m.role === 'user' ? (
-                    <View key={m.id} style={[styles.bubble, styles.bubbleUser]}>
+                    <Animated.View
+                      key={m.id}
+                      entering={FadeInDown.duration(220)}
+                      style={[styles.bubble, styles.bubbleUser]}
+                    >
                       <Text style={styles.userText}>{m.text}</Text>
-                    </View>
+                    </Animated.View>
                   ) : (
-                    <View key={m.id} style={[styles.bubble, styles.bubbleAssistant]}>
+                    <Animated.View
+                      key={m.id}
+                      entering={FadeIn.duration(220)}
+                      style={[styles.bubble, styles.bubbleAssistant]}
+                    >
                       {m.text ? (
                         <MarkdownText text={m.text} color={Colors.onSurface} />
                       ) : (
                         <ActivityIndicator color={Colors.primary} />
                       )}
-                    </View>
+                    </Animated.View>
                   ),
                 )
               )}
