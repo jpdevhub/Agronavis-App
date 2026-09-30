@@ -21,6 +21,7 @@ import type {
   MandiStateRef,
   PriceTrend,
   SoilHealth,
+  EligibleCrop,
   SoilReport,
   TwoFactorSetup,
   TwoFactorStatus,
@@ -64,6 +65,8 @@ export const farmApi = {
 };
 
 export const cropApi = {
+  /** Crops the scheme will advise on where this field is. */
+  eligible: (fieldId: string) => api.get<EligibleCrop[]>('/crops/eligible', { fieldId }),
   list: (params?: { fieldId?: string; status?: CropStatus }) => api.get<Crop[]>('/crops', params),
   create: (payload: Partial<Crop> & { name: string }) => api.post<Crop>('/crops', payload),
   update: (id: string, payload: Partial<Crop>) => api.patch<Crop>(`/crops/${id}`, payload),

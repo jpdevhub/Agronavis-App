@@ -218,6 +218,16 @@ export interface MicronutrientSpread {
   deficient: number;
 }
 
+/** A crop the Soil Health Card scheme will advise on in a given state. */
+export interface EligibleCrop {
+  /** The scheme's own id, which its recommendation engine takes. */
+  shcId: string;
+  name: string;
+  variety: string | null;
+  /** Crop, variety, irrigation and season as the scheme presents them. */
+  label: string;
+}
+
 export interface SoilReport {
   state: string;
   /** Null when no row matched the district and the state average was used. */

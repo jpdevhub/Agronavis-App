@@ -8,6 +8,8 @@ export const listCropsSchema = z.object({
 });
 
 export const createCropSchema = z.object({
+  shcCropId: z.string().trim().max(64).optional(),
+  durationDays: z.coerce.number().int().min(30).max(400).optional(),
   farmId: z.string().uuid().optional(),
   fieldId: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(80),
@@ -40,4 +42,8 @@ export const listVarietiesSchema = z.object({
 export const listDiseasesSchema = z.object({
   cropType: z.string().trim().max(60).optional(),
   search: z.string().trim().max(80).optional(),
+});
+
+export const eligibleCropsSchema = z.object({
+  fieldId: z.string().uuid(),
 });

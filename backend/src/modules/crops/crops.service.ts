@@ -8,6 +8,7 @@ import type {
   CropVariety,
   CropVarietyRow,
   DiseaseReference,
+  EligibleCrop,
 } from '@agronavis/shared-types';
 import { db } from '../../config/supabase';
 import { fromPostgrest, notFound } from '../../shared/errors';
@@ -77,6 +78,9 @@ function toDisease(row: CropDiseaseRow): DiseaseReference {
 }
 
 export interface CreateCropPayload {
+  /** The scheme's crop id, so fertiliser advice needs no name matching. */
+  shcCropId?: string;
+  durationDays?: number;
   farmId?: string;
   fieldId?: string;
   name: string;
@@ -86,7 +90,43 @@ export interface CreateCropPayload {
   harvestDate?: string;
 }
 
+
+/**
+ * Crops the scheme will advise on where this field is.
+ *
+ * Eligibility is per state and the lists differ sharply — Karnataka publishes
+ * 450 combinations, Bihar five, Punjab none — so a national crop list would
+ * offer farmers crops no recommendation exists for.
+ */
+async function listEligible(farmerId: string, fieldId: string): Promise<EligibleCrop[]> {
+  await assertOwnsField(farmerId, fieldId);
+
+  const { data: field, error: fieldError } = await db
+    .from('farm_fields')
+    .select('state')
+    .eq('id', fieldId)
+    .maybeSingle();
+  if (fieldError) throw fromPostgrest(fieldError, 'Load field');
+  if (!field?.state) return [];
+
+  const { data, error } = await db
+    .from('fertiliser_crops')
+    .select('shc_id, name, variety, label')
+    .eq('state', field.state)
+    .order('name')
+    .limit(2000);
+  if (error) throw fromPostgrest(error, 'List eligible crops');
+
+  return (data ?? []).map((row) => ({
+    shcId: row.shc_id,
+    name: row.name,
+    variety: row.variety,
+    label: row.label,
+  }));
+}
+
 export const cropsService = {
+  listEligible,
   async list(farmerId: string, filters: { fieldId?: string; status?: CropStatus } = {}): Promise<Crop[]> {
     let query = db
       .from('crops')
@@ -121,8 +161,12 @@ export const cropsService = {
         name: payload.name,
         variety: payload.variety ?? null,
         category: payload.category ?? null,
-        sown_date: payload.sownDate ?? null,
+        sown_date: payload.sownDate ?? new Date().toISOString().slice(0, 10),
         harvest_date: payload.harvestDate ?? null,
+        // Carries the scheme's crop id so fertiliser advice is a lookup rather
+        // than a re-match on a name that arrives in the state's own language.
+        shc_crop_id: payload.shcCropId ?? null,
+        duration_days: payload.durationDays ?? null,
       })
       .select('*')
       .single();

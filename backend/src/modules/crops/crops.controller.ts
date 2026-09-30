@@ -48,4 +48,10 @@ export const cropsController = {
   async getDiseaseReference(req: Request, res: Response) {
     ok(res, await cropsService.getDiseaseReference(req.params.classKey!));
   },
+
+  async listEligible(req: Request, res: Response) {
+    const { fieldId } = req.query as unknown as { fieldId: string };
+    const data = await cropsService.listEligible(farmerId(req), fieldId);
+    ok(res, data, { count: data.length });
+  },
 };

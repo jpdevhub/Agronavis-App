@@ -92,6 +92,8 @@ export type FarmFieldRow = {
 };
 
 export type CropRow = {
+  shc_crop_id: string | null;
+  duration_days: number | null;
   id: string;
   farm_id: string;
   farmer_id: string;

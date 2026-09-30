@@ -366,9 +366,21 @@ export default function DashboardScreen() {
               </View>
             ) : (
               <View style={styles.noTasksBox}>
-                <MaterialIcons name="check-circle-outline" size={36} color={Colors.primary} />
-                <Text style={styles.noTasksText}>All tasks completed</Text>
-                <Text style={styles.noTasksSub}>New tasks appear when you add crops.</Text>
+                <MaterialIcons name="eco" size={36} color={Colors.primary} />
+                <Text style={styles.noTasksText}>No crop on this field yet</Text>
+                <Text style={styles.noTasksSub}>
+                  Add what you are growing and the season&apos;s sowing, fertiliser, pest and
+                  harvest dates are laid out for you.
+                </Text>
+                <TouchableOpacity
+                  style={styles.addCropBtn}
+                  onPress={() => router.push('/crops' as any)}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                >
+                  <MaterialIcons name="add" size={20} color={Colors.onPrimary} />
+                  <Text style={styles.addCropText}>Add a crop</Text>
+                </TouchableOpacity>
               </View>
             )}
           </>
@@ -493,6 +505,12 @@ const styles = StyleSheet.create({
   },
 
   // No tasks
+  addCropBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    height: 48, paddingHorizontal: 22, marginTop: 6,
+    borderRadius: Radii.full, backgroundColor: Colors.primary,
+  },
+  addCropText: { fontSize: 15, fontWeight: '800', color: Colors.onPrimary },
   noTasksBox: {
     alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.xxl,
     backgroundColor: Colors.surfaceContainerLowest, borderRadius: Shape.extraLarge,

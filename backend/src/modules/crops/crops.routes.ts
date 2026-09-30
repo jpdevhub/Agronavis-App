@@ -3,7 +3,7 @@ import { requireAuth } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
 import { cropsController } from './crops.controller';
-import {
+import { eligibleCropsSchema,
   classKeyParamSchema,
   createCropSchema,
   idParamSchema,
@@ -20,6 +20,8 @@ cropRoutes.use(requireAuth);
 
 cropRoutes.get('/scans', handler(cropsController.listScans));
 cropRoutes.post('/scans', validate(recordScanSchema), handler(cropsController.recordScan));
+// Crops the scheme will advise on where this field is.
+cropRoutes.get('/eligible', validate(eligibleCropsSchema, 'query'), handler(cropsController.listEligible));
 cropRoutes.get('/varieties', validate(listVarietiesSchema, 'query'), handler(cropsController.listVarieties));
 cropRoutes.get('/diseases', validate(listDiseasesSchema, 'query'), handler(cropsController.listDiseases));
 cropRoutes.get(
