@@ -2,8 +2,15 @@ import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
-import { marketController } from './market.controller';
-import { dashboardSchema, livePricesSchema, mandiSearchSchema, trendSchema } from './market.schema';
+import { catalogueController, marketController } from './market.controller';
+import {
+  dashboardSchema,
+  districtListSchema,
+  livePricesSchema,
+  mandiSearchSchema,
+  marketListSchema,
+  trendSchema,
+} from './market.schema';
 
 export const marketRoutes = Router();
 
@@ -13,3 +20,10 @@ marketRoutes.get('/mandi', validate(mandiSearchSchema, 'query'), handler(marketC
 marketRoutes.get('/prices', validate(livePricesSchema, 'query'), handler(marketController.getLivePrices));
 marketRoutes.get('/trend', validate(trendSchema, 'query'), handler(marketController.getTrend));
 marketRoutes.get('/dashboard', validate(dashboardSchema, 'query'), handler(marketController.getDashboard));
+
+// Catalogue — Agmarknet reference data, mirrored nightly and served as small
+// lists so the filter UI can fill one dropdown at a time.
+marketRoutes.get('/catalogue/states', handler(catalogueController.listStates));
+marketRoutes.get('/catalogue/districts', validate(districtListSchema, 'query'), handler(catalogueController.listDistricts));
+marketRoutes.get('/catalogue/markets', validate(marketListSchema, 'query'), handler(catalogueController.listMarkets));
+marketRoutes.get('/catalogue/commodities', handler(catalogueController.listCommodities));

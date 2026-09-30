@@ -14,7 +14,11 @@ import type {
   FarmField,
   FarmTask,
   FarmerProfile,
+  MandiCommodityRef,
+  MandiDistrictRef,
+  MandiMarketRef,
   MandiSearchResult,
+  MandiStateRef,
   PriceTrend,
   SoilHealth,
   TwoFactorSetup,
@@ -110,6 +114,20 @@ export const marketApi = {
     }),
   trend: (commodity: string, state: string) =>
     api.get<PriceTrend | null>('/market/trend', { commodity, state }),
+
+  /**
+   * Agmarknet's catalogue, one dropdown at a time. The full tree is ~5000 rows,
+   * and a farmer only needs one state's districts and one district's mandis.
+   */
+  states: () => api.get<MandiStateRef[]>('/market/catalogue/states'),
+  districts: (stateId: number) =>
+    api.get<MandiDistrictRef[]>('/market/catalogue/districts', { stateId }),
+  markets: (stateId: number, districtId?: number) =>
+    api.get<MandiMarketRef[]>('/market/catalogue/markets', {
+      stateId,
+      ...(districtId !== undefined ? { districtId } : {}),
+    }),
+  commodities: () => api.get<MandiCommodityRef[]>('/market/catalogue/commodities'),
 };
 
 export const advisoryApi = {

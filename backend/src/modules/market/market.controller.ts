@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { ok } from '../../shared/http';
+import { catalogueService } from './catalogue.service';
 import { marketService } from './market.service';
 
 export const marketController = {
@@ -33,6 +34,30 @@ export const marketController = {
   async getDashboard(req: Request, res: Response) {
     const { state, crops } = req.query as unknown as { state: string; crops: string[] };
     const data = await marketService.getDashboardPrices(state, crops);
+    ok(res, data, { count: data.length });
+  },
+};
+
+export const catalogueController = {
+  async listStates(_req: Request, res: Response) {
+    const data = await catalogueService.listStates();
+    ok(res, data, { count: data.length });
+  },
+
+  async listDistricts(req: Request, res: Response) {
+    const { stateId } = req.query as unknown as { stateId: number };
+    const data = await catalogueService.listDistricts(stateId);
+    ok(res, data, { count: data.length });
+  },
+
+  async listMarkets(req: Request, res: Response) {
+    const { stateId, districtId } = req.query as unknown as { stateId: number; districtId?: number };
+    const data = await catalogueService.listMarkets(stateId, districtId);
+    ok(res, data, { count: data.length });
+  },
+
+  async listCommodities(_req: Request, res: Response) {
+    const data = await catalogueService.listCommodities();
     ok(res, data, { count: data.length });
   },
 };
