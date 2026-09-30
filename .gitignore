@@ -24,10 +24,6 @@ pnpm-debug.log*
 .env.*.local
 !.env.example
 
-# Reference checkouts — separate repos, kept locally for the merge graft
-krishi-sathi-ai/
-KrishiSaathi-AI/
-
 # Build output
 dist/
 build/
