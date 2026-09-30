@@ -18,7 +18,13 @@ services:
     # Only the API's dependency tree. The repo root is the Expo project, so a
     # bare `npm ci` would also pull in React Native — hundreds of megabytes the
     # server never loads. `--workspace=backend` installs that workspace alone.
-    buildCommand: npm ci --workspace=backend && npm run build --prefix backend
+    #
+    # `--include=dev` is required, not optional: NODE_ENV is production below, so
+    # npm would otherwise omit devDependencies — and every @types/* package the
+    # TypeScript compiler needs lives there. Without it the build fails on
+    # `Cannot find type definition file for 'jest'`, then express, and so on.
+    # Only the build uses them; `npm run start` runs plain compiled JavaScript.
+    buildCommand: npm ci --include=dev --workspace=backend && npm run build --prefix backend
     startCommand: npm run start --prefix backend
 
     envVars:
