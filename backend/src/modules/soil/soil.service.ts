@@ -225,22 +225,76 @@ export const soilService = {
   async getForField(farmerId: string, fieldId: string): Promise<SoilHealth | null> {
     const farmId = await assertOwnsField(farmerId, fieldId);
 
+    // A reading with no organic carbon and no moisture came from the estimator
+    // rather than a laboratory.
+    const isEstimate = (row: SoilHealthRow): boolean =>
+      row.organic_carbon === null && row.moisture_level === null;
+
     const existing = await latestReading(fieldId);
-    if (existing) {
-      // A row the estimator wrote carries no tested_date of its own beyond today;
-      // treat a reading with no organic carbon and no moisture as regional.
-      const isEstimate = existing.organic_carbon === null && existing.moisture_level === null;
-      return toSoilHealth(existing, isEstimate ? 'regional' : 'lab');
+
+    // A lab test is the farmer's own measurement and always wins.
+    if (existing && !isEstimate(existing)) return toSoilHealth(existing, 'lab');
+
+    // An estimate is only trustworthy if it was computed for this field's own
+    // place. Early estimates were derived from the farm, which can be a
+    // thousand kilometres away, so one written before the field's boundary was
+    // resolved is discarded and recomputed below.
+    const { data: placed } = await db
+      .from('farm_fields')
+      .select('state')
+      .eq('id', fieldId)
+      .maybeSingle();
+
+    if (existing && placed?.state && existing.estimated_for !== placed.state) {
+      await db.from('soil_health_history').delete().eq('id', existing.id);
+    } else if (existing) {
+      return toSoilHealth(existing, 'regional');
     }
 
-    const { data: location } = await db
-      .from('farms')
-      .select('state, district, farmers!inner(state, district)')
-      .eq('id', farmId)
-      .maybeSingle<{ state: string | null; district: string | null; farmers: { state: string | null; district: string | null } }>();
+    // The field's own place first. A farm carries one state and district while
+    // its fields can be a thousand kilometres apart, so reading the farm gave
+    // every field the same estimate — three fields in three states all showed
+    // West Bengal's. `state` is filled from the drawn boundary the first time a
+    // report is opened for the field.
+    const { data: field } = await db
+      .from('farm_fields')
+      .select('state, district, center_latitude, center_longitude')
+      .eq('id', fieldId)
+      .maybeSingle();
 
-    const state = location?.state ?? location?.farmers?.state;
-    const district = location?.district ?? location?.farmers?.district;
+    let state = field?.state ?? null;
+    let district = field?.district ?? null;
+
+    if (!state) {
+      const lat = field?.center_latitude == null ? null : Number(field.center_latitude);
+      const lon = field?.center_longitude == null ? null : Number(field.center_longitude);
+      if (lat != null && lon != null) {
+        const place = await reverseGeocode(lat, lon);
+        if (place) {
+          await db
+            .from('farm_fields')
+            .update({ state: place.state, district: place.district })
+            .eq('id', fieldId);
+          state = place.state;
+          district = place.district;
+        }
+      }
+    }
+
+    if (!state) {
+      const { data: location } = await db
+        .from('farms')
+        .select('state, district, farmers!inner(state, district)')
+        .eq('id', farmId)
+        .maybeSingle<{
+          state: string | null;
+          district: string | null;
+          farmers: { state: string | null; district: string | null };
+        }>();
+      state = location?.state ?? location?.farmers?.state ?? null;
+      district = location?.district ?? location?.farmers?.district ?? null;
+    }
+
     if (!state || !district) return null;
 
     const { error: rpcError } = await db.rpc('get_estimated_soil_health', {

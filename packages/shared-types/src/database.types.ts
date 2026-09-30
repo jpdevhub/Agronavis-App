@@ -170,6 +170,8 @@ export type CommunityReplyRow = {
 };
 
 export type SoilHealthRow = {
+  /** State the regional estimate was computed for; null for a lab test. */
+  estimated_for: string | null;
   id: string;
   farm_id: string | null;
   field_id: string | null;
@@ -478,6 +480,7 @@ export interface Database {
       community_replies: Table<CommunityReplyRow, 'id' | 'created_at' | 'author_id' | 'post_id'>;
       soil_health_history: Table<
         SoilHealthRow,
+        | 'estimated_for'
         | 'id'
         | 'created_at'
         | 'farm_id'
