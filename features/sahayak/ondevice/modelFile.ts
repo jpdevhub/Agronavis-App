@@ -17,7 +17,8 @@ export const MODEL_URL: Record<ModelVariant, string> = {
   e2b: 'https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm',
 };
 
-export const APPROX_SIZE_GB: Record<ModelVariant, number> = { e4b: 4.4, e2b: 3.1 };
+/** Measured from the published artefacts, not estimated. */
+export const APPROX_SIZE_GB: Record<ModelVariant, number> = { e4b: 3.4, e2b: 2.4 };
 
 /**
  * Retail "8 GB" phones report 9–11 GB through PlatformConstants because the
