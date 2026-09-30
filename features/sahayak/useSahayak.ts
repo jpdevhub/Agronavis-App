@@ -12,9 +12,15 @@ import { useFarmFields } from '@/hooks/useFarmFields';
 import { useFarmer } from '@/hooks/useFarmer';
 import { useSoilHealth } from '@/hooks/useSoilHealth';
 import { useWeather } from '@/hooks/useWeather';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useFarmStore } from '@/store/useFarmStore';
 import { useScreenContext } from './useScreenContext';
 import { buildSahayakPrompt, contextSummary } from './farmerContext';
+import {
+  loadContextSnapshot,
+  saveContextSnapshot,
+  type CachedContext,
+} from './contextCache';
 import { detectModelVariant, probeModel, type ModelVariant } from './ondevice/modelFile';
 
 export type SahayakMessage = { id: string; role: 'user' | 'assistant'; text: string };
@@ -50,11 +56,46 @@ export function useSahayak() {
   const { advisories } = useAdvisories();
 
   const { pathname } = useScreenContext();
-  const context = useMemo(
-    () => ({ farmer, fields, weather, soil: soil ?? undefined, advisories, pathname }),
-    [farmer, fields, weather, soil, advisories, pathname],
+  const userId = useAuthStore((s) => s.user?.id) ?? null;
+  const [snapshot, setSnapshot] = useState<{ context: CachedContext; savedAt: string } | null>(null);
+
+  // Restore the last synced farm details once, for a cold start with no signal.
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    loadContextSnapshot(userId).then((found) => {
+      if (!cancelled && found) setSnapshot(found);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  const live = useMemo<CachedContext>(
+    () => ({ farmer, fields, weather, soil: soil ?? undefined, advisories }),
+    [farmer, fields, weather, soil, advisories],
   );
-  const replyLanguage = language ?? farmer?.language ?? 'en';
+
+  // Keep the snapshot current while the farm details are readable.
+  useEffect(() => {
+    if (!userId || !farmer) return;
+    void saveContextSnapshot(userId, live);
+  }, [userId, farmer, live]);
+
+  /**
+   * Live details win. The snapshot only stands in when the profile has not
+   * loaded — offline, or before the first fetch lands.
+   */
+  const usingSnapshot = !farmer && snapshot !== null;
+  const context = useMemo(
+    () => ({
+      ...(usingSnapshot ? (snapshot as { context: CachedContext }).context : live),
+      pathname,
+      ...(usingSnapshot ? { dataSavedAt: snapshot?.savedAt } : {}),
+    }),
+    [usingSnapshot, snapshot, live, pathname],
+  );
+  const replyLanguage = language ?? context.farmer?.language ?? 'en';
   const systemPrompt = useMemo(
     () => buildSahayakPrompt({ ...context, replyLanguage }),
     [context, replyLanguage],
