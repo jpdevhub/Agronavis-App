@@ -2,7 +2,7 @@
   "name": "@agronavis/backend",
   "version": "1.2.0",
   "private": true,
-  "description": "Agronavis REST + realtime API — the only path between the app and the database",
+  "description": "Agronavis REST + realtime API \u2014 the only path between the app and the database",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch --clear-screen=false src/server.ts",
@@ -14,7 +14,8 @@
     "test": "jest --runInBand --passWithNoTests",
     "test:watch": "jest --watch",
     "sync:catalogue": "tsx src/jobs/catalogue.cli.ts",
-    "sync:soil": "tsx src/jobs/soil.cli.ts"
+    "sync:soil": "tsx src/jobs/soil.cli.ts",
+    "sync:fertiliser": "tsx src/jobs/fertiliser.cli.ts"
   },
   "dependencies": {
     "@agronavis/shared-types": "*",

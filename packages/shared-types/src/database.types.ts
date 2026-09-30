@@ -355,6 +355,17 @@ export type IngestionRunRow = {
   finished_at: string | null;
 };
 
+export type FertiliserCropRow = {
+  shc_id: string;
+  shc_state_id: string;
+  state: string;
+  name: string;
+  variety: string | null;
+  /** Crop, variety, irrigation and season as the scheme presents them. */
+  label: string;
+  synced_at: string;
+};
+
 /** Insert shape: PK, defaulted and generated columns are optional. */
 type Insertable<T, Optional extends keyof T> = Omit<T, Optional> & Partial<Pick<T, Optional>>;
 type Table<Row, InsertOptional extends keyof Row> = {
@@ -498,6 +509,7 @@ export interface Database {
         'id' | 'created_at' | 'synced_at' | 'Block' | 'Scheme' | 'Cycle'
       >;
       mandi_states: Table<MandiStateRow, 'synced_at'>;
+      fertiliser_crops: Table<FertiliserCropRow, 'synced_at' | 'variety'>;
       mandi_districts: Table<MandiDistrictRow, 'synced_at'>;
       mandi_markets: Table<MandiMarketRow, 'synced_at' | 'district_id'>;
       mandi_commodities: Table<

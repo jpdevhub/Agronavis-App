@@ -1,24 +1,6 @@
-import axios from 'axios';
 import { logger } from '../config/logger';
 import { db } from '../config/supabase';
-
-/**
- * The Soil Health Card portal is a React app over a GraphQL API that answers
- * without a credential. It publishes the district nutrient tables the scheme
- * collects, which is the same data the hand-written seed in 0004 came from —
- * only for all 34 states and UTs rather than five.
- */
-const API = 'https://soilhealth4.dac.gov.in';
-
-const HEADERS = {
-  'Content-Type': 'application/json',
-  'User-Agent':
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
-  Origin: 'https://soilhealth.dac.gov.in',
-  Referer: 'https://soilhealth.dac.gov.in/',
-};
-
-const STATES_QUERY = 'query GetState { getState }';
+import { shcQuery, shcStates, titleCase } from '../shared/soilHealthCard';
 
 const NUTRIENTS_QUERY = `query GetNutrientDashboardForPortal($state: ID, $cycle: String) {
   getNutrientDashboardForPortal(state: $state, cycle: $cycle)
@@ -49,11 +31,6 @@ interface NutrientRow {
   } | null;
 }
 
-interface StateRow {
-  _id: string;
-  name: string;
-}
-
 export interface SoilRow {
   State: string;
   District: string;
@@ -72,25 +49,6 @@ export interface SoilRow {
   Mn_Sufficient: number; Mn_Deficient: number;
 }
 
-async function graphql<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
-  const { data } = await axios.post<{ data: T; errors?: { message: string }[] }>(
-    API,
-    { query, variables },
-    { headers: HEADERS, timeout: 90_000 },
-  );
-  if (data.errors?.length) throw new Error(data.errors[0].message);
-  return data.data;
-}
-
-/** "ANDHRA PRADESH" reads badly in the UI; the lookup lower-cases anyway. */
-export function titleCase(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/\b[a-z]/g, (c) => c.toUpperCase())
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 const num = (band: Band | undefined, key: string): number => {
   const value = band?.[key];
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
@@ -104,6 +62,8 @@ const num = (band: Band | undefined, key: string): number => {
  * counts add. The estimate function sums multiple rows for a district anyway;
  * doing it here keeps the table one row per district.
  */
+export { titleCase };
+
 export function foldNutrientRows(stateName: string, rows: NutrientRow[]): SoilRow[] {
   const byDistrict = new Map<string, SoilRow>();
 
@@ -186,8 +146,7 @@ export async function runSoilSync(cycle?: string): Promise<{
   const runId = run?.id as string | undefined;
 
   try {
-    const { getState } = await graphql<{ getState: StateRow[] }>(STATES_QUERY);
-    const states = (getState ?? []).filter((s) => s?._id && s?.name);
+    const states = await shcStates();
 
     const all: SoilRow[] = [];
     let covered = 0;
@@ -204,7 +163,7 @@ export async function runSoilSync(cycle?: string): Promise<{
 
       for (const attempt of cycles) {
         try {
-          const res = await graphql<{ getNutrientDashboardForPortal: NutrientRow[] | null }>(
+          const res = await shcQuery<{ getNutrientDashboardForPortal: NutrientRow[] | null }>(
             NUTRIENTS_QUERY,
             { state: state._id, cycle: attempt },
           );

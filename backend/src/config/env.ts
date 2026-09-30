@@ -60,6 +60,8 @@ const envSchema = z
     CATALOGUE_SYNC_CRON: z.string().default('30 2 * * 0'),
     // Soil Health Card publishes per cycle, not per day; monthly is ample.
     SOIL_SYNC_CRON: z.string().default('0 3 1 * *'),
+    // Crop lists change with the scheme, not the season.
+    FERTILISER_SYNC_CRON: z.string().default('0 4 1 * *'),
   })
   .transform((raw) => ({
     ...raw,

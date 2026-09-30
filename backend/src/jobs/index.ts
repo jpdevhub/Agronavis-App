@@ -2,6 +2,7 @@ import cron, { type ScheduledTask } from 'node-cron';
 import { env } from '../config/env';
 import { logger } from '../config/logger';
 import { runCatalogueSync } from './catalogue.job';
+import { runFertiliserCropSync } from './fertiliser.job';
 import { runMarketPoll } from './market.job';
 import { runSoilSync } from './soil.job';
 import { runWeatherPoll } from './weather.job';
@@ -40,12 +41,14 @@ export function startJobs(): void {
   tasks.push(cron.schedule(env.MARKET_POLL_CRON, guarded('Market poll', runMarketPoll)));
   tasks.push(cron.schedule(env.CATALOGUE_SYNC_CRON, guarded('Catalogue sync', runCatalogueSync)));
   tasks.push(cron.schedule(env.SOIL_SYNC_CRON, guarded('Soil sync', () => runSoilSync())));
+  tasks.push(cron.schedule(env.FERTILISER_SYNC_CRON, guarded('Fertiliser crops', runFertiliserCropSync)));
 
   logger.info('Background jobs scheduled', {
     weather: env.WEATHER_POLL_CRON,
     market: env.MARKET_POLL_CRON,
     catalogue: env.CATALOGUE_SYNC_CRON,
     soil: env.SOIL_SYNC_CRON,
+    fertiliser: env.FERTILISER_SYNC_CRON,
   });
 }
 
@@ -54,4 +57,4 @@ export function stopJobs(): void {
   tasks.length = 0;
 }
 
-export { runCatalogueSync, runMarketPoll, runSoilSync, runWeatherPoll };
+export { runCatalogueSync, runFertiliserCropSync, runMarketPoll, runSoilSync, runWeatherPoll };
