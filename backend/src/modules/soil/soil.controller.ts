@@ -16,4 +16,10 @@ export const soilController = {
   async recordReading(req: Request, res: Response) {
     created(res, await soilService.recordReading(farmerId(req), req.params.fieldId!, req.body));
   },
+
+  async getReport(req: Request, res: Response) {
+    const { state, district } = req.query as unknown as { state: string; district?: string };
+    const report = await soilService.getReport(state, district);
+    ok(res, report);
+  },
 };

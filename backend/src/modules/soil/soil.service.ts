@@ -1,4 +1,9 @@
-import type { NutrientLevel, SoilHealth, SoilHealthRow } from '@agronavis/shared-types';
+import type {
+  NutrientLevel,
+  SoilHealth,
+  SoilHealthRow,
+  SoilReport,
+} from '@agronavis/shared-types';
 import { logger } from '../../config/logger';
 import { db } from '../../config/supabase';
 import { fromPostgrest } from '../../shared/errors';
@@ -57,7 +62,110 @@ async function latestReading(fieldId: string): Promise<SoilHealthRow | null> {
   return (data as SoilHealthRow) ?? null;
 }
 
+
+/** Strips the "Division"/"District" suffix Expo's reverse geocoder returns. */
+function bareDistrict(value: string): string {
+  return value.replace(/\s+(division|district)$/i, '').trim();
+}
+
+const sum = (rows: Record<string, unknown>[], key: string): number =>
+  rows.reduce((total, row) => total + (Number(row[key]) || 0), 0);
+
+/**
+ * The Soil Health Card figures behind a district estimate.
+ *
+ * Tries the farmer's district first and falls back to averaging the state, the
+ * same order `get_estimated_soil_health` uses — so the report always explains
+ * the number the dashboard is already showing, rather than a different one.
+ */
+async function getReport(state: string, district?: string): Promise<SoilReport | null> {
+  const cleanState = state.trim();
+  const cleanDistrict = district ? bareDistrict(district) : '';
+
+  const columns =
+    'State, District, Cycle, n_high, n_medium, n_low, p_high, p_medium, p_low, ' +
+    'k_high, k_medium, k_low, "OC_High", "OC_Medium", "OC_Low", ' +
+    '"pH_Alkaline", "pH_Acidic", "pH_Neutral", "EC_NonSaline", "EC_Saline", ' +
+    '"S_Sufficient", "S_Deficient", "Fe_Sufficient", "Fe_Deficient", ' +
+    '"Zn_Sufficient", "Zn_Deficient", "Cu_Sufficient", "Cu_Deficient", ' +
+    '"B_Sufficient", "B_Deficient", "Mn_Sufficient", "Mn_Deficient"';
+
+  let scope: SoilReport['scope'] = 'district';
+  let rows: Record<string, unknown>[] = [];
+
+  if (cleanDistrict) {
+    const { data, error } = await db
+      .from('regional_soil_data')
+      .select(columns)
+      .ilike('State', cleanState)
+      .ilike('District', cleanDistrict);
+    if (error) throw fromPostgrest(error, 'Soil report');
+    rows = (data ?? []) as unknown as Record<string, unknown>[];
+  }
+
+  if (rows.length === 0) {
+    scope = 'state';
+    const { data, error } = await db
+      .from('regional_soil_data')
+      .select(columns)
+      .ilike('State', cleanState);
+    if (error) throw fromPostgrest(error, 'Soil report');
+    rows = (data ?? []) as unknown as Record<string, unknown>[];
+  }
+
+  if (rows.length === 0) return null;
+
+  const spread = (prefix: string): { high: number; medium: number; low: number } => ({
+    high: sum(rows, `${prefix}high`),
+    medium: sum(rows, `${prefix}medium`),
+    low: sum(rows, `${prefix}low`),
+  });
+
+  const micro = (element: string) => ({
+    sufficient: sum(rows, `${element}_Sufficient`),
+    deficient: sum(rows, `${element}_Deficient`),
+  });
+
+  const nitrogen = spread('n_');
+
+  return {
+    state: String(rows[0].State ?? cleanState),
+    district: scope === 'district' ? String(rows[0].District ?? cleanDistrict) : null,
+    scope,
+    cycle: scope === 'district' ? ((rows[0].Cycle as string) ?? null) : null,
+    districtsCovered: rows.length,
+    // Every class of a nutrient is one sample counted once, so nitrogen's three
+    // bands total the samples behind the whole row.
+    samples: nitrogen.high + nitrogen.medium + nitrogen.low,
+    macro: {
+      nitrogen,
+      phosphorus: spread('p_'),
+      potassium: spread('k_'),
+      organicCarbon: {
+        high: sum(rows, 'OC_High'),
+        medium: sum(rows, 'OC_Medium'),
+        low: sum(rows, 'OC_Low'),
+      },
+    },
+    ph: {
+      alkaline: sum(rows, 'pH_Alkaline'),
+      acidic: sum(rows, 'pH_Acidic'),
+      neutral: sum(rows, 'pH_Neutral'),
+    },
+    ec: { saline: sum(rows, 'EC_Saline'), nonSaline: sum(rows, 'EC_NonSaline') },
+    micro: {
+      sulphur: micro('S'),
+      iron: micro('Fe'),
+      zinc: micro('Zn'),
+      copper: micro('Cu'),
+      boron: micro('B'),
+      manganese: micro('Mn'),
+    },
+  };
+}
+
 export const soilService = {
+  getReport,
   /** Soil health for a field. */
   async getForField(farmerId: string, fieldId: string): Promise<SoilHealth | null> {
     const farmId = await assertOwnsField(farmerId, fieldId);

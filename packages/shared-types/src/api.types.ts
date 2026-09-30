@@ -188,6 +188,55 @@ export interface SoilHealth {
   levels: { nitrogen: NutrientLevel; phosphorus: NutrientLevel; potassium: NutrientLevel };
 }
 
+/**
+ * The Soil Health Card figures behind a district estimate, unreduced.
+ *
+ * The dashboard shows one word per nutrient because the estimate collapses each
+ * distribution to its dominant class. That discards how close the call was, and
+ * every micronutrient — boron runs 40-50% deficient in much of India and never
+ * reached the farmer.
+ */
+export interface NutrientSpread {
+  high: number;
+  medium: number;
+  low: number;
+}
+
+export interface MicronutrientSpread {
+  sufficient: number;
+  deficient: number;
+}
+
+export interface SoilReport {
+  state: string;
+  /** Null when no row matched the district and the state average was used. */
+  district: string | null;
+  /** 'district' is specific to the farmer's place; 'state' is an average. */
+  scope: 'district' | 'state';
+  /** Soil Health Card collection cycle, e.g. "2026-27". */
+  cycle: string | null;
+  /** Districts averaged — 1 for a district match. */
+  districtsCovered: number;
+  /** Samples behind the figures, the honest measure of how much to trust them. */
+  samples: number;
+  macro: {
+    nitrogen: NutrientSpread;
+    phosphorus: NutrientSpread;
+    potassium: NutrientSpread;
+    organicCarbon: NutrientSpread;
+  };
+  ph: { alkaline: number; acidic: number; neutral: number };
+  ec: { saline: number; nonSaline: number };
+  micro: {
+    sulphur: MicronutrientSpread;
+    iron: MicronutrientSpread;
+    zinc: MicronutrientSpread;
+    copper: MicronutrientSpread;
+    boron: MicronutrientSpread;
+    manganese: MicronutrientSpread;
+  };
+}
+
 export interface CurrentWeather {
   temp: number;
   feelsLike: number;

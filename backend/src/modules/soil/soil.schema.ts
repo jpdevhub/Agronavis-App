@@ -11,3 +11,8 @@ export const recordReadingSchema = z.object({
   moistureLevel: z.number().min(0).max(100).optional(),
   testedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
+
+export const soilReportSchema = z.object({
+  state: z.string().trim().min(1).max(60),
+  district: z.string().trim().max(60).optional(),
+});

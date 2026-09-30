@@ -21,6 +21,7 @@ import type {
   MandiStateRef,
   PriceTrend,
   SoilHealth,
+  SoilReport,
   TwoFactorSetup,
   TwoFactorStatus,
   UpdateFarmerPayload,
@@ -94,6 +95,12 @@ export const taskApi = {
 };
 
 export const soilApi = {
+  /** The Soil Health Card figures behind a district estimate, unreduced. */
+  report: (state: string, district?: string) =>
+    api.get<SoilReport | null>('/soil/report', {
+      state,
+      ...(district ? { district } : {}),
+    }),
   forField: (fieldId: string) => api.get<SoilHealth | null>(`/soil/field/${fieldId}`),
   history: (fieldId: string) => api.get<SoilHealth[]>(`/soil/field/${fieldId}/history`),
 };

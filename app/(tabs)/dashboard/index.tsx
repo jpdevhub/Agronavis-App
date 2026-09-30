@@ -29,13 +29,30 @@ const NPK_COLORS: Record<string, { bg: string; text: string }> = {
   'N/A':  { bg: Colors.surfaceContainerHigh, text: Colors.onSurfaceVariant  },
 };
 
-function StatChip({ label, value }: { label: string; value: string }) {
+function StatChip({ label, value, onPress }: { label: string; value: string; onPress?: () => void }) {
   const colors = NPK_COLORS[value] ?? NPK_COLORS['N/A'];
-  return (
-    <View style={[styles.statChip, { backgroundColor: colors.bg }]}>
+  const body = (
+    <>
       <Text style={[styles.statChipValue, { color: colors.text }]}>{value}</Text>
       <Text style={styles.statChipLabel}>{label}</Text>
-    </View>
+    </>
+  );
+
+  // One word hides the distribution behind it; the report shows the spread.
+  if (!onPress) {
+    return <View style={[styles.statChip, { backgroundColor: colors.bg }]}>{body}</View>;
+  }
+
+  return (
+    <TouchableOpacity
+      style={[styles.statChip, { backgroundColor: colors.bg }]}
+      onPress={onPress}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`${label} ${value}. Open the soil health report.`}
+    >
+      {body}
+    </TouchableOpacity>
   );
 }
 
@@ -129,6 +146,22 @@ export default function DashboardScreen() {
   const setActiveField = useFarmStore((s) => s.setActiveField);
 
   const { data: farmer, isLoading: farmerLoading, refetch: refetchFarmer } = useFarmer();
+
+  /**
+   * The tiles show one word each — the rating that won. The report behind them
+   * carries the distribution, the micronutrients and how many samples it rests
+   * on, keyed on the same place the estimate used.
+   */
+  const openSoilReport = useCallback(() => {
+    if (!farmer?.state) return;
+    router.push({
+      pathname: '/soil-report',
+      params: {
+        state: farmer.state,
+        ...(farmer.district ? { district: farmer.district } : {}),
+      },
+    } as never);
+  }, [router, farmer?.state, farmer?.district]);
   const { data: fields, isLoading: fieldsLoading, refetch: refetchFields } = useFarmFields();
   const { data: tasks, isLoading: tasksLoading, completeTask, refetch: refetchTasks } = useTimelineTasks();
   const { levels, isLoading: soilLoading, isRegional, hasNoCoverage } = useSoilHealth();
@@ -268,9 +301,9 @@ export default function DashboardScreen() {
                   </>
                 ) : (
                   <>
-                    <StatChip label="Nitrogen"   value={levels.nitrogen}   />
-                    <StatChip label="Phosphorus" value={levels.phosphorus} />
-                    <StatChip label="Potassium"  value={levels.potassium}  />
+                    <StatChip label="Nitrogen"   value={levels.nitrogen}   onPress={openSoilReport} />
+                    <StatChip label="Phosphorus" value={levels.phosphorus} onPress={openSoilReport} />
+                    <StatChip label="Potassium"  value={levels.potassium}  onPress={openSoilReport} />
                   </>
                 )}
               </View>
