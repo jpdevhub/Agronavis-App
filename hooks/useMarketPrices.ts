@@ -19,11 +19,3 @@ export function useMarketPrices(state: string | null | undefined, crops?: string
   });
 }
 
-export function usePriceTrend(commodity: string | null, state: string | null) {
-  return useQuery({
-    queryKey: ['market', 'trend', commodity, state],
-    queryFn: () => marketApi.trend(commodity!, state!),
-    enabled: !!commodity && !!state,
-    staleTime: 1000 * 60 * 60,
-  });
-}

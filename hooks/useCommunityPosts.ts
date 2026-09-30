@@ -20,14 +20,6 @@ export function useCreatePost() {
   });
 }
 
-export function useDeletePost() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: communityApi.deletePost,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['community', 'posts'] }),
-  });
-}
-
 /**
  * Upvote toggle. The count comes back from the server, so two people voting at
  * once can no longer overwrite each other.
