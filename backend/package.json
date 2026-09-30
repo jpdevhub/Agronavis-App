@@ -2,7 +2,7 @@
   "name": "@agronavis/backend",
   "version": "1.2.0",
   "private": true,
-  "description": "Agronavis REST + realtime API \u2014 the only path between the app and the database",
+  "description": "Agronavis REST + realtime API — the only path between the app and the database",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch --clear-screen=false src/server.ts",
@@ -34,7 +34,6 @@
     "socket.io": "^4.8.1",
     "speakeasy": "^2.0.0",
     "winston": "^3.17.0",
-    "ws": "^8.18.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -50,7 +49,6 @@
     "@types/qrcode": "^1.5.5",
     "@types/speakeasy": "^2.0.10",
     "@types/supertest": "^6.0.2",
-    "@types/ws": "^8.5.13",
     "@typescript-eslint/eslint-plugin": "^8.20.0",
     "@typescript-eslint/parser": "^8.20.0",
     "eslint": "^9.18.0",
@@ -60,5 +58,8 @@
     "tsx": "^4.19.2",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.20.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
