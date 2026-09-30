@@ -66,8 +66,6 @@
     "notebooks",
     "android",
     "ios",
-    "dist",
-    "krishi-sathi-ai",
-    "KrishiSaathi-AI"
+    "dist"
   ]
 }

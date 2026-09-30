@@ -26,8 +26,6 @@ config.resolver.blockList = [
   /\/supabase\/.*/,
   /\/notebooks\/.*/,
   /\/android\/.*/,
-  /\/krishi-sathi-ai\/.*/,
-  /\/KrishiSaathi-AI\/.*/,
 ];
 
 module.exports = config;

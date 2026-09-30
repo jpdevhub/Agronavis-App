@@ -20,8 +20,6 @@ module.exports = defineConfig([
       'scripts/**',
       'docs/**',
       'notebooks/**',
-      'krishi-sathi-ai/**',
-      'KrishiSaathi-AI/**',
     ],
   },
 ]);
