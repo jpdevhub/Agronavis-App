@@ -106,6 +106,17 @@ export interface CreateFieldPayload {
   polygon: Json;
   centerLatitude?: number;
   centerLongitude?: number;
+  /**
+   * Where the polygon actually sits, reverse-geocoded as it was drawn.
+   *
+   * The farm's coordinates have always come from the first field's centroid,
+   * but its state and district came from onboarding and were never revisited —
+   * so a farm could read "Punjab" while its land sat in Kolkata. Weather
+   * follows the coordinates and soil follows the names, and the two described
+   * different places.
+   */
+  state?: string;
+  district?: string;
 }
 
 export interface Crop {

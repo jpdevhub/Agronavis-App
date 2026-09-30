@@ -200,6 +200,23 @@ export default function FarmFieldDrawer({
       const ring: [number, number][] = pins.map((p) => [p.longitude, p.latitude]);
       ring.push(ring[0]);
 
+      // Where the polygon sits, not where the phone is: a farmer can pan the
+      // map to land they are not standing on, and the farm's state and district
+      // drive the soil estimate. Best-effort — a failure here must not lose the
+      // field that was just drawn.
+      let place: { state?: string; district?: string } = {};
+      try {
+        const geo = await Location.reverseGeocodeAsync({
+          latitude: centerLat,
+          longitude: centerLon,
+        });
+        const region = geo[0]?.region ?? '';
+        const sub = geo[0]?.subregion ?? geo[0]?.city ?? '';
+        if (region) place = { state: region, ...(sub ? { district: sub } : {}) };
+      } catch {
+        /* keep whatever the farm already had */
+      }
+
       // The API resolves or creates the parent farm and recomputes the area
       // from this geometry, so the client sends only what it measured.
       await createField.mutateAsync({
@@ -208,6 +225,7 @@ export default function FarmFieldDrawer({
         polygon: { type: 'Polygon', coordinates: [ring] },
         centerLatitude: Number(centerLat.toFixed(6)),
         centerLongitude: Number(centerLon.toFixed(6)),
+        ...place,
       });
 
       onComplete();

@@ -78,6 +78,17 @@ const sum = (rows: Record<string, unknown>[], key: string): number =>
  * same order `get_estimated_soil_health` uses — so the report always explains
  * the number the dashboard is already showing, rather than a different one.
  */
+async function getReportForFarm(farmId: string): Promise<SoilReport | null> {
+  const { data, error } = await db
+    .from('farms')
+    .select('state, district')
+    .eq('id', farmId)
+    .maybeSingle();
+  if (error) throw fromPostgrest(error, 'Soil report');
+  if (!data?.state) return null;
+  return getReport(data.state, data.district ?? undefined);
+}
+
 async function getReport(state: string, district?: string): Promise<SoilReport | null> {
   const cleanState = state.trim();
   const cleanDistrict = district ? bareDistrict(district) : '';
@@ -166,6 +177,7 @@ async function getReport(state: string, district?: string): Promise<SoilReport |
 
 export const soilService = {
   getReport,
+  getReportForFarm,
   /** Soil health for a field. */
   async getForField(farmerId: string, fieldId: string): Promise<SoilHealth | null> {
     const farmId = await assertOwnsField(farmerId, fieldId);

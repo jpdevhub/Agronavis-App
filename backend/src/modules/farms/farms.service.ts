@@ -149,13 +149,28 @@ export const farmsService = {
       .single();
     if (error) throw fromPostgrest(error, 'Create field');
 
-    // First mapped field also fixes the farm's coordinates, which the pollers use.
+    // The first mapped field fixes the farm's coordinates, which the pollers use.
     if (centerLatitude != null && centerLongitude != null) {
       await db
         .from('farms')
         .update({ latitude: centerLatitude, longitude: centerLongitude })
         .eq('id', farmId)
         .is('latitude', null);
+    }
+
+    // …and its state and district, which the soil estimate reads. Those came
+    // from onboarding alone and were never revisited, so a farm could claim one
+    // state while its land was drawn in another: weather followed the
+    // coordinates, soil followed the names, and the two described different
+    // places. Sent only when the drawer managed to resolve them.
+    if (payload.state) {
+      await db
+        .from('farms')
+        .update({
+          state: payload.state,
+          ...(payload.district ? { district: payload.district } : {}),
+        })
+        .eq('id', farmId);
     }
 
     return toField(data);

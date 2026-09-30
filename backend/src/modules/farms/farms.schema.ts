@@ -22,6 +22,8 @@ export const createFieldSchema = z.object({
   polygon: polygonSchema,
   centerLatitude: z.number().min(-90).max(90).optional(),
   centerLongitude: z.number().min(-180).max(180).optional(),
+  state: z.string().trim().max(60).optional(),
+  district: z.string().trim().max(60).optional(),
 });
 
 export const renameFieldSchema = z.object({

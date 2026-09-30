@@ -95,11 +95,15 @@ export const taskApi = {
 };
 
 export const soilApi = {
-  /** The Soil Health Card figures behind a district estimate, unreduced. */
-  report: (state: string, district?: string) =>
+  /**
+   * The Soil Health Card figures behind a district estimate, unreduced. Keyed on
+   * the farm so it describes the same place the weather does.
+   */
+  report: (params: { farmId?: string; state?: string; district?: string }) =>
     api.get<SoilReport | null>('/soil/report', {
-      state,
-      ...(district ? { district } : {}),
+      ...(params.farmId ? { farmId: params.farmId } : {}),
+      ...(params.state ? { state: params.state } : {}),
+      ...(params.district ? { district: params.district } : {}),
     }),
   forField: (fieldId: string) => api.get<SoilHealth | null>(`/soil/field/${fieldId}`),
   history: (fieldId: string) => api.get<SoilHealth[]>(`/soil/field/${fieldId}/history`),

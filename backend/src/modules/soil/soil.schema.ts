@@ -12,7 +12,16 @@ export const recordReadingSchema = z.object({
   testedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
-export const soilReportSchema = z.object({
-  state: z.string().trim().min(1).max(60),
-  district: z.string().trim().max(60).optional(),
-});
+/**
+ * Either a farm — whose own state and district are used, so the report matches
+ * the weather for the same place — or an explicit state for a manual lookup.
+ */
+export const soilReportSchema = z
+  .object({
+    farmId: z.string().uuid().optional(),
+    state: z.string().trim().min(1).max(60).optional(),
+    district: z.string().trim().max(60).optional(),
+  })
+  .refine((v) => Boolean(v.farmId ?? v.state), {
+    message: 'farmId or state is required',
+  });

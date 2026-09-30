@@ -150,9 +150,17 @@ export default function DashboardScreen() {
   /**
    * The tiles show one word each — the rating that won. The report behind them
    * carries the distribution, the micronutrients and how many samples it rests
-   * on, keyed on the same place the estimate used.
+   * on.
+   *
+   * Keyed on the selected field's farm, not the farmer's profile: a farmer with
+   * land in two states would otherwise read the same report for both, and it
+   * would disagree with the weather, which follows the farm.
    */
   const openSoilReport = useCallback(() => {
+    if (activeFarmId) {
+      router.push({ pathname: '/soil-report', params: { farmId: activeFarmId } } as never);
+      return;
+    }
     if (!farmer?.state) return;
     router.push({
       pathname: '/soil-report',
@@ -161,7 +169,7 @@ export default function DashboardScreen() {
         ...(farmer.district ? { district: farmer.district } : {}),
       },
     } as never);
-  }, [router, farmer?.state, farmer?.district]);
+  }, [router, activeFarmId, farmer?.state, farmer?.district]);
   const { data: fields, isLoading: fieldsLoading, refetch: refetchFields } = useFarmFields();
   const { data: tasks, isLoading: tasksLoading, completeTask, refetch: refetchTasks } = useTimelineTasks();
   const { levels, isLoading: soilLoading, isRegional, hasNoCoverage } = useSoilHealth();
