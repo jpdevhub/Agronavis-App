@@ -182,6 +182,8 @@ export type SoilHealthRow = {
 
 export type RegionalSoilRow = {
   id: number;
+  /** Set by the Soil Health Card sync; rows it did not touch are pruned. */
+  synced_at: string | null;
   State: string;
   District: string;
   Block: string | null;
@@ -479,7 +481,10 @@ export interface Database {
         | 'moisture_level'
         | 'tested_date'
       >;
-      regional_soil_data: Table<RegionalSoilRow, 'id' | 'created_at'>;
+      regional_soil_data: Table<
+        RegionalSoilRow,
+        'id' | 'created_at' | 'synced_at' | 'Block' | 'Scheme' | 'Cycle'
+      >;
       mandi_states: Table<MandiStateRow, 'synced_at'>;
       mandi_districts: Table<MandiDistrictRow, 'synced_at'>;
       mandi_markets: Table<MandiMarketRow, 'synced_at' | 'district_id'>;

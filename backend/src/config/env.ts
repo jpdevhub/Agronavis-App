@@ -58,6 +58,8 @@ const envSchema = z
     MARKET_POLL_CRON: z.string().default('15 * * * *'),
     // Reference data; Sunday 02:30 is enough for a list that changes a few times a year.
     CATALOGUE_SYNC_CRON: z.string().default('30 2 * * 0'),
+    // Soil Health Card publishes per cycle, not per day; monthly is ample.
+    SOIL_SYNC_CRON: z.string().default('0 3 1 * *'),
   })
   .transform((raw) => ({
     ...raw,

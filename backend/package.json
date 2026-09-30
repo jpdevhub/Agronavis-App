@@ -13,7 +13,8 @@
     "lint:fix": "eslint src --ext .ts --fix",
     "test": "jest --runInBand --passWithNoTests",
     "test:watch": "jest --watch",
-    "sync:catalogue": "tsx src/jobs/catalogue.cli.ts"
+    "sync:catalogue": "tsx src/jobs/catalogue.cli.ts",
+    "sync:soil": "tsx src/jobs/soil.cli.ts"
   },
   "dependencies": {
     "@agronavis/shared-types": "*",
