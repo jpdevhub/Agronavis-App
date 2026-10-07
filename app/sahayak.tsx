@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -32,6 +32,14 @@ const SUGGESTIONS = [
 export default function SahayakScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  /**
+   * Android reports a bottom inset of zero while the keyboard is up, because
+   * the navigation bar is behind it. Reading it live made the composer jump by
+   * the height of that bar every time the keyboard opened or closed. Captured
+   * once, it stays where the farmer last saw it.
+   */
+  const [bottomInset] = useState(() => insets.bottom);
   const {
     status, error, messages, streaming, summary, send, stop, load, variant,
     onModelReady, language, setLanguage,
@@ -50,6 +58,7 @@ export default function SahayakScreen() {
    * already at the bottom, so scrolling up to re-read is never yanked back.
    */
   const stick = useRef(true);
+  const [atLatest, setAtLatest] = useState(true);
 
   const onContentSizeChange = useCallback(() => {
     if (stick.current) scroller.current?.scrollToEnd({ animated: false });
@@ -57,7 +66,16 @@ export default function SahayakScreen() {
 
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    stick.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 80;
+    const near = contentSize.height - contentOffset.y - layoutMeasurement.height < 80;
+    stick.current = near;
+    // Only on a change: this fires every frame while scrolling.
+    setAtLatest((was) => (was === near ? was : near));
+  }, []);
+
+  const jumpToLatest = useCallback(() => {
+    stick.current = true;
+    setAtLatest(true);
+    scroller.current?.scrollToEnd({ animated: true });
   }, []);
 
   useEffect(() => {
@@ -205,9 +223,8 @@ export default function SahayakScreen() {
                       <Text style={styles.userText}>{m.text}</Text>
                     </Animated.View>
                   ) : (
-                    <Animated.View
+                    <View
                       key={m.id}
-                      entering={FadeIn.duration(220)}
                       style={[styles.bubble, styles.bubbleAssistant]}
                     >
                       {m.text ? (
@@ -215,13 +232,24 @@ export default function SahayakScreen() {
                       ) : (
                         <ActivityIndicator color={Colors.primary} />
                       )}
-                    </Animated.View>
+                    </View>
                   ),
                 )
               )}
             </ScrollView>
 
-            <View style={[styles.composer, { paddingBottom: insets.bottom + Spacing.sm }]}>
+            {!atLatest && messages.length > 0 && (
+              <Pressable
+                onPress={jumpToLatest}
+                style={styles.jump}
+                accessibilityRole="button"
+                accessibilityLabel="Jump to the latest answer"
+              >
+                <MaterialIcons name="arrow-downward" size={20} color={Colors.onPrimary} />
+              </Pressable>
+            )}
+
+            <View style={[styles.composer, { paddingBottom: bottomInset + Spacing.sm }]}>
               <TextInput
                 value={draft}
                 onChangeText={setDraft}
@@ -300,7 +328,8 @@ const styles = StyleSheet.create({
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md },
   centreText: { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
 
-  thread: { padding: Spacing.lg, gap: Spacing.md, flexGrow: 1 },
+  thread: { padding: Spacing.lg, gap: Spacing.md },
+  threadEmpty: { flexGrow: 1 },
   bubble: { maxWidth: '92%', padding: Spacing.md, borderRadius: Shape.extraLarge },
   bubbleUser: {
     alignSelf: 'flex-end', backgroundColor: Colors.primary,
@@ -326,6 +355,12 @@ const styles = StyleSheet.create({
   },
   suggestionText: { ...Type.bodyLarge, color: Colors.onSurface, textAlign: 'center' },
 
+  jump: {
+    position: 'absolute', alignSelf: 'center', bottom: 96,
+    width: 40, height: 40, borderRadius: Shape.full,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.primary,
+  },
   composer: {
     flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.sm,
     paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm,
