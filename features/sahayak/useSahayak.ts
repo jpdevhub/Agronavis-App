@@ -157,29 +157,66 @@ export function useSahayak() {
         .filter(Boolean)
         .join('\n');
 
+      /**
+       * The answer is finished when the tokens stop, not when the native call
+       * returns.
+       *
+       * LiteRT's flow can stay open after the model has said everything it is
+       * going to say, and the native side only reports `done` once that flow
+       * closes — which it did by hitting its own sixty-second timeout. The
+       * answer was fully on screen while the composer stayed locked and a
+       * second question was silently dropped.
+       *
+       * Going quiet for this long after at least one token has arrived is the
+       * reliable end-of-turn signal.
+       */
+      const QUIET_MS = 2_500;
+      let settled = false;
+      let idle: ReturnType<typeof setTimeout> | undefined;
+
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(idle);
+        subscription.remove();
+        setStreaming(false);
+      };
+
+      const nudge = () => {
+        clearTimeout(idle);
+        idle = setTimeout(finish, QUIET_MS);
+      };
+
       const subscription = addTokenListener((token: string, done: boolean) => {
+        if (settled) return;
         streamRef.current += token;
         const partial = streamRef.current;
         setMessages((prev) =>
           prev.map((m) => (m.id === replyId ? { ...m, text: partial } : m)),
         );
-        if (done) setStreaming(false);
+        if (done) finish();
+        else if (partial.length > 0) nudge();
       });
 
       try {
         const full = await generateText(prompt);
-        setMessages((prev) =>
-          prev.map((m) => (m.id === replyId ? { ...m, text: full || streamRef.current } : m)),
-        );
+        // A late return must not overwrite an answer the farmer is reading, nor
+        // revive a turn that has already been settled.
+        if (full && full.length >= streamRef.current.length) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === replyId ? { ...m, text: full } : m)),
+          );
+        }
       } catch (e) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === replyId ? { ...m, text: `Could not answer: ${(e as Error).message}` } : m,
-          ),
-        );
+        if (!settled) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === replyId ? { ...m, text: `Could not answer: ${(e as Error).message}` } : m,
+            ),
+          );
+        }
       } finally {
-        subscription.remove();
-        setStreaming(false);
+        finish();
       }
     },
     [messages, streaming, systemPrompt],

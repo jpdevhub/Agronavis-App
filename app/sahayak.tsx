@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -156,14 +155,14 @@ export default function SahayakScreen() {
       )}
 
       {/*
-        The manifest sets windowSoftInputMode="adjustResize", so Android already
-        shrinks the window for the keyboard. Letting this shrink it a second
-        time collapsed the thread. iOS has no equivalent and still needs it.
+        SDK 54 draws Android edge to edge, and under that the window is no
+        longer resized for the keyboard however windowSoftInputMode is set —
+        so nothing lifted the composer and the keyboard covered it. Padding
+        behaviour works on both platforms here because neither resizes.
       */}
       <KeyboardAvoidingView
         style={styles.fill}
         behavior="padding"
-        enabled={Platform.OS === 'ios'}
         keyboardVerticalOffset={0}
       >
         {status === 'unsupported' ? (
