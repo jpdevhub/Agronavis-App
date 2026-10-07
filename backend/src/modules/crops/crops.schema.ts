@@ -35,10 +35,6 @@ export const recordScanSchema = z.object({
 export const idParamSchema = z.object({ id: z.string().uuid() });
 export const classKeyParamSchema = z.object({ classKey: z.string().trim().min(1).max(120) });
 
-export const listVarietiesSchema = z.object({
-  cropType: z.string().trim().max(60).optional(),
-});
-
 export const listDiseasesSchema = z.object({
   cropType: z.string().trim().max(60).optional(),
   search: z.string().trim().max(80).optional(),

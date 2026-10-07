@@ -9,7 +9,6 @@ import { eligibleCropsSchema,
   idParamSchema,
   listCropsSchema,
   listDiseasesSchema,
-  listVarietiesSchema,
   recordScanSchema,
   updateCropSchema,
 } from './crops.schema';
@@ -22,7 +21,6 @@ cropRoutes.get('/scans', handler(cropsController.listScans));
 cropRoutes.post('/scans', validate(recordScanSchema), handler(cropsController.recordScan));
 // Crops the scheme will advise on where this field is.
 cropRoutes.get('/eligible', validate(eligibleCropsSchema, 'query'), handler(cropsController.listEligible));
-cropRoutes.get('/varieties', validate(listVarietiesSchema, 'query'), handler(cropsController.listVarieties));
 cropRoutes.get('/diseases', validate(listDiseasesSchema, 'query'), handler(cropsController.listDiseases));
 cropRoutes.get(
   '/diseases/:classKey',

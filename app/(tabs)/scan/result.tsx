@@ -15,7 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import type { DiseaseReference } from '@agronavis/shared-types';
 import { Button, Card, EmptyState, Skeleton } from '@/components/ui';
 import { Colors, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
-import { useDiseaseLibrary } from '@/hooks/useCropCatalog';
+import { useDiseaseLibrary } from '@/hooks/useDiseaseLibrary';
 import { cropApi, storageApi } from '@/services/endpoints';
 import { useFarmStore } from '@/store/useFarmStore';
 

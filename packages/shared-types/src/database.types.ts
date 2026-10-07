@@ -280,25 +280,6 @@ export type YieldHistoryRow = {
   created_at: string;
 };
 
-export type CropVarietyRow = {
-  id: string;
-  crop_type: string;
-  crop_category: string;
-  variety: string;
-  season: string[] | null;
-  primary_harvest_part: string | null;
-  yield_unit: string | null;
-  avg_yield_per_acre: number | null;
-  growth_duration_days: number | null;
-  req_nitrogen_kg_per_acre: number | null;
-  req_phosphorus_kg_per_acre: number | null;
-  req_potassium_kg_per_acre: number | null;
-  ideal_ph_min: number | null;
-  ideal_ph_max: number | null;
-  water_req_mm_per_season: number | null;
-  created_at: string;
-};
-
 export type CropDiseaseRow = {
   id: string;
   class_key: string;
@@ -552,22 +533,6 @@ export interface Database {
         | 'symptoms'
         | 'treatment'
         | 'image_url'
-      >;
-      crop_varieties: Table<
-        CropVarietyRow,
-        | 'id'
-        | 'created_at'
-        | 'season'
-        | 'primary_harvest_part'
-        | 'yield_unit'
-        | 'avg_yield_per_acre'
-        | 'growth_duration_days'
-        | 'req_nitrogen_kg_per_acre'
-        | 'req_phosphorus_kg_per_acre'
-        | 'req_potassium_kg_per_acre'
-        | 'ideal_ph_min'
-        | 'ideal_ph_max'
-        | 'water_req_mm_per_season'
       >;
     };
     Views: {

@@ -5,8 +5,6 @@ import type {
   CropScan,
   CropScanRow,
   CropStatus,
-  CropVariety,
-  CropVarietyRow,
   DiseaseReference,
   EligibleCrop,
 } from '@agronavis/shared-types';
@@ -39,26 +37,6 @@ function toScan(row: CropScanRow): CropScan {
     confidence: row.confidence_score,
     recommendation: row.recommendation,
     scannedAt: row.scan_date,
-  };
-}
-
-function toVariety(row: CropVarietyRow): CropVariety {
-  return {
-    id: row.id,
-    cropType: row.crop_type,
-    cropCategory: row.crop_category,
-    variety: row.variety,
-    seasons: row.season ?? [],
-    growthDurationDays: row.growth_duration_days,
-    avgYieldPerAcre: row.avg_yield_per_acre,
-    yieldUnit: row.yield_unit,
-    waterRequirementMm: row.water_req_mm_per_season,
-    idealPh: { min: row.ideal_ph_min, max: row.ideal_ph_max },
-    nutrientsKgPerAcre: {
-      n: row.req_nitrogen_kg_per_acre,
-      p: row.req_phosphorus_kg_per_acre,
-      k: row.req_potassium_kg_per_acre,
-    },
   };
 }
 
@@ -250,18 +228,6 @@ export const cropsService = {
   },
 
   /** The agronomy catalogue: what can be grown, and what each variety needs. */
-  async listVarieties(cropType?: string): Promise<CropVariety[]> {
-    let query = db
-      .from('crop_varieties')
-      .select('*')
-      .order('crop_type', { ascending: true })
-      .order('variety', { ascending: true });
-    if (cropType) query = query.ilike('crop_type', cropType);
-
-    const { data, error } = await query;
-    if (error) throw fromPostgrest(error, 'List crop varieties');
-    return (data ?? []).map((row) => toVariety(row as CropVarietyRow));
-  },
 
   /** The disease library — symptoms and treatment steps, searchable by name. */
   async listDiseases(filters: { cropType?: string; search?: string } = {}): Promise<DiseaseReference[]> {

@@ -35,10 +35,6 @@ export const cropsController = {
     created(res, await cropsService.recordScan(farmerId(req), req.body));
   },
 
-  async listVarieties(req: Request, res: Response) {
-    const data = await cropsService.listVarieties((req.query as { cropType?: string }).cropType);
-    ok(res, data, { count: data.length });
-  },
 
   async listDiseases(req: Request, res: Response) {
     const data = await cropsService.listDiseases(req.query as { cropType?: string; search?: string });

@@ -81,11 +81,6 @@ export interface Farm {
   createdAt: string;
 }
 
-export interface GeoPolygon {
-  type: 'Polygon';
-  coordinates: [number, number][][];
-}
-
 export interface FarmField {
   id: string;
   farmId: string;
@@ -141,20 +136,6 @@ export interface CropScan {
   confidence: number | null;
   recommendation: string | null;
   scannedAt: string;
-}
-
-export interface CropVariety {
-  id: string;
-  cropType: string;
-  cropCategory: string;
-  variety: string;
-  seasons: string[];
-  growthDurationDays: number | null;
-  avgYieldPerAcre: number | null;
-  yieldUnit: string | null;
-  waterRequirementMm: number | null;
-  idealPh: { min: number | null; max: number | null };
-  nutrientsKgPerAcre: { n: number | null; p: number | null; k: number | null };
 }
 
 export interface DiseaseReference {
@@ -359,14 +340,6 @@ export interface MandiCommodityRef {
   id: number;
   name: string;
   groupName: string | null;
-}
-
-export interface MandiCatalogue {
-  states: MandiStateRef[];
-  districts: MandiDistrictRef[];
-  markets: MandiMarketRef[];
-  commodities: MandiCommodityRef[];
-  syncedAt: string | null;
 }
 
 export interface PriceTrend {

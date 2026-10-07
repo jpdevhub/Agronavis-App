@@ -7,7 +7,6 @@ import type {
   Crop,
   CropScan,
   CropStatus,
-  CropVariety,
   DashboardPrice,
   DiseaseReference,
   Farm,
@@ -81,8 +80,6 @@ export const cropApi = {
     confidence?: number;
     recommendation?: string;
   }) => api.post<CropScan>('/crops/scans', payload),
-  varieties: (cropType?: string) =>
-    api.get<CropVariety[]>('/crops/varieties', cropType ? { cropType } : undefined),
   diseases: (params?: { cropType?: string; search?: string }) =>
     api.get<DiseaseReference[]>('/crops/diseases', params),
   diseaseReference: (classKey: string) =>
