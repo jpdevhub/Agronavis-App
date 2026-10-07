@@ -161,11 +161,23 @@ async function getSolar(lat: number, lon: number, days = 7): Promise<SolarDay[]>
           if (!valid(solarRadiation) || !valid(tMax) || !valid(tMin)) return [];
 
           const date = `${key.slice(0, 4)}-${key.slice(4, 6)}-${key.slice(6, 8)}`;
+
+          // FAO-56 names 60% and 2 m/s as the substitutes when humidity or wind
+          // are unavailable. Recording which were used keeps the report honest
+          // about how firm each day's ET₀ is.
+          const substituted: SolarDay['substituted'] = [];
+          if (!valid(rhAll[key])) substituted.push('humidity');
+          if (!valid(windAll[key])) substituted.push('wind');
+          if (!valid(precipAll[key])) substituted.push('precipitation');
+
+          const humidity = valid(rhAll[key]) ? rhAll[key]! : 60;
+          const windSpeed2m = valid(windAll[key]) ? windAll[key]! : 2;
+
           const et0 = referenceEt0({
             tMax,
             tMin,
-            rhMean: valid(rhAll[key]) ? rhAll[key]! : 60,
-            windSpeed2m: valid(windAll[key]) ? windAll[key]! : 2,
+            rhMean: humidity,
+            windSpeed2m,
             solarRadiation,
             latitude: lat,
             dayOfYear: dayOfYearFrom(new Date(`${date}T00:00:00Z`)),
@@ -179,6 +191,9 @@ async function getSolar(lat: number, lon: number, days = 7): Promise<SolarDay[]>
               precipitation: valid(precipAll[key]) ? Math.round(precipAll[key]! * 10) / 10 : 0,
               temperatureMax: Math.round(tMax),
               temperatureMin: Math.round(tMin),
+              humidity: Math.round(humidity),
+              windSpeed2m: Math.round(windSpeed2m * 10) / 10,
+              substituted,
             },
           ];
         });

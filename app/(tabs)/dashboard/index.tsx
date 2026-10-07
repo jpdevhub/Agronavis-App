@@ -231,7 +231,13 @@ export default function DashboardScreen() {
             <Text style={styles.greetDate}>{today}</Text>
           </View>
 
-          <View style={styles.weatherCard}>
+          <TouchableOpacity
+            style={styles.weatherCard}
+            onPress={() => router.push('/weather-report' as any)}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Open the full weather record"
+          >
             {weatherLoading ? (
               <View style={{ gap: 4 }}>
                 <Skeleton width={60} height={28} />
@@ -262,7 +268,7 @@ export default function DashboardScreen() {
                 <MaterialIcons name="wb-cloudy" size={40} color={Colors.outline} />
               </>
             )}
-          </View>
+          </TouchableOpacity>
         </View>
 
         {fieldsLoading ? (

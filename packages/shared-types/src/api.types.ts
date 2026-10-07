@@ -264,13 +264,31 @@ export interface ForecastDay {
   rainProbability: number;
 }
 
+/**
+ * One day of NASA POWER measurements for a point, with ET₀ derived from them.
+ *
+ * POWER publishes no reference evapotranspiration of its own — `et0` is
+ * computed here by FAO-56 Penman-Monteith from the five measured fields.
+ */
 export interface SolarDay {
   date: string;
+  /** All-sky shortwave downward irradiance, MJ/m²/day. */
   solarRadiation: number;
+  /** Derived, not measured: FAO-56 Penman-Monteith, mm/day. */
   et0: number;
+  /** Corrected precipitation, mm/day. */
   precipitation: number;
   temperatureMax: number;
   temperatureMin: number;
+  /** Relative humidity at 2 m, %. */
+  humidity: number;
+  /** Wind speed at 2 m, m/s. */
+  windSpeed2m: number;
+  /**
+   * Fields POWER had no value for, where FAO-56's standard substitutes were
+   * used instead (60% humidity, 2 m/s wind). ET₀ for such a day is weaker.
+   */
+  substituted: ('humidity' | 'wind' | 'precipitation')[];
 }
 
 export interface WeatherBundle {
