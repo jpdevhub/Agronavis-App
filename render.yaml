@@ -56,8 +56,9 @@ services:
         value: http://localhost:8081,http://localhost:19006
 
       # The weather and market pollers. A free instance sleeps after 15 minutes
-      # of no traffic, so they only run while the service is awake — see
-      # docs/deployment/render.md.
+      # of no traffic and these only run while it is awake, so in practice they
+      # fire when someone is using the app rather than on the hour. The syncs
+      # below are also runnable by hand from the Render shell.
       - key: ENABLE_JOBS
         value: "true"
       - key: WEATHER_POLL_CRON
