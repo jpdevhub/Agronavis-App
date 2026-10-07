@@ -3,7 +3,7 @@
 #
 #  New Blueprint ▸ point at this repo ▸ Render reads this file.
 #  Values marked `sync: false` are prompted for on first deploy and are never
-#  stored in git. See docs/deployment/render.md for the full walkthrough.
+#  stored in git and are prompted for on the first deploy.
 # ═════════════════════════════════════════════════════════════════════════════
 
 services:

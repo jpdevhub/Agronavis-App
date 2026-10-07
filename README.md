@@ -12,7 +12,7 @@ the service-role key and the third-party API keys.
 
 ```bash
 git clone https://github.com/jpdevhub/Agronavis-App.git && cd Agronavis-App
-cp .env.example .env          # see docs/free-apis.md for where each key comes from
+cp .env.example .env
 npm install --legacy-peer-deps
 npm run db:push               # apply supabase/migrations to your project
 npm run dev                   # API on :3001, Expo on :8081
@@ -34,7 +34,6 @@ directory; `backend` and `packages/*` are npm workspaces underneath it.
 | `backend/` | Express REST API, Socket.IO and the cron pollers |
 | `packages/shared-types/` | Type contracts shared by the app and the API |
 | `supabase/migrations/` | The only schema definition |
-| `docs/` | Architecture, API reference, deployment, external services |
 | `.env` | The one environment file, read by both the app and the API |
 | `render.yaml` | Render blueprint for the API |
 
@@ -46,10 +45,6 @@ which npm workspaces require. A single `npm install` sets up everything.
 
 | Document | Covers |
 |---|---|
-| [Architecture](docs/architecture/system-architecture.md) | How a request flows, why the app cannot reach Postgres, the advisory engine |
-| [API reference](docs/api/README.md) | Every route, the response envelope, the realtime events |
-| [External services](docs/free-apis.md) | Which APIs are used, which are free, where each key comes from |
-| [Deploying to Render](docs/deployment/render.md) | The blueprint, the secrets, and what the free plan actually costs |
 | [Database](supabase/README.md) | Migration workflow |
 
 ## Scripts
