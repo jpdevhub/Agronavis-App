@@ -62,6 +62,8 @@ const envSchema = z
     SOIL_SYNC_CRON: z.string().default('0 3 1 * *'),
     // Crop lists change with the scheme, not the season.
     FERTILISER_SYNC_CRON: z.string().default('0 4 1 * *'),
+    // The mirror refreshes daily when its own upstream is alive.
+    MANDI_MIRROR_CRON: z.string().default('45 5 * * *'),
   })
   .transform((raw) => ({
     ...raw,

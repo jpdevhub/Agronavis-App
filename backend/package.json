@@ -15,7 +15,8 @@
     "test:watch": "jest --watch",
     "sync:catalogue": "tsx src/jobs/catalogue.cli.ts",
     "sync:soil": "tsx src/jobs/soil.cli.ts",
-    "sync:fertiliser": "tsx src/jobs/fertiliser.cli.ts"
+    "sync:fertiliser": "tsx src/jobs/fertiliser.cli.ts",
+    "sync:mandi": "tsx src/jobs/mandi.cli.ts"
   },
   "dependencies": {
     "@agronavis/shared-types": "*",
