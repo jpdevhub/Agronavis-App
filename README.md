@@ -40,7 +40,7 @@ hold many fields, and plots hundreds of kilometres apart read differently.
 
 |             | What the farmer gets                                                                                                          |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Soil**    | Nitrogen, phosphorus, potassium and eleven more nutrients, from the government's own laboratory testing of their district.    |
+| **Soil**    | Nitrogen, phosphorus, potassium and nine more nutrients, from the government's own laboratory testing of their district.    |
 | **Weather** | Live conditions over the field, and the one answer that matters — how much water the crop is losing, and whether to irrigate. |
 | **Crops**   | A season laid out as dated tasks, chosen from the crops the national scheme actually lists for their state.                   |
 | **Scanner** | Photograph an affected leaf; an answer in about a second, with the next two most likely conditions beside it.                 |
