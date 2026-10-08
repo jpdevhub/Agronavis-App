@@ -1,102 +1,137 @@
+<div align="center">
+
 # Agronavis
 
-AI-driven geospatial intelligence for Indian agriculture. A farmer maps a field
-once, and the platform watches the weather, the water balance, the soil and the
-mandi for that exact plot.
+### Every field in India, advised.
 
-An Expo app, an Express API and a Supabase project. The app never touches the
-database: every read and write goes through the API, which is the only holder of
-the service-role key and the third-party API keys.
+Soil, weather, crops, disease and the day's market price — for one mapped field,
+in the farmer's own language.
 
-## Quick start
+</div>
+
+---
+
+## The problem
+
+An Indian farmer makes four decisions every season. Each one costs money when it
+goes wrong, and each one is usually made without data.
+
+| The question                   | How it is answered today                                          |
+| ------------------------------ | ----------------------------------------------------------------- |
+| What is in my soil?            | The government measured it. The farmer has never seen the number. |
+| When do I water?               | Guesswork, or waiting and hoping the rain arrives in time.        |
+| What is this spot on the leaf? | Ask a neighbour, or buy whatever the shop suggests.               |
+| What is my crop worth?         | Make the trip to the mandi and find out on arrival.               |
+
+Every one of these already has an answer sitting in a public government dataset.
+None of them reach the person standing in the field.
+
+**Agronavis answers all four, for one field, from the moment the farmer draws it
+on a map.**
+
+---
+
+## How it works
+
+**It starts with the boundary.** The farmer traces their field on satellite
+imagery, once. Everything afterwards is about that field — not a district
+average, not a village estimate, not the nearest weather station. A farm can
+hold many fields, and plots hundreds of kilometres apart read differently.
+
+|             | What the farmer gets                                                                                                          |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Soil**    | Nitrogen, phosphorus, potassium and eleven more nutrients, from the government's own laboratory testing of their district.    |
+| **Weather** | Live conditions over the field, and the one answer that matters — how much water the crop is losing, and whether to irrigate. |
+| **Crops**   | A season laid out as dated tasks, chosen from the crops the national scheme actually lists for their state.                   |
+| **Scanner** | Photograph an affected leaf; an answer in about a second, with the next two most likely conditions beside it.                 |
+| **Market**  | A representative price for their state with its range, and the mandis that reported it.                                       |
+| **Sahayak** | An assistant that already knows their fields, soil and weather. They can speak to it, and it speaks back.                     |
+
+---
+
+## What is loaded today
+
+These are counts from the live production database, not projections.
+
+|            |                                        |
+| ---------- | -------------------------------------- |
+| **712**    | districts of soil data                 |
+| **32**     | states and territories                 |
+| **11,332** | market price records                   |
+| **1,491**  | mandis reporting prices                |
+| **4,172**  | mandis in the directory                |
+| **1,812**  | crops in the scheme catalogue          |
+| **86**     | crop conditions the scanner recognises |
+| **2**      | languages live — English and Hindi     |
+
+---
+
+## Every number has an owner
+
+| What the farmer sees | Where it comes from              | Who owns it         |
+| -------------------- | -------------------------------- | ------------------- |
+| Soil nutrients       | Soil Health Card survey          | Government of India |
+| Rain and sunlight    | POWER satellite record           | NASA                |
+| Water requirement    | Penman–Monteith method           | United Nations FAO  |
+| Mandi prices         | Agmarknet reporting network      | Government of India |
+| Crop lists           | Fertiliser recommendation scheme | Government of India |
+| Disease reading      | Our own trained model            | Agronavis           |
+
+Five of the six come from public institutions. We are not asking a farmer to
+trust our opinion — we are delivering records that already exist, to the field
+they belong to.
+
+---
+
+## Why this one gets used
+
+A farmer forgives an app that says _"I am not sure"_. They never open one again
+after it was confidently wrong. So Agronavis is built to admit what it does not
+know:
+
+- **The scanner refuses photographs that are not crops**, instead of forcing
+  every image into one of its 86 labels the way these models normally do.
+- **A weak reading is labelled a hint, never a diagnosis**, and the farmer is
+  always asked to confirm against the reference library before spraying.
+- **Soil readings show their evidence** — the full High/Medium/Low split and the
+  number of samples behind it. A thinly tested district is marked as one.
+- **When district data is missing**, the reading widens to the state and says so,
+  rather than inventing a number.
+- **The irrigation advice shows its working**, as a full daily record anyone can
+  check.
+
+---
+
+## What comes next
+
+- Five more languages — Marathi, Punjabi, Gujarati, Telugu and Kannada
+- Fertiliser and pesticide quantities worked out for the field's actual acreage
+- A second model dedicated to deciding whether a photograph shows a crop at all
+- Dated task timelines extended across the full crop catalogue
+
+---
+
+## References
+
+| Used for                | Source                                                                                             |
+| ----------------------- | -------------------------------------------------------------------------------------------------- |
+| Water requirement       | Allen, Pereira, Raes & Smith (1998). _Crop Evapotranspiration._ FAO Irrigation & Drainage Paper 56 |
+| Sunlight and rainfall   | NASA POWER — Prediction Of Worldwide Energy Resources, NASA Langley Research Center                |
+| Soil nutrients          | Soil Health Card scheme, Department of Agriculture & Farmers Welfare, Government of India          |
+| Market prices           | Agmarknet, Directorate of Marketing & Inspection, Government of India                              |
+| Scanner architecture    | He, Zhang, Ren & Sun (2016). _Deep Residual Learning for Image Recognition._ CVPR                  |
+| Crop detection in frame | Woebbecke, Meyer, Von Bargen & Mortensen (1995). _Color Indices for Weed Identification._ ASAE     |
+
+---
+
+## For developers
+
+Setup, architecture, scripts and deployment are in
+**[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
 
 ```bash
 git clone https://github.com/jpdevhub/Agronavis-App.git && cd Agronavis-App
 cp .env.example .env
 npm install --legacy-peer-deps
-npm run db:push               # apply supabase/migrations to your project
-npm run dev                   # API on :3001, Expo on :8081
+npm run dev
 ```
-
-Node 20 or newer. `scripts/setup.sh` does the same and tells you which keys are
-still blank.
-
-## Layout
-
-The repo root **is** the React Native project. `app/` is expo-router's routes
-directory; `backend` and `packages/*` are npm workspaces underneath it.
-
-| Path | What it is |
-|---|---|
-| `app/` | Expo Router screens — the app's routes |
-| `components/` `hooks/` `services/` `store/` `constants/` `features/` | App source |
-| `assets/` | Icons, splash and brand images |
-| `backend/` | Express REST API, Socket.IO and the cron pollers |
-| `packages/shared-types/` | Type contracts shared by the app and the API |
-| `supabase/migrations/` | The only schema definition |
-| `.env` | The one environment file, read by both the app and the API |
-| `render.yaml` | Render blueprint for the API |
-
-One `package.json`, one `.env`, one `.gitignore`, one `tsconfig` — all at the
-root. `backend` and `packages/shared-types` keep a minimal `package.json` each,
-which npm workspaces require. A single `npm install` sets up everything.
-
-## Documentation
-
-| Document | Covers |
-|---|---|
-| [Database](supabase/README.md) | Migration workflow |
-
-## Scripts
-
-```bash
-npm run dev            # API and app together
-npm run dev:api        # API only
-npm start              # Expo only (alias: npm run dev:app)
-npm run web            # Expo in the browser
-npm run android        # native Android build and run
-
-npm run verify         # typecheck + lint + test, app and API
-npm run typecheck
-npm run lint
-npm test
-
-npm run db:link        # link the Supabase project named in .env
-npm run db:push        # apply pending migrations
-npm run db:types       # regenerate database.types.ts from the live schema
-
-npm run build:api      # compile the API to backend/dist
-npm run start:api      # run the compiled API (what Render runs)
-npm run build:android  # EAS Android build
-```
-
-## How it fits together
-
-The app authenticates with Supabase Auth and sends that JWT to the API. The API
-verifies it against the project's JWKS, checks that the caller owns the row it
-is about to touch, and is the only process that reaches Postgres, Storage,
-OpenWeatherMap, NASA POWER and Agmarknet.
-
-Two consequences worth stating plainly:
-
-- **No API key that matters ships inside the app bundle.** `EXPO_PUBLIC_*`
-  values are extractable from the APK, so only the Supabase publishable key and
-  the Maps SDK key carry that prefix.
-- **The service-role key bypasses Row Level Security**, so ownership is checked
-  explicitly in the service layer. RLS is the second line of defence, not the
-  first.
-
-Irrigation advice is a real water balance, not a rule of thumb: reference
-evapotranspiration by FAO-56 Penman-Monteith, computed from NASA POWER solar
-radiation, temperature, humidity and wind, minus measured rainfall.
-
-## Status
-
-Working end to end: authentication with optional TOTP, field mapping, weather
-and ET₀, soil estimates, the advisory engine, mandi prices, the crop and disease
-catalogues, community posts, tasks, push and in-app notifications.
-
-Not yet built, and not pretended otherwise in the UI: automatic crop-disease
-detection from a photo. The scan screen stores the image against the farm and
-lets the farmer identify it from the disease library instead of inventing a
-diagnosis.

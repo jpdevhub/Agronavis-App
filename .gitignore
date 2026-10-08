@@ -84,3 +84,5 @@ GoogleService-Info.plist
 
 expo-env.d.ts
 # @end expo-cli
+# Scratch folder for building the pitch deck; not part of the app.
+.deck-build/
