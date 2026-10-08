@@ -317,8 +317,6 @@ export interface MandiPrice {
 export type MandiSource =
   | 'agmarknet_district'
   | 'agmarknet_state'
-  | 'enam_district'
-  | 'enam_state'
   | 'cache'
   /** Every upstream was asked and none had a row for this place. */
   | 'none'

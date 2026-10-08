@@ -9,8 +9,6 @@ export type MandiFilter = { state: string; district: string };
 const SOURCE_LABEL: Record<MandiSource, string> = {
   agmarknet_district: 'Live · Agmarknet',
   agmarknet_state: 'Live · Agmarknet, state-wide',
-  enam_district: 'Live · eNAM',
-  enam_state: 'Live · eNAM, state-wide',
   cache: 'Last synced prices',
   none: 'No prices reported',
   unconfigured: 'Price source not connected',
