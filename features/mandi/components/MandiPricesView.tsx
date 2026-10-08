@@ -43,7 +43,7 @@ function PriceRow({ row }: { row: MandiPrice }) {
 
       {/* Under the price, where the mandis read as where the figure came from
           rather than as the price a farmer would get by going to one of them. */}
-      {row.markets.length > 0 && (
+      {row.markets?.length > 0 && (
         <Text style={styles.markets} numberOfLines={2}>
           {row.markets.join(' · ')}
         </Text>
