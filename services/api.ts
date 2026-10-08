@@ -1,4 +1,5 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
+import { Platform } from 'react-native';
 import type { ApiResponse } from '@agronavis/shared-types';
 import { Env } from '@/constants/env';
 import { supabase } from '@/utils/supabase';
@@ -97,15 +98,29 @@ export const api = {
   /**
    * Multipart upload. `uri` is a local file path from the picker or camera.
    * `field` names the form part — storage expects "file", the scanner "image".
+   *
+   * The two platforms need different parts. React Native accepts a `{ uri }`
+   * descriptor and streams the file itself; a browser would stringify that to
+   * "[object Object]" and send a text field, so there the uri — `blob:` or
+   * `data:` — is read into a real Blob first.
    */
   upload: async <T>(url: string, uri: string, name: string, type: string, field = 'file') => {
     const form = new FormData();
-    form.append(field, { uri, name, type } as unknown as Blob);
+    if (Platform.OS === 'web') {
+      const blob = await (await fetch(uri)).blob();
+      form.append(field, blob, name);
+    } else {
+      form.append(field, { uri, name, type } as unknown as Blob);
+    }
     return request<T>({
       method: 'POST',
       url,
       data: form,
-      headers: { 'Content-Type': 'multipart/form-data' },
+      // On the web the header is cleared so the browser writes the boundary
+      // itself. It has to be cleared explicitly: left alone, this client's
+      // default `application/json` survives and axios quietly serialises the
+      // form to JSON, which drops the file.
+      headers: Platform.OS === 'web' ? { 'Content-Type': null } : { 'Content-Type': 'multipart/form-data' },
     });
   },
 };
