@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIndicator,
@@ -16,6 +16,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import type { DiseaseReference } from '@agronavis/shared-types';
 import { Button, Card, EmptyState, Skeleton } from '@/components/ui';
 import { Colors, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
+import { readCapture, releaseCapture } from '@/features/scan';
 import { useDiseaseLibrary } from '@/hooks/useDiseaseLibrary';
 import { cropApi, storageApi } from '@/services/endpoints';
 import { useFarmStore } from '@/store/useFarmStore';
@@ -24,8 +25,16 @@ type SaveState = { status: 'idle' | 'saving' | 'saved'; error?: string };
 
 export default function ScanResultScreen() {
   const router = useRouter();
-  const { imageUri } = useLocalSearchParams<{ imageUri?: string }>();
+  const { capture } = useLocalSearchParams<{ capture?: string }>();
   const activeFarmId = useFarmStore((s) => s.activeFarmId);
+
+  /**
+   * The photograph itself never travels through the URL — only its ticket does.
+   * See `features/scan/capture.ts`. A reload drops the held photo, which is why
+   * a missing one is a first-class state below rather than a broken screen.
+   */
+  const imageUri = readCapture(capture);
+  useEffect(() => () => releaseCapture(capture), [capture]);
 
   const { diseases, isLoading, error, refetch } = useDiseaseLibrary();
 
@@ -35,7 +44,7 @@ export default function ScanResultScreen() {
    * the farmer came here to file a scan, not to hear about our model.
    */
   const scan = useQuery({
-    queryKey: ['crop-scan', imageUri],
+    queryKey: ['crop-scan', capture],
     queryFn: () => cropApi.diagnose(imageUri as string),
     enabled: Boolean(imageUri),
     retry: 1,
@@ -83,6 +92,24 @@ export default function ScanResultScreen() {
     } catch (err) {
       setSave({ status: 'idle', error: err instanceof Error ? err.message : 'Could not save the scan' });
     }
+  }
+
+  // The ticket outlived the photograph — a browser reload, or a return to a
+  // stale history entry. Nothing here can work without the picture, so say so
+  // plainly and send them back to the camera.
+  if (capture && !imageUri) {
+    return (
+      <View style={styles.root}>
+        <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
+        <EmptyState
+          icon="photo-camera"
+          title="The photo is gone"
+          description="Photographs are not kept after you leave this screen. Take the picture again and it will be read straight away."
+          actionLabel="Open the camera"
+          onAction={() => router.replace('/(tabs)/scan' as never)}
+        />
+      </View>
+    );
   }
 
   if (save.status === 'saved') {

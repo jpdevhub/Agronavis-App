@@ -9,6 +9,7 @@ import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-ca
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
+import { holdCapture } from '@/features/scan';
 
 const CORNER_SIZE  = 44;
 const CORNER_THICK = 4;
@@ -52,7 +53,7 @@ export default function ScanScreen() {
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.75 });
       if (photo?.uri) {
-        router.push({ pathname: '/(tabs)/scan/result', params: { imageUri: photo.uri } } as any);
+        router.push({ pathname: '/(tabs)/scan/result', params: { capture: holdCapture(photo.uri) } } as any);
       }
     } catch (e) {
       console.warn('Capture error:', e);
@@ -72,7 +73,10 @@ export default function ScanScreen() {
       aspect: [1, 1],
     });
     if (!result.canceled && result.assets[0]) {
-      router.push({ pathname: '/(tabs)/scan/result', params: { imageUri: result.assets[0].uri } } as any);
+      router.push({
+        pathname: '/(tabs)/scan/result',
+        params: { capture: holdCapture(result.assets[0].uri) },
+      } as any);
     }
   }
 
