@@ -42,12 +42,28 @@ const MIN_CONFIDENCE = 0.5;
  * original service answered this with CLIP, which needs 600 MB of weights and
  * will not start alongside this API on a small instance.
  *
- * The excess green index, 2G − R − B, is the standard cheap test for vegetation
- * in the field and costs one pass over the pixels. The threshold is deliberately
- * forgiving: a badly diseased leaf is brown and yellow far more than it is
- * green, and refusing those would reject exactly the photographs this is for.
+ * The excess green index is the standard cheap test for vegetation in the field
+ * and costs one pass over the pixels. It is taken on chromaticity — each channel
+ * over the pixel's total — rather than on the raw channels, which makes it a
+ * question of colour alone and not of how bright the photograph is. On raw
+ * channels a grey wall sits near zero and sensor noise alone pushes a third of
+ * its pixels over any low threshold; normalised, grey is zero however noisy or
+ * dark it is, and a leaf in shade scores the same as a leaf in sun.
+ *
+ * It stays green-led on purpose. An earlier version also counted any warm pixel
+ * — red above blue, green above blue — so that browning tissue would pass, but
+ * that rule is a textbook description of human skin, and a selfie came back as
+ * healthy rice at 78%. Skin, bare wood and earth all sit red-dominant with blue
+ * high enough to push the index negative, while leaf tissue from deep green
+ * through chlorotic yellow keeps blue low enough to stay above it, so the one
+ * index separates them without a second rule carving the first one back.
+ *
+ * What this gives up is fully necrotic tissue — brown, no green left. That
+ * photograph is refused with an explanation rather than answered, which is the
+ * right way round: a farmer who is told to reframe loses a moment, and a farmer
+ * told their face is healthy rice has no reason to trust anything else here.
  */
-function vegetationShare(data: Buffer): number {
+export function vegetationShare(data: Buffer): number {
   let vegetation = 0;
   const pixels = data.length / 3;
 
@@ -56,15 +72,13 @@ function vegetationShare(data: Buffer): number {
     const g = data[i + 1]!;
     const b = data[i + 2]!;
 
-    // Scaled to the 0-255 range the channels already use.
-    const excessGreen = 2 * g - r - b;
+    // Near-black pixels carry no usable colour — the ratios below would be
+    // mostly sensor noise — so they are counted as not plant rather than
+    // amplified into one.
+    const total = r + g + b;
+    if (total < 90) continue;
 
-    // Diseased tissue loses its green, so warm leaf colours count too: amber
-    // through brown, which is red-dominant but never blue-dominant the way sky,
-    // water and shadow are.
-    const warmTissue = r > b + 20 && g > b && r > 60;
-
-    if (excessGreen > 20 || warmTissue) vegetation += 1;
+    if ((2 * g - r - b) / total > 0.08) vegetation += 1;
   }
 
   return vegetation / pixels;
