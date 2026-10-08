@@ -10,31 +10,44 @@ const rupees = (value: number) => `₹${Math.round(value).toLocaleString('en-IN'
 
 function PriceRow({ row }: { row: MandiPrice }) {
   const hasRange = row.minPrice > 0 && row.maxPrice > 0 && row.minPrice !== row.maxPrice;
+
   return (
     <View style={styles.row}>
-      <View style={styles.rowMain}>
-        <Text style={styles.commodity}>{row.commodity}</Text>
-        <Text style={styles.place} numberOfLines={1}>
-          {/* Pooled across the state. Naming one mandi would read as the price
-              a farmer could get by going there, and the feeds carry only a
-              fraction of India's mandis. */}
-          {row.marketsReporting > 0
-            ? `${row.marketsReporting} mandi${row.marketsReporting === 1 ? '' : 's'} reporting`
-            : row.state}
-        </Text>
-        {row.variety && row.variety !== 'Common' ? (
-          <Text style={styles.variety}>{row.variety}</Text>
-        ) : null}
-      </View>
-      <View style={styles.rowPrice}>
-        <Text style={styles.modal}>{rupees(row.modalPrice)}</Text>
-        <Text style={styles.unit}>per {row.unit.toLowerCase()}</Text>
-        {hasRange && (
-          <Text style={styles.range}>
-            {rupees(row.minPrice)} – {rupees(row.maxPrice)}
+      <View style={styles.rowTop}>
+        <View style={styles.rowMain}>
+          <Text style={styles.commodity}>{row.commodity}</Text>
+          <Text style={styles.place} numberOfLines={1}>
+            {row.marketsReporting > 0
+              ? `${row.marketsReporting} mandi${row.marketsReporting === 1 ? '' : 's'} reporting`
+              : row.state}
           </Text>
-        )}
+          {/* The feed often repeats the crop as its own variety — "Brinjal,
+              variety Brinjal" tells a farmer nothing. */}
+          {row.variety &&
+          row.variety !== 'Common' &&
+          row.variety.toLowerCase() !== row.commodity.toLowerCase() ? (
+            <Text style={styles.variety}>{row.variety}</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.rowPrice}>
+          <Text style={styles.modal}>{rupees(row.modalPrice)}</Text>
+          <Text style={styles.unit}>per {row.unit.toLowerCase()}</Text>
+          {hasRange && (
+            <Text style={styles.range}>
+              {rupees(row.minPrice)} – {rupees(row.maxPrice)}
+            </Text>
+          )}
+        </View>
       </View>
+
+      {/* Under the price, where the mandis read as where the figure came from
+          rather than as the price a farmer would get by going to one of them. */}
+      {row.markets.length > 0 && (
+        <Text style={styles.markets} numberOfLines={2}>
+          {row.markets.join(' · ')}
+        </Text>
+      )}
     </View>
   );
 }
@@ -46,9 +59,8 @@ export function MandiPricesView() {
   } = useMandiSearch();
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // Figures are pooled across the state, so the heading names the state. The
-  // district still narrows which mandis feed them where the feed carries it.
-  const place = [filter.district, filter.state].filter(Boolean).join(', ');
+  // Figures are pooled across the state, so that is the only level to pick.
+  const place = filter.state;
   const heading = filter.state ? `${filter.state} prices` : '';
 
   return (
@@ -160,9 +172,15 @@ const styles = StyleSheet.create({
 
   list: { paddingHorizontal: Spacing.xl, gap: Spacing.sm, paddingBottom: Spacing.xl },
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    gap: Spacing.sm,
     padding: Spacing.lg, borderRadius: Shape.extraLarge,
     backgroundColor: Colors.surfaceContainerLowest,
+  },
+  rowTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  markets: {
+    ...Type.bodySmall, color: Colors.outline,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1, borderTopColor: Colors.outlineVariant,
   },
   rowMain: { flex: 1, gap: 2 },
   commodity: { ...TypeEmphasized.titleMedium, color: Colors.onSurface },

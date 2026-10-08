@@ -21,30 +21,24 @@ interface Props {
   onApply: (filter: MandiFilter) => void;
 }
 
+/**
+ * Picks a state, not a mandi.
+ *
+ * Prices are pooled across whichever mandis in a state reported, because the
+ * feeds carry only a fraction of them — so offering a particular mandi would
+ * promise a figure the data cannot give.
+ */
 export function MandiFilterModal({ visible, initial, onClose, onApply }: Props) {
   const insets = useSafeAreaInsets();
   const [state, setState] = useState(initial.state);
-  const [district, setDistrict] = useState(initial.district);
   const [search, setSearch] = useState('');
 
-  const { states, districts } = useIndiaLocationLists(state);
-  const picking: 'state' | 'district' = state ? 'district' : 'state';
-  const options = picking === 'state' ? states : districts;
+  const { states } = useIndiaLocationLists(state);
 
-  const visibleOptions = useMemo(() => {
+  const visibleStates = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return term ? options.filter((o) => o.toLowerCase().includes(term)) : options;
-  }, [options, search]);
-
-  function choose(value: string) {
-    setSearch('');
-    if (picking === 'state') {
-      setState(value);
-      setDistrict('');
-    } else {
-      setDistrict(value);
-    }
-  }
+    return term ? states.filter((s) => s.toLowerCase().includes(term)) : states;
+  }, [states, search]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -53,39 +47,22 @@ export function MandiFilterModal({ visible, initial, onClose, onApply }: Props) 
           <View style={styles.handle} />
 
           <View style={styles.header}>
-            <Text style={styles.title}>Choose a mandi</Text>
+            <Text style={styles.title}>Choose a state</Text>
             <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
               <MaterialIcons name="close" size={22} color={Colors.onSurface} />
             </Pressable>
           </View>
 
-          <View style={styles.crumbs}>
-            <Pressable
-              onPress={() => {
-                setState('');
-                setDistrict('');
-                setSearch('');
-              }}
-              style={[styles.crumb, picking === 'state' && styles.crumbActive]}
-            >
-              <Text style={[styles.crumbText, picking === 'state' && styles.crumbTextActive]}>
-                {state || 'Select state'}
-              </Text>
-            </Pressable>
-            <MaterialIcons name="chevron-right" size={18} color={Colors.onSurfaceVariant} />
-            <View style={[styles.crumb, picking === 'district' && styles.crumbActive]}>
-              <Text style={[styles.crumbText, picking === 'district' && styles.crumbTextActive]}>
-                {district || 'All districts'}
-              </Text>
-            </View>
-          </View>
+          <Text style={styles.note}>
+            Prices are pooled across the mandis in a state that reported.
+          </Text>
 
           <View style={styles.searchWrap}>
             <MaterialIcons name="search" size={20} color={Colors.onSurfaceVariant} />
             <TextInput
               value={search}
               onChangeText={setSearch}
-              placeholder={picking === 'state' ? 'Search state' : 'Search district'}
+              placeholder="Search state"
               placeholderTextColor={Colors.onSurfaceVariant}
               style={styles.searchInput}
               autoCorrect={false}
@@ -93,12 +70,15 @@ export function MandiFilterModal({ visible, initial, onClose, onApply }: Props) 
           </View>
 
           <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
-            {visibleOptions.map((option) => {
-              const selected = picking === 'state' ? option === state : option === district;
+            {visibleStates.map((option) => {
+              const selected = option === state;
               return (
                 <Pressable
                   key={option}
-                  onPress={() => choose(option)}
+                  onPress={() => {
+                    setSearch('');
+                    setState(option);
+                  }}
                   style={[styles.option, selected && styles.optionSelected]}
                 >
                   <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
@@ -108,19 +88,19 @@ export function MandiFilterModal({ visible, initial, onClose, onApply }: Props) 
                 </Pressable>
               );
             })}
-            {visibleOptions.length === 0 && (
+            {visibleStates.length === 0 && (
               <Text style={styles.empty}>Nothing matches that search.</Text>
             )}
           </ScrollView>
 
           <Pressable
-            onPress={() => onApply({ state, district })}
+            onPress={() => onApply({ state })}
             disabled={!state}
             style={[styles.apply, !state && styles.applyDisabled]}
             accessibilityRole="button"
           >
             <Text style={styles.applyText}>
-              {district ? `Show ${district} prices` : state ? `Show ${state} prices` : 'Select a state'}
+              {state ? `Show ${state} prices` : 'Select a state'}
             </Text>
           </Pressable>
         </View>
@@ -146,15 +126,7 @@ const styles = StyleSheet.create({
   },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { ...TypeEmphasized.titleLarge, color: Colors.onSurface },
-
-  crumbs: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  crumb: {
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
-    borderRadius: Shape.full, backgroundColor: Colors.surfaceContainerHigh,
-  },
-  crumbActive: { backgroundColor: Colors.secondaryContainer },
-  crumbText: { ...Type.labelLarge, color: Colors.onSurfaceVariant },
-  crumbTextActive: { color: Colors.onSecondaryContainer },
+  note: { ...Type.bodySmall, color: Colors.onSurfaceVariant, marginTop: -Spacing.xs },
 
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,

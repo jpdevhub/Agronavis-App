@@ -12,6 +12,7 @@ const row = (over: Partial<MandiPrice> = {}): MandiPrice => ({
   modalPrice: 3500,
   unit: 'Quintal',
   marketsReporting: 1,
+  markets: ['Kalyani'],
   arrivalDate: '2026-09-23',
   ...over,
 });

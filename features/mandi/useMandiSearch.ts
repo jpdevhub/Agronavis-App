@@ -4,7 +4,7 @@ import type { MandiSearchResult, MandiSource } from '@agronavis/shared-types';
 import { marketApi } from '@/services/endpoints';
 import { useFarmer } from '@/hooks/useFarmer';
 
-export type MandiFilter = { state: string; district: string };
+export type MandiFilter = { state: string };
 
 const SOURCE_LABEL: Record<MandiSource, string> = {
   agmarknet_district: 'Live · Agmarknet',
@@ -27,16 +27,15 @@ export function useMandiSearch(commodity?: string) {
   const [override, setOverride] = useState<MandiFilter | null>(null);
 
   const filter = useMemo<MandiFilter>(
-    () => override ?? { state: farmer?.state ?? '', district: farmer?.district ?? '' },
-    [override, farmer?.state, farmer?.district],
+    () => override ?? { state: farmer?.state ?? '' },
+    [override, farmer?.state],
   );
 
   const query = useQuery<MandiSearchResult>({
-    queryKey: ['market', 'mandi', filter.state, filter.district, commodity ?? ''],
+    queryKey: ['market', 'mandi', filter.state, commodity ?? ''],
     queryFn: () =>
       marketApi.mandi({
         state: filter.state,
-        ...(filter.district ? { district: filter.district } : {}),
         ...(commodity ? { commodity } : {}),
       }),
     enabled: filter.state.trim().length > 0,

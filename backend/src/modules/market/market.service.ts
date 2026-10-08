@@ -119,6 +119,7 @@ function toMandiPrice(record: Record<string, unknown>, fallbackCommodity: string
     modalPrice: modal,
     unit: 'Quintal',
     marketsReporting: 1,
+    markets: [pick(record, 'Market', 'market')].filter(Boolean),
     arrivalDate: arrivalDate || new Date().toISOString().slice(0, 10),
   };
 }
@@ -225,6 +226,7 @@ async function getDashboardPrices(state: string, crops: string[]): Promise<Dashb
         trend: trend.direction,
         changePct: trend.changePct,
         marketsReporting: 1,
+        markets: [],
         arrivalDate: trend.history.at(-1)?.date ?? new Date().toISOString().slice(0, 10),
       },
     ];
@@ -318,6 +320,7 @@ async function fromCache(state: string, district: string, limit: number): Promis
     modalPrice: Number(row.modal_price),
     unit: row.unit,
     marketsReporting: 1,
+    markets: [row.market].filter(Boolean),
     arrivalDate: row.arrival_date,
   }));
 }
@@ -418,6 +421,7 @@ export function poolByCommodity(rows: MandiPrice[]): MandiPrice[] {
     const median =
       modals.length % 2 === 0 ? Math.round((modals[mid - 1]! + modals[mid]!) / 2) : modals[mid]!;
 
+    const markets = [...new Set(group.map((r) => r.market).filter(Boolean))].sort();
     const first = group[0]!;
     return {
       ...first,
@@ -427,7 +431,8 @@ export function poolByCommodity(rows: MandiPrice[]): MandiPrice[] {
       maxPrice: Math.max(...group.map((r) => r.maxPrice)),
       modalPrice: median,
       // The same mandi can report a commodity on more than one date.
-      marketsReporting: new Set(group.map((r) => r.market)).size,
+      marketsReporting: markets.length,
+      markets,
       arrivalDate: group.map((r) => r.arrivalDate).sort().at(-1)!,
     };
   });

@@ -326,6 +326,8 @@ export interface MandiPrice {
   unit: string;
   /** Mandis behind this figure. */
   marketsReporting: number;
+  /** Which mandis they were, so the figure can be traced. */
+  markets: string[];
   /** Most recent date any of them reported. */
   arrivalDate: string;
 }

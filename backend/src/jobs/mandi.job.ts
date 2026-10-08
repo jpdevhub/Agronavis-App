@@ -92,6 +92,7 @@ export function toPriceRows(rows: MirrorRow[]): MandiPrice[] {
         modalPrice: modal,
         unit: 'Quintal',
         marketsReporting: 1,
+        markets: [market],
         arrivalDate,
       },
     ];
