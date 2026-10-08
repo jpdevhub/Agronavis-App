@@ -63,7 +63,15 @@ module.exports = () => ({
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#0E3D1F',
     },
-    googleMapsApiKey: publicEnv.googleMapsApiKey,
+    // Expo reads the Maps key from android.config.googleMaps.apiKey and writes
+    // it into the manifest as com.google.android.geo.API_KEY. It was previously
+    // set as `android.googleMapsApiKey`, which is not a field Expo knows, so it
+    // was dropped silently and every standalone build shipped with no key at
+    // all — grey tiles in the APK while development stayed fine, because Expo
+    // Go carries a Maps key of its own.
+    config: {
+      googleMaps: { apiKey: publicEnv.googleMapsApiKey },
+    },
     permissions: [
       'android.permission.CAMERA',
       'android.permission.ACCESS_FINE_LOCATION',
