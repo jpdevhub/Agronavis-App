@@ -66,6 +66,9 @@ notebooks/
 # deploys what is in the repo, so an ignored model means no scanner in
 # production and no error until the first scan.
 !backend/model/*.onnx
+# …but not the AppleDouble sidecars this volume writes beside them, which end
+# in .onnx too and so were pulled back in by the line above.
+backend/model/._*
 *.tif
 *.tiff
 

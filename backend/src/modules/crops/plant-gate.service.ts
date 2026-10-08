@@ -4,29 +4,30 @@ import type { Sharp } from 'sharp';
 import { logger } from '../../config/logger';
 
 /**
- * Decides whether a photograph shows a plant at all, before the disease model
- * is allowed an opinion.
+ * Second opinion on whether a photograph shows a crop, asked before the disease
+ * model is allowed one.
  *
- * The disease model cannot do this itself. It was trained on 86 leaf classes
+ * The disease model cannot answer this itself. It was trained on 86 leaf classes
  * and nothing else, so it has no label for "not a leaf" and no score that means
- * one: measured on it directly, a grey wall came back with a higher top logit
- * than a healthy leaf. Every photograph wins a crop, and a farmer was told his
- * own face was healthy rice.
+ * one — measured directly, a grey wall came back with a higher top logit than a
+ * healthy leaf. The colour gate in diagnose.service.ts catches the common
+ * misfires cheaply, but colour is only colour: a green shirt or a painted wall
+ * passes it comfortably.
  *
- * NOT WIRED IN YET. The thresholds this would gate on have to be measured
- * against real photographs — leaves across crops and conditions on one side,
- * the things a phone sees indoors on the other — and guessing them risks
- * refusing the diseased leaves this exists to read. Until that calibration is
- * done, diagnose.service.ts gates on colour alone. The weights are not in the
- * repo either: fetch mobilenetv2-12.onnx (14 MB) into backend/model/ from the
- * ONNX model zoo, validated/vision/classification/mobilenet/model.
+ * So the question goes to a model that has seen the rest of the world.
+ * MobileNetV2 on ImageNet is 13 MB and knows a thousand everyday things.
  *
- * So the question is asked by a model that has actually seen the rest of the
- * world. MobileNetV2 on ImageNet is 14 MB and knows a thousand everyday things,
- * a good share of them leaves, fruit, vegetables, fungi and flowers. Summing
- * what it assigns to those against what it assigns to furniture, clothing and
- * the objects that surround a person indoors answers the question this API
- * actually has, and costs about as much as resizing the image.
+ * It is deliberately asked the negative question. Nothing is refused for failing
+ * to look like a plant — ImageNet has no class for "rice leaf at 20 cm", and a
+ * close-up of diseased tissue may match nothing it knows, which under a
+ * plant-score threshold would refuse exactly the photographs this exists to
+ * read. A frame is refused only when the model is confidently looking at
+ * something a crop photograph cannot contain, and the colour gate found almost
+ * no vegetation to argue otherwise. All three conditions must hold at once.
+ *
+ * The asymmetry is the point. Set too loosely this misses some non-crops, which
+ * is exactly where the scanner already stood. It cannot begin refusing real
+ * leaves, because a leaf does not score 40% on "sweatshirt".
  */
 const MODEL_PATH = path.join(__dirname, '../../../model/mobilenetv2-12.onnx');
 
@@ -35,30 +36,18 @@ const STD = [0.229, 0.224, 0.225];
 const SIDE = 224;
 
 /**
- * ImageNet-1k indices for growing things: vegetables and fruit on the plant,
- * cereal heads, fungi, flowers, and the nursery a crop is photographed in.
+ * ImageNet-1k classes that a photograph of a crop cannot be.
+ *
+ * ImageNet has no class for a person, so a photograph of one lands on what
+ * people wear; the rest are the manufactured things a phone sees indoors. Fruit,
+ * vegetables, fungi, flowers and flowerpots are deliberately absent — a crop
+ * photograph may legitimately be any of those.
  */
-const PLANT_CLASSES = new Set([
-  738, // flowerpot
-  580, // greenhouse
-  936, 937, 938, 939, 940, 941, 942, 943, 944, 945, 946, // cabbage … cardoon
-  947, // mushroom
-  948, 949, 950, 951, 952, 953, 954, 955, 956, 957, // apple … pomegranate
-  958, // hay
-  984, 985, 986, 987, 988, 989, 990, // rapeseed, daisy, corn, acorn, hip, buckeye
-  991, 992, 993, 994, 995, 996, 997, // fungi
-  998, // ear of corn
-]);
-
-/**
- * ImageNet has no class for a person, so a photograph of one is spread across
- * the things people wear and hold. These are what a selfie actually scores on,
- * and they are strong evidence against a crop however green the frame is.
- */
-const PERSON_CLASSES = new Set([
+const NOT_CROP_CLASSES = new Set([
+  // Worn — what a selfie actually scores on
   834, // suit
-  837, // sunglasses
   836, // sunglass
+  837, // sunglasses
   841, // sweatshirt
   610, // jersey, T-shirt
   617, // lab coat
@@ -73,6 +62,31 @@ const PERSON_CLASSES = new Set([
   903, // wig
   445, // bikini
   638, // maillot
+  400, // academic gown
+  655, // miniskirt
+  775, // sarong
+  // Screens and desks
+  664, // monitor
+  761, // television
+  620, // laptop
+  527, // desktop computer
+  508, // computer keyboard
+  673, // mouse
+  526, // desk
+  532, // dining table
+  // Furnishings and paper
+  831, // studio couch
+  703, // park bench
+  846, // table lamp
+  905, // window shade
+  750, // quilt
+  721, // pillow
+  434, // bath towel
+  922, // book jacket
+  549, // envelope
+  923, // menu
+  692, // packet
+  478, // carton
 ]);
 
 let session: ort.InferenceSession | null = null;
@@ -97,33 +111,35 @@ async function ready(): Promise<boolean> {
 }
 
 export type PlantGate = {
-  /** False only when the model was asked and actively disagreed. */
+  /** False when the model could not be asked; the caller then does not gate. */
   available: boolean;
-  plantScore: number;
-  personScore: number;
+  /** The strongest ImageNet class, and how sure it is. */
   topClass: number;
+  topScore: number;
+  /** True when that class is one a crop photograph cannot contain. */
+  topIsNotCrop: boolean;
 };
 
 /**
  * Scores one already-decoded image. Takes the sharp pipeline rather than a
- * buffer so the photograph is decoded once for both models.
+ * buffer so the photograph is decoded once and shared with the disease model.
  */
 export async function scorePlant(image: Sharp): Promise<PlantGate> {
   if (!(await ready()) || !session) {
-    return { available: false, plantScore: 0, personScore: 0, topClass: -1 };
+    return { available: false, topClass: -1, topScore: 0, topIsNotCrop: false };
   }
 
   const { data } = await image
     .clone()
-    .resize(SIDE, SIDE, { fit: 'cover' })
+    .resize(SIDE, SIDE, { fit: 'fill' })
     .removeAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
 
   const tensor = new Float32Array(3 * SIDE * SIDE);
   const plane = SIDE * SIDE;
-  for (let i = 0; i < plane; i++) {
-    for (let c = 0; c < 3; c++) {
+  for (let i = 0; i < plane; i += 1) {
+    for (let c = 0; c < 3; c += 1) {
       tensor[c * plane + i] = (data[i * 3 + c]! / 255 - MEAN[c]!) / STD[c]!;
     }
   }
@@ -133,23 +149,22 @@ export async function scorePlant(image: Sharp): Promise<PlantGate> {
   });
   const logits = output[session.outputNames[0]!]!.data as Float32Array;
 
-  const max = Math.max(...logits);
+  let max = -Infinity;
+  for (let i = 0; i < logits.length; i += 1) if (logits[i]! > max) max = logits[i]!;
+
   let total = 0;
-  const exps = new Float64Array(logits.length);
-  for (let i = 0; i < logits.length; i++) {
-    exps[i] = Math.exp(logits[i]! - max);
-    total += exps[i]!;
-  }
-
-  let plantScore = 0;
-  let personScore = 0;
   let topClass = 0;
-  for (let i = 0; i < exps.length; i++) {
-    const p = exps[i]! / total;
-    if (PLANT_CLASSES.has(i)) plantScore += p;
-    if (PERSON_CLASSES.has(i)) personScore += p;
-    if (exps[i]! > exps[topClass]!) topClass = i;
+  for (let i = 0; i < logits.length; i += 1) {
+    total += Math.exp(logits[i]! - max);
+    if (logits[i]! > logits[topClass]!) topClass = i;
   }
 
-  return { available: true, plantScore, personScore, topClass };
+  const topScore = Math.exp(logits[topClass]! - max) / total;
+
+  return {
+    available: true,
+    topClass,
+    topScore,
+    topIsNotCrop: NOT_CROP_CLASSES.has(topClass),
+  };
 }

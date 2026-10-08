@@ -4,6 +4,7 @@ import * as ort from 'onnxruntime-node';
 import sharp from 'sharp';
 import type { DiseasePrediction } from '@agronavis/shared-types';
 import { logger } from '../../config/logger';
+import { scorePlant, type PlantGate } from './plant-gate.service';
 
 /**
  * Plant disease classification, run inside this process.
@@ -92,6 +93,26 @@ export function vegetationShare(data: Buffer): number {
  */
 const MIN_VEGETATION = 0.15;
 
+/**
+ * How sure the second model must be that it is looking at something a crop
+ * photograph cannot contain, before that outweighs the colour in the frame.
+ * Set high on purpose: a mistaken refusal costs the farmer the scan they came
+ * for, and letting a non-crop through only returns the scanner to where it was.
+ */
+const MIN_NOT_CROP_SCORE = 0.35;
+
+/**
+ * Whether the second model's reading outweighs the colour in the frame.
+ *
+ * Kept as a plain function of the two scores so every branch can be tested
+ * without loading 13 MB of weights to find out. All three conditions must hold:
+ * the model was actually asked, it is looking at something a crop photograph
+ * cannot contain, and it is sure enough to override what the colour said.
+ */
+export function refusedByGate(gate: PlantGate): boolean {
+  return gate.available && gate.topIsNotCrop && gate.topScore >= MIN_NOT_CROP_SCORE;
+}
+
 let session: ort.InferenceSession | null = null;
 let classes: string[] = [];
 let loadFailed = false;
@@ -168,10 +189,13 @@ export async function diagnose(image: Buffer): Promise<DiseasePrediction> {
     return { available: false, confident: false, plantDetected: true, predictions: [] };
   }
 
+  // Decoded once, shared with the plant gate below.
+  const decoded = sharp(image).removeAlpha();
+
   // Resize to the training geometry and normalise, channel-planar as the model
   // expects (NCHW), which is not the interleaved order sharp returns.
-  const { data } = await sharp(image)
-    .removeAlpha()
+  const { data } = await decoded
+    .clone()
     .resize(SIDE, SIDE, { fit: 'fill' })
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -180,6 +204,22 @@ export async function diagnose(image: Buffer): Promise<DiseasePrediction> {
   // there is no plant here, its answer is noise whatever its confidence says.
   const plantShare = vegetationShare(data);
   if (plantShare < MIN_VEGETATION) {
+    return { available: true, confident: false, plantDetected: false, predictions: [] };
+  }
+
+  // Colour is only colour. A bright green shirt scores at the top of the index,
+  // so this runs on every frame that got past it rather than only on the
+  // doubtful ones — skipping the confident ones would skip exactly the case the
+  // second model exists to catch. It costs about 20 ms and 13 MB, and it is only
+  // allowed to refuse on positive evidence: a confident reading of something a
+  // crop photograph cannot contain, never a failure to recognise a leaf.
+  const gate = await scorePlant(decoded);
+  if (refusedByGate(gate)) {
+    logger.info('Scan refused by the plant gate', {
+      topClass: gate.topClass,
+      topScore: Number(gate.topScore.toFixed(3)),
+      vegetation: Number(plantShare.toFixed(3)),
+    });
     return { available: true, confident: false, plantDetected: false, predictions: [] };
   }
 

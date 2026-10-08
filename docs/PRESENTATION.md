@@ -206,9 +206,9 @@ Our server has **12 modules** and **46 endpoints**:
 
 ## 5. Every Model We Use
 
-We use **eight** models. Two are neural networks. One is a physics equation.
-Five are deliberately simple — because simple was the correct answer, not the
-lazy one.
+We use **eight** models. Three are neural networks — two of them running at
+once on every scan. One is a physics equation. The rest are deliberately simple,
+because simple was the correct answer, not the lazy one.
 
 ---
 
@@ -378,31 +378,44 @@ anything else in the app.
 
 ---
 
-### 5.4 MobileNetV2 — built, deliberately switched off
+### 5.4 MobileNetV2 — the second opinion
 
-|                      |                                                          |
-| -------------------- | -------------------------------------------------------- |
-| **What it would do** | Properly decide "is this a crop?"                        |
-| **Type**             | MobileNetV2 trained on ImageNet — 1,000 everyday objects |
-| **Size**             | 14 MB                                                    |
-| **Status**           | **Written, tested, and not turned on**                   |
+|                  |                                                          |
+| ---------------- | -------------------------------------------------------- |
+| **What it does** | Decides whether the frame is something a crop cannot be  |
+| **Type**         | MobileNetV2 trained on ImageNet — 1,000 everyday objects |
+| **Size**         | 13 MB                                                    |
+| **Runs**         | On every scan that gets past the colour check            |
+| **Cost**         | About 20 ms. Both models together sit at 227 MB          |
 
-Colour catches skin, walls and sky. It cannot catch a green thing that is not a
-plant — a painted wall, a green shirt. MobileNetV2 knows a thousand ordinary
-objects, many of them leaves, fruit and vegetables, so we can ask it how much of
-the picture looks like something growing.
+Colour is only colour. It catches skin, walls and sky, but it cannot catch a
+green thing that is not a plant — a painted wall, a green shirt. So a second
+model that has actually seen the rest of the world gets a look.
 
-We have not switched it on, because its threshold must be measured against real
-photographs of real diseased leaves in real light. **A guessed threshold would
-start refusing exactly the photos the scanner exists to read.**
+**The important part is which question we ask it.**
 
-The code is committed, with a header explaining how to finish it.
+The obvious design is to ask "does this look like a plant?" and refuse anything
+scoring low. That design is dangerous. ImageNet has no class for _rice leaf at
+twenty centimetres_, and a close-up of diseased tissue may match nothing it
+knows — so a plant-score threshold would refuse exactly the photographs the
+scanner exists to read.
 
-> We think leaving this off is worth more than turning it on. Shipping an
-> uncalibrated gate would be the same mistake as the face-as-rice bug, just in
-> the other direction.
+So we ask the opposite question. A photo is refused only when **all three** of
+these hold at once:
 
----
+1. The model was actually reachable, and
+2. its single strongest answer is something a crop photograph cannot contain —
+   a sweatshirt, a pair of sunglasses, a monitor, a dining table — and
+3. it is at least 35% sure of that.
+
+The asymmetry is deliberate. Set too loosely, this misses some non-crops, which
+is exactly where the scanner already stood — no loss. It cannot start refusing
+real leaves, because a leaf does not score 35% on "sweatshirt".
+
+> **Honest status:** the three-way decision is unit-tested on every branch. What
+> we have not yet done is verify how it scores a photograph of a _real_ green
+> shirt, because we have no such photo. The rule is built so that being wrong
+> there fails safe — it lets the frame through rather than refusing it.
 
 ### 5.5 FAO-56 Penman–Monteith — the irrigation answer
 
@@ -654,8 +667,11 @@ wrong purchase.
 **A fully brown dead leaf gets refused.** The deliberate cost of the vegetation
 check.
 
-**The green check reads colour, not meaning.** A green painted wall would pass
-it. That is exactly what MobileNetV2 is for, and it is not switched on yet.
+**The second model's rejections are unverified on real photographs.** The
+decision logic is tested on every branch, but we have never measured how it
+scores a real green shirt or a painted wall, because we have no such photos. It
+is built to fail safe — when unsure it lets the frame through — so the risk is
+that it misses a non-crop, not that it refuses a leaf.
 
 **The scanner needs a connection.** Unlike the assistant, it runs on the server.
 
@@ -687,8 +703,10 @@ yet look at the field from orbit. See the next section.
 
 ### Near term
 
-1. **Switch on the MobileNetV2 crop check.** Collect real leaf photographs,
-   measure the threshold, enable it. The code is already written.
+1. **Calibrate the second model against real photographs.** It is switched on
+   and failing safe, but its thresholds are reasoned rather than measured.
+   Photograph real leaves, real green clothing and real painted walls, then
+   tighten it on evidence.
 2. **Five more languages** — Marathi, Punjabi, Gujarati, Telugu, Kannada.
 3. **Dose, not just advice.** Fertiliser and pesticide quantities calculated for
    the field's actual acreage — which we already know, because we measured the
@@ -745,22 +763,22 @@ is the hard part, and we solved it on day one. Sentinel-2 data is free.
 
 ## 14. The Full Stack
 
-| Layer        | Built with                                                  |
-| ------------ | ----------------------------------------------------------- |
-| App          | React Native 0.81, Expo SDK 54, Expo Router, React 19       |
-| State        | Zustand, TanStack Query                                     |
-| Maps         | react-native-maps                                           |
-| On-device AI | Gemma-4 via LiteRT-LM, in a native Android module we wrote  |
-| Voice        | expo-speech (speaking), expo-speech-recognition (listening) |
-| Languages    | i18next — 97 phrases in English and Hindi                   |
-| Server       | Node 22, Express, TypeScript                                |
-| Live updates | Socket.IO, plus Expo push notifications                     |
-| Vision       | onnxruntime-node, sharp                                     |
-| Validation   | Zod on every incoming request                               |
-| Database     | Supabase — Postgres, Auth, Storage, Row Level Security      |
-| Hosting      | Render (server, free tier), Supabase (database)             |
-| Scheduling   | node-cron — 6 jobs                                          |
-| Tests        | 111 automated tests (39 app, 72 server)                     |
+| Layer        | Built with                                                                          |
+| ------------ | ----------------------------------------------------------------------------------- |
+| App          | React Native 0.81, Expo SDK 54, Expo Router, React 19                               |
+| State        | Zustand, TanStack Query                                                             |
+| Maps         | react-native-maps                                                                   |
+| On-device AI | Gemma-4 via LiteRT-LM, in a native Android module we wrote                          |
+| Voice        | expo-speech (speaking), expo-speech-recognition (listening)                         |
+| Languages    | i18next — 97 phrases in English and Hindi                                           |
+| Server       | Node 22, Express, TypeScript                                                        |
+| Live updates | Expo push notifications (a Socket.IO server runs, but no client connects to it yet) |
+| Vision       | onnxruntime-node, sharp                                                             |
+| Validation   | Zod on every incoming request                                                       |
+| Database     | Supabase — Postgres, Auth, Storage, Row Level Security                              |
+| Hosting      | Render (server, free tier), Supabase (database)                                     |
+| Scheduling   | node-cron — 6 jobs                                                                  |
+| Tests        | 111 automated tests (39 app, 72 server)                                             |
 
 ---
 
