@@ -127,7 +127,8 @@ know:
 ## For developers
 
 Setup, architecture, scripts and deployment are in
-**[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
+**[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**. How every model works, and what
+we got right and wrong, is in **[docs/PRESENTATION.md](docs/PRESENTATION.md)**.
 
 ```bash
 git clone https://github.com/jpdevhub/Agronavis-App.git && cd Agronavis-App
