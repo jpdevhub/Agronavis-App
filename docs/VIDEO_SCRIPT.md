@@ -1,327 +1,278 @@
-# Agronavis — Presentation Video Script
+# Agronavis — Video Narration Script
 
-A 3-minute film. Every word is written to be spoken, and every shot is named.
-Total narration is about 450 words, which lands at 3:00–3:10 at a natural pace.
+Read this aloud over a screen recording of the app. No other footage is needed.
 
-**Read the [recording checklist](#recording-checklist) before you shoot
-anything.** One item on it will save you a ruined take.
+476 words, which runs **about 3 minutes 25 seconds** including the two pauses.
+The words in _(brackets)_ are not spoken — they only tell you which screen
+should be showing while you say the line next to them.
 
-### On the timing
-
-There are 401 words of narration here. Spoken naturally that is about 2 minutes
-45 seconds, inside a 3:05 film.
-
-The missing twenty seconds are deliberate. They are the pause after "he will
-guess at all four", the four seconds of real Sahayak voice, and the two seconds
-of silence while the refusal sits on screen. **Do not fill them.** A script that
-talks wall to wall sounds hurried, and the three moments this film is built
-around all land in the gaps.
+If you have a hard three-minute limit, see [cutting it
+down](#cutting-it-to-three-minutes).
 
 ---
 
 ## The Script
 
-### 0:00 – 0:22 · The hook
+_(The app opening. Let it sit on the home screen for a moment before you start.)_
 
-> **SHOT** — A real field. A farmer walking it. If you have no footage, use the
-> app's camera view pointed at a crop, or a still photo held for the full 22
-> seconds. Do not open the app yet.
+An Indian farmer makes four decisions every season.
 
-**Say:**
+What his soil needs. When to water. What the spots on his leaves are. And what
+his crop is worth.
 
-> "This is a farmer in Bihar.
->
-> This season he will decide four things. What his soil needs. When to water.
-> What the spots on his leaves are. And what his crop is worth.
->
-> Each one costs him money if he gets it wrong.
->
-> He will guess at all four."
+Each one costs him money if he gets it wrong.
 
-> **DELIVERY** — Slow. Let "He will guess at all four" sit for a full second
-> before the next line. This is the only moment in the film where silence works
-> harder than words.
+And he makes all four without any data.
 
 ---
 
-### 0:22 – 0:38 · The insight
+Which is strange. Because the answers already exist.
 
-> **SHOT** — Cut between four things on screen: the Soil Health Card website,
-> the NASA POWER page, the Agmarknet price page, the FAO-56 paper cover. Two to
-> three seconds each. Plain screen recordings are fine.
+The government tested his soil and published the result. NASA measures the rain
+that falls on his field every single day. The mandi publishes today's price.
 
-**Say:**
+All of it is public. None of it reaches him.
 
-> "Here's what's strange.
->
-> The government already tested his soil. NASA already measured the rain that
-> fell on his field. The mandi already published today's price.
->
-> All of it is public. None of it reaches him."
-
-> **DELIVERY** — Pick up the pace here. This is the turn, and it should feel
-> like one.
+The problem isn't missing science. It's missing delivery.
 
 ---
 
-### 0:38 – 1:55 · The demo
+_(The map screen. Draw the field boundary slowly while you say this.)_
 
-This is the heart of the film. Screen recording throughout, in portrait.
+So Agronavis starts with one action.
 
-#### Drawing the field — 0:38
+He draws his field on the map.
 
-> **SHOT** — The map screen. Finger traces the field boundary on satellite
-> imagery. The area appears. **Record this unhurried** — it is the single most
-> important shot in the video.
-
-**Say:**
-
-> "Agronavis starts with one action. He draws his field on the map.
->
-> That's it. That's the whole setup."
-
-#### The soil — 0:50
-
-> **SHOT** — Dashboard, with the Nitrogen / Phosphorus / Potassium tiles. Then
-> tap through to the full soil report. Scroll slowly past the bars so the sample
-> counts are visible.
-
-**Say:**
-
-> "Now everything is about that field.
->
-> His soil — nitrogen low, phosphorus high. Not a district guess. The
-> government's own laboratory results, and we show how many samples that's
-> based on."
-
-#### The weather — 1:05
-
-> **SHOT** — The weather card showing the irrigation line. Tap "Open the full
-> weather record". Scroll the technical report.
-
-**Say:**
-
-> "His weather — today's conditions, and the one answer that matters.
->
-> Irrigate today.
->
-> That comes from the United Nations' water-balance equation. And the full
-> record is right there, if he wants to check our working."
-
-#### The crops — 1:20
-
-> **SHOT** — The crop picker, showing state-specific crops. Select one. Cut to
-> the task list filling in.
-
-**Say:**
-
-> "His crops — only the ones his state's scheme actually recognises.
->
-> He picks one, and the season lays itself out as dated tasks."
-
-#### The scanner — 1:32
-
-> **SHOT** — Camera opens, frames a real leaf with visible disease, captures.
-> Hold on the result card. Make sure the next-two-conditions line is readable.
-
-**Say:**
-
-> "A spot on a leaf — he photographs it.
->
-> One second.
->
-> With the next two possibilities, and a reminder to confirm before he sprays."
-
-#### The price — 1:44
-
-> **SHOT** — The mandi tab. A commodity row with the price, the range, and the
-> mandi names underneath.
-
-**Say:**
-
-> "Today's price for his state. With the range, and the mandis that reported
-> it."
-
-#### Sahayak — 1:50
-
-> **SHOT** — Tap the Sahayak button. Speak a question out loud in Hindi. Show
-> the answer arriving. **Let the viewer hear the actual voice.**
-
-**Say:**
-
-> "And he can just ask. In Hindi. Out loud."
-
-> **DELIVERY** — Then stop talking and let four seconds of the real voice
-> interaction play. Judges remember sound.
+That's the whole setup. And from here, everything is about that field. Not his
+district. Not his village. That field.
 
 ---
 
-### 1:55 – 2:35 · What you cannot see
+_(The dashboard, then open the full soil report.)_
 
-> **SHOT** — Leave the app. Use the architecture diagram from the deck, or plain
-> text on a dark background. Keep it simple — this is the one stretch where the
-> words carry it.
+His soil. Nitrogen low. Phosphorus high.
 
-**Say:**
-
-> "Two things make this work that you can't see on screen.
->
-> Sahayak runs on his phone. Not on our server. A three-gigabyte language model,
-> on the handset.
->
-> So it works with no signal. And it costs us nothing per question — a cloud AI
-> would bill us for every message a million farmers ever send.
->
-> The leaf scanner runs inside our own API. The original needed a gigabyte of
-> libraries. Our server has five hundred and twelve megabytes — it couldn't even
-> start.
->
-> So we converted the model. Forty-three megabytes. One second a photo. Same
-> answers, agreeing to seven decimal places."
-
-> **DELIVERY** — "It couldn't even start" is the line that makes engineers lean
-> in. Land it, then pause before "So we converted the model."
+That isn't an estimate. Those are the government's own laboratory results for
+his district — and we show how many samples they're based on, so he can judge
+how much to trust them.
 
 ---
 
-### 2:35 – 2:52 · The part nobody else will show you
+_(The weather card, then open the full weather record.)_
 
-> **SHOT** — This one is scripted exactly. Open the scanner. Point it at a
-> **person's face**. Capture. The screen says _"That does not look like a
-> crop."_ Hold on it.
+His weather. Today's conditions, and the one line that actually matters.
 
-**Say:**
+Irrigate today.
 
-> "One more thing.
->
-> Early on, we showed our scanner a photograph of a person.
->
-> It said: rice. Healthy. Seventy-eight percent confident.
->
-> Every model like this is forced to answer something. So we taught ours to
-> refuse."
-
-> **DELIVERY** — Deadpan. Do not sound embarrassed; sound like an engineer
-> reporting a finding. The refusal on screen is the punchline — say nothing over
-> it for two seconds.
+That comes from the United Nations' water balance equation, not a rule of thumb.
+And the full record sits behind it, if he wants to check our working.
 
 ---
 
-### 2:52 – 3:05 · Close
+_(The crop picker. Choose a crop, then show the task list.)_
 
-> **SHOT** — Back to the field. Or the app's home screen. Then the name.
+His crops. Only the ones his state's scheme actually recognises, so nothing on
+screen is noise.
 
-**Say:**
-
-> "A farmer forgives an app that says 'I'm not sure'.
->
-> He never opens one again after it was confidently wrong.
->
-> Agronavis. The data was always there."
-
-> **DELIVERY** — Drop your voice on the last line. Do not add a call to action,
-> a thank-you, or a team slide with music. End it.
+He picks one, and the whole season lays itself out as dated tasks.
 
 ---
 
-## The 60-Second Cut
+_(Open the camera, photograph a diseased leaf, hold on the result.)_
 
-If the brief caps you at a minute, use this. Nothing else survives.
+A spot on a leaf. He photographs it.
 
-| Time      | Shot                              | Say                                                                                                                                                                                         |
-| --------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0:00–0:10 | Field                             | "A farmer decides four things each season — his soil, his water, his pests, his price. He guesses at all four. Yet the government already tested his soil. NASA already measured his rain." |
-| 0:10–0:20 | Drawing the field                 | "Agronavis starts with one action. He draws his field."                                                                                                                                     |
-| 0:20–0:35 | Soil → weather → price, fast cuts | "Now his soil is the real lab result. His irrigation comes from the UN's water equation. His price is today's, from his own state."                                                         |
-| 0:35–0:45 | Scan a leaf                       | "A spot on a leaf — one photograph, one second."                                                                                                                                            |
-| 0:45–0:55 | Scan a face → refusal             | "We showed it a person once. It said healthy rice, seventy-eight percent. So we taught it to refuse."                                                                                       |
-| 0:55–1:00 | Name                              | "Agronavis. The data was always there."                                                                                                                                                     |
+One second.
+
+The crop, the condition, and the next two possibilities. With a reminder to
+confirm before he sprays — because a photograph can't tell him the dose.
 
 ---
 
-## Recording Checklist
+_(The mandi screen.)_
 
-Work through this **before** you press record.
-
-### Critical
-
-- [ ] **Wake the server first.** Our API sleeps after 15 minutes idle on the
-      free tier, and the first request then takes about ten seconds. Open the
-      app, load any screen, wait for it to respond — _then_ start recording. A
-      cold server will put a ten-second dead spot in the middle of your demo.
-- [ ] **Use build 1.2.0 or newer.** The face-refusal shot only works on it.
-      Older builds will cheerfully call your face a crop, which is a different
-      video.
-- [ ] **Find a real diseased leaf.** A healthy leaf makes a dull result card.
-      Something with visible spotting reads far better on camera.
-
-### Before each take
-
-- [ ] Open every screen once so data is cached — no loading spinners on camera
-- [ ] Aeroplane mode off, good signal, full battery
-- [ ] Notifications silenced, Do Not Disturb on
-- [ ] Screen brightness up — phone screens film dark
-- [ ] Clear the search fields and filters from previous testing
-
-### Recording
-
-- [ ] Portrait, 1080 × 1920, 30 or 60 fps
-- [ ] **Record the screen silently first, narrate afterwards.** Trying to speak
-      while tapping produces both a bad take and a bad tap.
-- [ ] Record narration in one continuous pass if you can — splicing sentences
-      recorded minutes apart sounds spliced
-- [ ] Move slowly. What feels painfully slow while tapping looks normal on
-      playback; what feels normal looks frantic.
-
-### Editing
-
-- [ ] Cut every loading moment
-- [ ] Keep the Sahayak voice audio — do not duck it under music
-- [ ] Music under the narration at most, and drop it entirely for the
-      face-refusal section
-- [ ] Captions throughout. Judges often watch muted first.
+Today's price for his state. The range it moved in, and the mandis that reported
+it.
 
 ---
 
-## Why the Script Is Shaped This Way
+_(Open Sahayak. Ask a question out loud in Hindi.)_
 
-Three decisions, in case you want to change them and need to know what breaks.
+And if he just wants to ask — he can. In Hindi. Out loud.
 
-**The problem gets 22 seconds before the app appears.** Most teams open with
-their product. A judge has seen forty products that day and no problems. Holding
-the problem makes the product land as an answer rather than a demo.
-
-**The honesty section is near the end, not buried.** Showing a bug you found and
-fixed is counter-intuitive, and it is the strongest thing you have. Every team
-claims accuracy. Almost none can describe how their system fails, and a judge
-knows that difference means the team actually measured something.
-
-**There is no team slide and no thank-you.** They cost eight seconds and add
-nothing. End on the product.
+**— then stop talking for about four seconds and let the real voice play —**
 
 ---
 
-## Alternative Openings
+_(Leave the app. A plain screen, or hold on the dashboard.)_
 
-If "a farmer in Bihar" does not suit your audience, these cost the same time.
+Two things make this work that you can't see on the screen.
+
+Sahayak runs on his phone. Not on our server. A three gigabyte language model,
+running on the handset.
+
+So it works with no signal. And it costs us nothing per question — where a cloud
+AI would charge us for every message a million farmers ever send.
+
+The leaf scanner runs inside our own API. The original version needed a gigabyte
+of libraries, and our server has five hundred and twelve megabytes. It couldn't
+even start.
+
+So we converted the model. Forty-three megabytes. One second a photo. The same
+answers, agreeing to seven decimal places.
+
+---
+
+_(Open the camera again. Point it at a person's face. Capture.)_
+
+One last thing.
+
+Early on, we pointed this scanner at a photograph of a person.
+
+It said: rice. Healthy. Seventy-eight percent confident.
+
+Every model like this is forced to answer something.
+
+So we taught ours to refuse.
+
+**— the screen now says "That does not look like a crop". Say nothing for two
+seconds. —**
+
+---
+
+_(The app's home screen, or the logo.)_
+
+A farmer forgives an app that says "I'm not sure".
+
+He never opens one again after it was confidently wrong.
+
+Agronavis. The data was always there.
+
+---
+
+## How to Read It
+
+**Slow down more than feels natural.** Everyone speeds up on a recording. If it
+feels slightly too slow while you are saying it, it is about right on playback.
+
+**The four pauses that matter.** After "without any data". After "It's missing
+delivery." The four seconds of Sahayak's voice. And the two seconds of silence
+while the refusal sits on screen. These are where the film lands — do not fill
+them.
+
+**Three lines to hit hard:**
+
+- "And he makes all four without any data." — the problem
+- "It couldn't even start." — the engineering
+- "So we taught ours to refuse." — the one nobody else can say
+
+**Don't sound embarrassed about the face story.** Say it the way an engineer
+reports a measurement. It is the strongest thing in the script, not an apology.
+
+**Record the screen first, silently. Narrate afterwards.** Tapping and talking at
+the same time gives you a bad take and a bad tap. Then line the voice up to the
+footage in editing and trim any dead air.
+
+**Record the narration in one continuous pass** if you can. Sentences recorded
+minutes apart sound spliced, however carefully you cut them.
+
+---
+
+## Before You Record
+
+- **Wake the server first.** It sleeps after 15 minutes idle, and the first
+  request then takes about ten seconds. Open the app, load a screen, wait for it
+  to answer — then start recording. Otherwise you get a ten-second dead spot in
+  the middle of the demo.
+- **Use build 1.2.0 or newer.** The face-refusal moment only works on it. Older
+  builds will call your face healthy rice.
+- **Find a real diseased leaf.** A healthy one gives a dull result card.
+- Open every screen once beforehand so nothing loads on camera.
+- Do Not Disturb on, brightness up, battery full.
+- Clear old searches and filters from testing.
+- Captions in the final edit. Judges often watch muted the first time.
+
+---
+
+## Cutting It to Three Minutes
+
+Hard cap of 3:00? Cut these three, in this order. They come to about 70 words,
+which is the 25 seconds you need, and none of them is load-bearing.
+
+**1. Drop the mandi price section entirely** _(−17 words)_
+
+> ~~Today's price for his state. The range it moved in, and the mandis that
+> reported it.~~
+
+It is the weakest moment in the film. The screen can show the mandi tab for two
+seconds while you move on.
+
+**2. Tighten the opening of the field section** _(−22 words)_
+
+> So Agronavis starts with one action. He draws his field on the map. ~~That's
+> the whole setup. And from here, everything is about that field. Not his
+> district. Not his village. That field.~~ → **Everything after this is about
+> that field. Not his district. That field.**
+
+**3. Trim the soil explanation** _(−30 words)_
+
+> His soil. Nitrogen low. Phosphorus high. ~~That isn't an estimate. Those are
+> the government's own laboratory results for his district — and we show how
+> many samples they're based on, so he can judge how much to trust them.~~ →
+> **Not an estimate — the government's own laboratory results, and we show how
+> many samples they're based on.**
+
+**Do not cut** the face-refusal section, the two pauses, or "It couldn't even
+start." Those are the three things a judge will still remember an hour later.
+
+---
+
+## The One-Minute Version
+
+If you are capped at sixty seconds, this is what survives.
+
+An Indian farmer decides four things every season. His soil, his water, his
+pests, his price. He guesses at all four.
+
+Yet the government already tested his soil. NASA already measured his rain. It's
+all public — it just never reaches him.
+
+_(drawing the field)_ Agronavis starts with one action. He draws his field.
+
+_(soil, weather, price)_ Now his soil is the real laboratory result. His
+irrigation comes from the UN's water equation. His price is today's, from his
+own state.
+
+_(scanning a leaf)_ A spot on a leaf — one photograph, one second.
+
+_(scanning a face)_ We pointed it at a person once. It said healthy rice,
+seventy-eight percent confident. So we taught it to refuse.
+
+Agronavis. The data was always there.
+
+---
+
+## If You Need a Different Opening
+
+Same length, different room.
 
 **For a technical panel**
 
-> "Every image classifier has the same flaw. Show it something outside its
-> training set and it answers anyway — confidently. We showed ours a photograph
-> of a person, and it said healthy rice, seventy-eight percent. This is what we
-> built around that problem."
+> Every image classifier has the same flaw. Show it something outside its
+> training data and it answers anyway, confidently. We showed ours a photograph
+> of a person and it said healthy rice, seventy-eight percent. This is what we
+> built around that problem.
 
 **For a government or cooperative audience**
 
-> "India tests its soil in seven hundred districts and publishes every result.
-> NASA measures the rainfall on every field in the country, free. The data is
-> excellent and it is already paid for. It just never reaches the farm. That is
-> the only problem Agronavis solves."
+> India tests the soil in over seven hundred districts and publishes every
+> result. NASA measures the rainfall on every field in the country, for free.
+> The data is excellent, and it's already paid for. It just never reaches the
+> farm. That is the only problem Agronavis solves.
 
-**For an investor audience**
+**For investors**
 
-> "Agricultural apps have one of two problems. Either the AI costs more per user
-> than the user is worth, or it needs a signal the farmer does not have. We put
+> Agricultural apps have one of two problems. Either the AI costs more per user
+> than the user is worth, or it needs a signal the farmer doesn't have. We put
 > the model on the phone. It costs us nothing per question, and it works in a
-> field with no bars."
+> field with no bars.
