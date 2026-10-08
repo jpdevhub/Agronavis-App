@@ -18,8 +18,25 @@ import { TtlCache } from '../../shared/cache';
  * in-process for an hour and mirrored into `market_prices` for offline reads.
  */
 const AGMARKNET_RESOURCE = 'https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070';
-/** eNAM trade data. Covers mandis Agmarknet reports late or not at all. */
-const ENAM_RESOURCE = 'https://api.data.gov.in/resource/5d623a19-f2ca-4b1f-9e3e-24e340f86ef2';
+
+/**
+ * Query field names as the resource's own OAS 2.0 spec declares them, read from
+ * data.gov.in/backend/dataapi/v1/swagger/<resource>.
+ *
+ * They are lower case, and state carries a `.keyword` suffix because the index
+ * holds it both analysed and raw — filtering on the analysed form matches
+ * nothing. The capitalised names used before came from an older revision of the
+ * dataset and would have quietly returned no rows.
+ */
+const FILTER_FIELD: Record<string, string> = {
+  State: 'state.keyword',
+  state: 'state.keyword',
+  District: 'district',
+  Commodity: 'commodity',
+  Market: 'market',
+  Variety: 'variety',
+  Grade: 'grade',
+};
 
 const priceCache = new TtlCache<MandiPrice[]>(60 * 60_000);
 
@@ -120,7 +137,7 @@ async function queryDataGov(
     limit,
   };
   for (const [field, value] of Object.entries(filters)) {
-    params[`filters[${field}]`] = value;
+    params[`filters[${FILTER_FIELD[field] ?? field}]`] = value;
   }
 
   const { data } = await axios.get(resource, { params, timeout: 15_000 });
@@ -237,32 +254,6 @@ async function persist(state: string, trend: PriceTrend, sample: MandiPrice | un
   if (error) logger.warn('Market price not cached', { error: error.message });
 }
 
-/** eNAM publishes different field names for the same idea. */
-function toEnamPrice(record: Record<string, unknown>, state: string): MandiPrice | null {
-  const modal = Number(pick(record, 'modal_price', 'Modal_Price', 'modal_price_rs', 'price'));
-  if (!Number.isFinite(modal) || modal <= 0) return null;
-
-  const rawDate = pick(record, 'arrival_date', 'Arrival_Date', 'created_at', 'date');
-  const [dd, mm, yyyy] = rawDate.split('/');
-  const arrivalDate =
-    yyyy && mm && dd
-      ? `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
-      : rawDate || new Date().toISOString().slice(0, 10);
-
-  return {
-    commodity: pick(record, 'commodity', 'Commodity', 'commodity_name', 'crop_name') || 'Unknown',
-    variety: pick(record, 'variety', 'Variety') || 'Common',
-    state: pick(record, 'state', 'State') || state,
-    district: pick(record, 'district', 'District', 'apmc_district') || '',
-    market: pick(record, 'market', 'Market', 'apmc_name', 'APMC_Name', 'mandi') || '',
-    minPrice: Number(pick(record, 'min_price', 'Min_Price', 'min_price_rs')) || 0,
-    maxPrice: Number(pick(record, 'max_price', 'Max_Price', 'max_price_rs')) || 0,
-    modalPrice: modal,
-    unit: 'Quintal',
-    arrivalDate,
-  };
-}
-
 /** Mirrors fetched rows so a later outage has something to serve. */
 async function cacheRows(rows: MandiPrice[]): Promise<void> {
   if (rows.length === 0) return;
@@ -349,24 +340,12 @@ async function searchMandi(opts: {
       filters: { State: state, ...commodity },
     });
   }
-  if (district) {
-    attempts.push({
-      source: 'enam_district',
-      resource: ENAM_RESOURCE,
-      filters: { state, district },
-    });
-  }
-  attempts.push({ source: 'enam_state', resource: ENAM_RESOURCE, filters: { state } });
 
   for (const attempt of attempts) {
     try {
       const records = await queryDataGov(attempt.resource, attempt.filters, limit);
       const rows = records
-        .map((record) =>
-          attempt.resource === ENAM_RESOURCE
-            ? toEnamPrice(record, state)
-            : toMandiPrice(record, opts.commodity ?? ''),
-        )
+        .map((record) => toMandiPrice(record, opts.commodity ?? ''))
         .filter((row): row is MandiPrice => row !== null);
       if (rows.length > 0) {
         // Fire-and-forget: a slow write must not delay the farmer's screen.
