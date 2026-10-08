@@ -12,6 +12,8 @@ KrishiSaathi-AI/
 # package.json declares them as npm workspaces, so npm install needs them.
 /notebooks/
 /docs/
+# Scratch folder for building the pitch deck.
+/.deck-build/
 /.expo/
 /backend/dist/
 /backend/tests/
