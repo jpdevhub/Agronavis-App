@@ -300,16 +300,33 @@ export interface WeatherBundle {
   fetchedAt: string;
 }
 
+/**
+ * One commodity's price across a state, pooled from every mandi that reported.
+ *
+ * Coverage is partial — the feeds carry a fraction of India's mandis — so a
+ * single market's row would read as "the price at your mandi" when it is only
+ * "a price at one mandi somewhere in your state". The pooled figure says what
+ * the data can actually support, and `marketsReporting` says how thin or firm
+ * it is.
+ */
 export interface MandiPrice {
   commodity: string;
   variety: string;
   state: string;
+  /** Empty once rows are pooled across a state. */
   district: string;
+  /** Empty once rows are pooled across a state. */
   market: string;
+  /** Lowest modal price any reporting mandi recorded. */
   minPrice: number;
+  /** Highest modal price any reporting mandi recorded. */
   maxPrice: number;
+  /** Median across reporting mandis — one unusual mandi cannot drag it. */
   modalPrice: number;
   unit: string;
+  /** Mandis behind this figure. */
+  marketsReporting: number;
+  /** Most recent date any of them reported. */
   arrivalDate: string;
 }
 

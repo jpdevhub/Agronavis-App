@@ -118,6 +118,7 @@ function toMandiPrice(record: Record<string, unknown>, fallbackCommodity: string
     maxPrice: Number(pick(record, 'Max_x0020_Price', 'max_price')) || 0,
     modalPrice: modal,
     unit: 'Quintal',
+    marketsReporting: 1,
     arrivalDate: arrivalDate || new Date().toISOString().slice(0, 10),
   };
 }
@@ -223,6 +224,7 @@ async function getDashboardPrices(state: string, crops: string[]): Promise<Dashb
         market: `${normaliseState(state)} mandi`,
         trend: trend.direction,
         changePct: trend.changePct,
+        marketsReporting: 1,
         arrivalDate: trend.history.at(-1)?.date ?? new Date().toISOString().slice(0, 10),
       },
     ];
@@ -315,6 +317,7 @@ async function fromCache(state: string, district: string, limit: number): Promis
     maxPrice: Number(row.max_price),
     modalPrice: Number(row.modal_price),
     unit: row.unit,
+    marketsReporting: 1,
     arrivalDate: row.arrival_date,
   }));
 }
@@ -364,7 +367,7 @@ async function searchMandi(opts: {
       if (rows.length > 0) {
         // Fire-and-forget: a slow write must not delay the farmer's screen.
         void cacheRows(rows);
-        return { rows, source: attempt.source, state, district };
+        return { rows: poolByCommodity(rows), source: attempt.source, state, district };
       }
     } catch (error) {
       logger.warn('Mandi source failed', {
@@ -375,7 +378,9 @@ async function searchMandi(opts: {
   }
 
   const cached = await fromCache(state, district, limit);
-  if (cached.length > 0) return { rows: cached, source: 'cache', state, district };
+  if (cached.length > 0) {
+    return { rows: poolByCommodity(cached), source: 'cache', state, district };
+  }
 
   // Distinguish "asked everyone, nobody had it" from "no source to ask": telling
   // a farmer no mandi reported today is untrue when nothing was ever queried.
@@ -385,6 +390,52 @@ async function searchMandi(opts: {
     state,
     district,
   };
+}
+
+
+/**
+ * Pools per-mandi rows into one figure per commodity for the state.
+ *
+ * The feeds cover a fraction of India's mandis, so naming a single market
+ * implies a farmer could take their crop there and get that price. What the
+ * data honestly supports is the spread across whichever mandis did report.
+ *
+ * The middle figure is the median rather than the mean: one mandi recording an
+ * unusual price should not drag the number a farmer plans around.
+ */
+export function poolByCommodity(rows: MandiPrice[]): MandiPrice[] {
+  const groups = new Map<string, MandiPrice[]>();
+  for (const row of rows) {
+    const key = `${row.commodity}|${row.variety}`;
+    const group = groups.get(key);
+    if (group) group.push(row);
+    else groups.set(key, [row]);
+  }
+
+  const pooled = [...groups.values()].map((group) => {
+    const modals = group.map((r) => r.modalPrice).sort((a, b) => a - b);
+    const mid = Math.floor(modals.length / 2);
+    const median =
+      modals.length % 2 === 0 ? Math.round((modals[mid - 1]! + modals[mid]!) / 2) : modals[mid]!;
+
+    const first = group[0]!;
+    return {
+      ...first,
+      district: '',
+      market: '',
+      minPrice: Math.min(...group.map((r) => r.minPrice)),
+      maxPrice: Math.max(...group.map((r) => r.maxPrice)),
+      modalPrice: median,
+      // The same mandi can report a commodity on more than one date.
+      marketsReporting: new Set(group.map((r) => r.market)).size,
+      arrivalDate: group.map((r) => r.arrivalDate).sort().at(-1)!,
+    };
+  });
+
+  // Widest coverage first: those are the figures worth trusting.
+  return pooled.sort(
+    (a, b) => b.marketsReporting - a.marketsReporting || a.commodity.localeCompare(b.commodity),
+  );
 }
 
 export const marketService = {

@@ -15,7 +15,12 @@ function PriceRow({ row }: { row: MandiPrice }) {
       <View style={styles.rowMain}>
         <Text style={styles.commodity}>{row.commodity}</Text>
         <Text style={styles.place} numberOfLines={1}>
-          {[row.market, row.district].filter(Boolean).join(' · ') || '—'}
+          {/* Pooled across the state. Naming one mandi would read as the price
+              a farmer could get by going there, and the feeds carry only a
+              fraction of India's mandis. */}
+          {row.marketsReporting > 0
+            ? `${row.marketsReporting} mandi${row.marketsReporting === 1 ? '' : 's'} reporting`
+            : row.state}
         </Text>
         {row.variety && row.variety !== 'Common' ? (
           <Text style={styles.variety}>{row.variety}</Text>
@@ -41,7 +46,10 @@ export function MandiPricesView() {
   } = useMandiSearch();
   const [filterOpen, setFilterOpen] = useState(false);
 
+  // Figures are pooled across the state, so the heading names the state. The
+  // district still narrows which mandis feed them where the feed carries it.
   const place = [filter.district, filter.state].filter(Boolean).join(', ');
+  const heading = filter.state ? `${filter.state} prices` : '';
 
   return (
     <View style={styles.root}>
@@ -49,7 +57,7 @@ export function MandiPricesView() {
         <MaterialIcons name="location-on" size={20} color={Colors.primary} />
         <View style={styles.locationText}>
           <Text style={styles.locationPlace} numberOfLines={1}>
-            {place || 'Choose a mandi'}
+            {heading || 'Choose a state'}
           </Text>
           {sourceLabel ? <Text style={styles.locationSource}>{sourceLabel}</Text> : null}
         </View>

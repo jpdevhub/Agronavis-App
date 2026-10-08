@@ -91,6 +91,7 @@ export function toPriceRows(rows: MirrorRow[]): MandiPrice[] {
         maxPrice: Math.max(min, max),
         modalPrice: modal,
         unit: 'Quintal',
+        marketsReporting: 1,
         arrivalDate,
       },
     ];
