@@ -278,15 +278,29 @@ async function cacheRows(rows: MandiPrice[]): Promise<void> {
 
 /** Rows already mirrored into `market_prices`, used when every upstream is dry. */
 async function fromCache(state: string, district: string, limit: number): Promise<MandiPrice[]> {
-  let query = db
-    .from('market_prices')
-    .select('*')
-    .eq('state', normaliseState(state))
-    .order('arrival_date', { ascending: false })
-    .limit(limit);
-  if (district) query = query.ilike('district', district);
+  const read = async (withDistrict: boolean) => {
+    let query = db
+      .from('market_prices')
+      .select('*')
+      .eq('state', normaliseState(state))
+      .order('arrival_date', { ascending: false })
+      .limit(limit);
+    if (withDistrict && district) query = query.ilike('district', district);
+    return query;
+  };
 
-  const { data, error } = await query;
+  let { data, error } = await read(true);
+
+  // The feed files rows under the market town, not the administrative district:
+  // West Bengal has Asansol and Siliguri but no Kolkata, Meghalaya has Shillong
+  // but no East Khasi Hills. A farmer whose district never appears would see an
+  // empty screen, when the mandis they could actually reach are in the state
+  // rows. Each row names its own market, so widening is visible rather than
+  // silently pretending these are local.
+  if (!error && district && (data ?? []).length === 0) {
+    ({ data, error } = await read(false));
+  }
+
   if (error) {
     logger.warn('Cached mandi read failed', { error: error.message });
     return [];
