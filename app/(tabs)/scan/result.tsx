@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIndicator,
   Image,
@@ -27,6 +28,22 @@ export default function ScanResultScreen() {
   const activeFarmId = useFarmStore((s) => s.activeFarmId);
 
   const { diseases, isLoading, error, refetch } = useDiseaseLibrary();
+
+  /**
+   * The photograph is classified on the server as soon as it arrives. A failure
+   * is not surfaced as an error: the reference library below still works, and
+   * the farmer came here to file a scan, not to hear about our model.
+   */
+  const scan = useQuery({
+    queryKey: ['crop-scan', imageUri],
+    queryFn: () => cropApi.diagnose(imageUri as string),
+    enabled: Boolean(imageUri),
+    retry: 1,
+    staleTime: Infinity,
+  });
+
+  const result = scan.data;
+  const best = result?.predictions?.[0];
   const [search, setSearch] = useState('');
   const [cropType, setCropType] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -102,17 +119,64 @@ export default function ScanResultScreen() {
         </View>
 
         <View style={styles.body}>
-          <Card variant="filled" style={styles.notice}>
-            <View style={styles.noticeHead}>
-              <MaterialIcons name="info" size={20} color={Colors.onTertiaryContainer} />
-              <Text style={styles.noticeTitle}>Automatic detection is not live yet</Text>
-            </View>
-            <Text style={styles.noticeBody}>
-              Agronavis does not guess a diagnosis it cannot make. Match the photo against the
-              reference library below and the scan will be filed against your farm with the right
-              treatment plan.
-            </Text>
-          </Card>
+          {scan.isLoading ? (
+            <Card variant="filled" style={styles.notice}>
+              <View style={styles.noticeHead}>
+                <ActivityIndicator color={Colors.primary} />
+                <Text style={styles.noticeTitle}>Reading the photo…</Text>
+              </View>
+            </Card>
+          ) : result && !result.plantDetected ? (
+            <Card variant="filled" style={styles.notice}>
+              <View style={styles.noticeHead}>
+                <MaterialIcons name="no-photography" size={20} color={Colors.error} />
+                <Text style={styles.noticeTitle}>That does not look like a crop</Text>
+              </View>
+              <Text style={styles.noticeBody}>
+                Photograph a leaf or the affected part of the plant, filling most of the frame and
+                in good light, then try again.
+              </Text>
+            </Card>
+          ) : best ? (
+            <Card variant="filled" style={styles.notice}>
+              <View style={styles.noticeHead}>
+                <MaterialIcons
+                  name={best.healthy ? 'check-circle' : 'coronavirus'}
+                  size={20}
+                  color={best.healthy ? Colors.primary : Colors.onTertiaryContainer}
+                />
+                <Text style={styles.noticeTitle}>
+                  {best.crop} · {best.condition}
+                </Text>
+              </View>
+              <Text style={styles.noticeBody}>
+                {result?.confident
+                  ? `${Math.round(best.confidence * 100)}% confident.`
+                  : `Only ${Math.round(best.confidence * 100)}% confident — read this as a hint, not a diagnosis.`}
+                {result && result.predictions.length > 1
+                  ? ` Next closest: ${result.predictions
+                      .slice(1)
+                      .map((p) => `${p.condition} ${Math.round(p.confidence * 100)}%`)
+                      .join(', ')}.`
+                  : ''}
+              </Text>
+              <Text style={styles.noticeBody}>
+                Confirm it against the library below before spraying. A photograph cannot tell you
+                the dose, and the wrong treatment costs more than the disease.
+              </Text>
+            </Card>
+          ) : (
+            <Card variant="filled" style={styles.notice}>
+              <View style={styles.noticeHead}>
+                <MaterialIcons name="info" size={20} color={Colors.onTertiaryContainer} />
+                <Text style={styles.noticeTitle}>Could not read this photo</Text>
+              </View>
+              <Text style={styles.noticeBody}>
+                Match it against the reference library below and the scan will still be filed
+                against your farm.
+              </Text>
+            </Card>
+          )}
 
           {save.error ? <Text style={styles.error}>{save.error}</Text> : null}
 

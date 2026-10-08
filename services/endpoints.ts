@@ -20,6 +20,7 @@ import type {
   MandiStateRef,
   PriceTrend,
   SoilHealth,
+  DiseasePrediction,
   EligibleCrop,
   SoilReport,
   TwoFactorSetup,
@@ -64,6 +65,12 @@ export const farmApi = {
 };
 
 export const cropApi = {
+  /**
+   * Classifies a leaf photograph. Runs on the server, so the model ships once
+   * rather than inside every APK.
+   */
+  diagnose: (uri: string) =>
+    api.upload<DiseasePrediction>('/crops/diagnose', uri, 'scan.jpg', 'image/jpeg', 'image'),
   /** Crops the scheme will advise on where this field is. */
   eligible: (fieldId: string) => api.get<EligibleCrop[]>('/crops/eligible', { fieldId }),
   list: (params?: { fieldId?: string; status?: CropStatus }) => api.get<Crop[]>('/crops', params),

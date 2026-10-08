@@ -94,10 +94,13 @@ export const api = {
   put: <T>(url: string, data?: unknown) => request<T>({ method: 'PUT', url, data }),
   delete: <T = void>(url: string, data?: unknown) => request<T>({ method: 'DELETE', url, data }),
 
-  /** Multipart upload. `uri` is a local file path from the picker or camera. */
-  upload: async <T>(url: string, uri: string, name: string, type: string) => {
+  /**
+   * Multipart upload. `uri` is a local file path from the picker or camera.
+   * `field` names the form part — storage expects "file", the scanner "image".
+   */
+  upload: async <T>(url: string, uri: string, name: string, type: string, field = 'file') => {
     const form = new FormData();
-    form.append('file', { uri, name, type } as unknown as Blob);
+    form.append(field, { uri, name, type } as unknown as Blob);
     return request<T>({
       method: 'POST',
       url,
