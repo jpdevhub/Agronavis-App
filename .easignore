@@ -15,6 +15,9 @@ KrishiSaathi-AI/
 /.expo/
 /backend/dist/
 /backend/tests/
+# The disease classifier runs on the server. Shipping 43 MB of weights to a
+# phone that never loads them would be pure APK weight.
+/backend/model/
 
 # Secrets. .easignore REPLACES .gitignore for EAS uploads, so .env has to be
 # named here or the service-role key rides along to the build server. The

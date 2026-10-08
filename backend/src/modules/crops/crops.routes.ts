@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
@@ -13,6 +14,9 @@ import { eligibleCropsSchema,
   updateCropSchema,
 } from './crops.schema';
 
+/** One leaf photograph; 12 MB is generous for a phone camera at this quality. */
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024 } });
+
 export const cropRoutes = Router();
 
 cropRoutes.use(requireAuth);
@@ -20,6 +24,8 @@ cropRoutes.use(requireAuth);
 cropRoutes.get('/scans', handler(cropsController.listScans));
 cropRoutes.post('/scans', validate(recordScanSchema), handler(cropsController.recordScan));
 // Crops the scheme will advise on where this field is.
+// Classifies a leaf photograph. Runs in this process; see diagnose.service.ts.
+cropRoutes.post('/diagnose', upload.single('image'), handler(cropsController.diagnoseScan));
 cropRoutes.get('/eligible', validate(eligibleCropsSchema, 'query'), handler(cropsController.listEligible));
 cropRoutes.get('/diseases', validate(listDiseasesSchema, 'query'), handler(cropsController.listDiseases));
 cropRoutes.get(

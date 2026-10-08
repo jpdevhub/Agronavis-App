@@ -1,7 +1,9 @@
 import type { Request, Response } from 'express';
 import type { CropStatus } from '@agronavis/shared-types';
 import { farmerId } from '../../middleware/auth.middleware';
+import { badRequest } from '../../shared/errors';
 import { created, noContent, ok } from '../../shared/http';
+import { diagnose } from './diagnose.service';
 import { cropsService } from './crops.service';
 
 export const cropsController = {
@@ -49,5 +51,10 @@ export const cropsController = {
     const { fieldId } = req.query as unknown as { fieldId: string };
     const data = await cropsService.listEligible(farmerId(req), fieldId);
     ok(res, data, { count: data.length });
+  },
+
+  async diagnoseScan(req: Request, res: Response) {
+    if (!req.file) throw badRequest('No image uploaded — send it as multipart field "image"');
+    ok(res, await diagnose(req.file.buffer));
   },
 };

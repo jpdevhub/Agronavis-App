@@ -127,6 +127,34 @@ export interface Crop {
   createdAt: string;
 }
 
+/** One class the disease model ranked for a photograph. */
+export interface DiseaseCandidate {
+  /** The model's own label, e.g. "tomato_late_blight". Keys the reference library. */
+  classKey: string;
+  crop: string;
+  condition: string;
+  healthy: boolean;
+  /** 0–1. */
+  confidence: number;
+}
+
+/**
+ * What the scanner could tell from one photograph.
+ *
+ * `available` is false when the model is not loaded, so the app can fall back to
+ * the reference library rather than imply the scan failed. `confident` is false
+ * when even the best class is weak — the classifier must choose one of its 86
+ * labels for any image, including photographs that hold no plant at all.
+ */
+export interface DiseasePrediction {
+  available: boolean;
+  confident: boolean;
+  /** False when the frame holds no plant — the farmer photographed something else. */
+  plantDetected: boolean;
+  /** Strongest first, at most three. */
+  predictions: DiseaseCandidate[];
+}
+
 export interface CropScan {
   id: string;
   farmId: string | null;

@@ -62,6 +62,10 @@ notebooks/
 *.ipynb
 *.pth
 *.onnx
+# …except the disease classifier, which the API loads at runtime. Render
+# deploys what is in the repo, so an ignored model means no scanner in
+# production and no error until the first scan.
+!backend/model/*.onnx
 *.tif
 *.tiff
 
