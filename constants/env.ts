@@ -26,5 +26,3 @@ export const Env = {
   },
 } as const;
 
-/** Socket.IO connects to the server root, not the versioned REST prefix. */
-export const socketUrl = Env.apiUrl.replace(/\/api\/v\d+\/?$/, '');

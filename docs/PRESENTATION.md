@@ -772,7 +772,7 @@ is the hard part, and we solved it on day one. Sentinel-2 data is free.
 | Voice        | expo-speech (speaking), expo-speech-recognition (listening)                         |
 | Languages    | i18next — 97 phrases in English and Hindi                                           |
 | Server       | Node 22, Express, TypeScript                                                        |
-| Live updates | Expo push notifications (a Socket.IO server runs, but no client connects to it yet) |
+| Live updates | Expo push notifications                                                            |
 | Vision       | onnxruntime-node, sharp                                                             |
 | Validation   | Zod on every incoming request                                                       |
 | Database     | Supabase — Postgres, Auth, Storage, Row Level Security                              |

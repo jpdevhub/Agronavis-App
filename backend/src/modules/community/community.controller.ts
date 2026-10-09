@@ -2,7 +2,6 @@ import type { Request, Response } from 'express';
 import { farmerId } from '../../middleware/auth.middleware';
 import { created, noContent, ok } from '../../shared/http';
 import { db } from '../../config/supabase';
-import { emitCommunityPost } from '../../websocket/socket.server';
 import { communityService } from './community.service';
 
 export const communityController = {
@@ -19,14 +18,6 @@ export const communityController = {
     // Notify the author's district so neighbours see the question immediately.
     const { data: author } = await db.from('farmers').select('district').eq('id', id).maybeSingle();
     if (author?.district) {
-      emitCommunityPost(author.district, {
-        postId: post.id,
-        district: author.district,
-        authorName: post.author?.fullName ?? 'A farmer',
-        title: post.title,
-        preview: post.content.slice(0, 120),
-        createdAt: post.createdAt,
-      });
     }
 
     created(res, post);

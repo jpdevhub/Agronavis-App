@@ -2,7 +2,6 @@ import type { Request, Response } from 'express';
 import { farmerId } from '../../middleware/auth.middleware';
 import { ok } from '../../shared/http';
 import { assertOwnsFarm } from '../../shared/ownership';
-import { emitAdvisory, emitPestAlert } from '../../websocket/socket.server';
 import { advisoryService } from './advisory.service';
 
 export const advisoryController = {
@@ -44,7 +43,6 @@ export const advisoryController = {
       latitude: farm.latitude ?? 0,
       longitude: farm.longitude ?? 0,
     });
-    for (const advisory of created) emitAdvisory(farmId, advisory);
 
     ok(res, created, { count: created.length });
   },
@@ -70,9 +68,7 @@ export const advisoryController = {
     const farm = await assertOwnsFarm(id, farmId);
 
     const advisory = await advisoryService.createPestAdvisory(id, farmId, disease, confidence);
-    if (advisory) emitAdvisory(farmId, advisory);
     if (farm.district && confidence >= 0.75) {
-      emitPestAlert(farm.district, farmId, disease, confidence);
     }
 
     ok(res, advisory, undefined, 201);

@@ -27,7 +27,7 @@ directory; `backend` and `packages/*` are npm workspaces underneath it.
 | `app/`                                                               | Expo Router screens — the app's routes                     |
 | `components/` `hooks/` `services/` `store/` `constants/` `features/` | App source                                                 |
 | `assets/`                                                            | Icons, splash and brand images                             |
-| `backend/`                                                           | Express REST API, Socket.IO and the cron pollers           |
+| `backend/`                                                           | Express REST API and the cron pollers                      |
 | `backend/model/`                                                     | The disease classifier's weights, served in-process        |
 | `packages/shared-types/`                                             | Type contracts shared by the app and the API               |
 | `supabase/migrations/`                                               | The only schema definition                                 |

@@ -279,7 +279,7 @@ export const advisoryService = {
   /**
    * Runs every rule against current conditions for one farm and stores whatever
    * fires. Returns only the advisories that are new, which is what the caller
-   * pushes over the WebSocket.
+   * delivers it as a push notification.
    */
   async generateForFarm(
     farmerId: string,

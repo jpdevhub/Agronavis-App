@@ -1,6 +1,5 @@
 import { logger } from '../config/logger';
 import { marketService } from '../modules/market/market.service';
-import { emitMarketPrice } from '../websocket/socket.server';
 import { loadPollableFarms } from './farm-locations';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -36,16 +35,6 @@ export async function runMarketPoll(): Promise<{ pairs: number; updated: number 
         await marketService.persist(state, trend, sample);
         updated += 1;
 
-        emitMarketPrice(state, {
-          commodity: trend.commodity,
-          price: trend.currentPrice,
-          change: trend.change,
-          changePct: trend.changePct,
-          direction: trend.direction,
-          market: `${marketService.normaliseState(state)} mandi`,
-          state,
-          updatedAt: new Date().toISOString(),
-        });
       } catch (error) {
         logger.warn('Market poll failed', { commodity, state, error: (error as Error).message });
       }

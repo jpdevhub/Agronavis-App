@@ -1,7 +1,6 @@
 import { logger } from '../config/logger';
 import { advisoryService } from '../modules/advisory/advisory.service';
 import { weatherService } from '../modules/weather/weather.service';
-import { emitAdvisory, emitWeatherUpdate } from '../websocket/socket.server';
 import { notificationsService } from '../modules/notifications/notifications.service';
 import { loadPollableFarms } from './farm-locations';
 
@@ -34,11 +33,6 @@ export async function runWeatherPoll(): Promise<{ farms: number; calls: number; 
 
       for (const farm of group) {
         await weatherService.saveSnapshot(farm.farmId, bundle);
-        emitWeatherUpdate(farm.farmId, {
-          current: bundle.current,
-          forecast: bundle.forecast,
-          updatedAt: bundle.fetchedAt,
-        });
 
         const created = await advisoryService.generateForFarm(farm.farmerId, farm.farmId, {
           latitude: farm.latitude,
@@ -47,7 +41,6 @@ export async function runWeatherPoll(): Promise<{ farms: number; calls: number; 
         advisoryCount += created.length;
 
         for (const advisory of created) {
-          emitAdvisory(farm.farmId, advisory);
           // Only interrupt someone's day for something they must act on today.
           if (advisory.severity === 'critical') {
             await notificationsService.send(farm.farmerId, {

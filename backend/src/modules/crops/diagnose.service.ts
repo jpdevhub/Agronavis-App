@@ -144,9 +144,28 @@ async function ready(): Promise<boolean> {
  * The class key stays on the prediction: it is what the scan is filed under and
  * what the reference library is keyed on.
  */
+/**
+ * The training set names some crops twice. Its disease classes say `grape_*`
+ * and `bell_pepper_*` while its healthy ones say `healthy_grapes` and
+ * `healthy_pepper`, so the same crop reached the farmer as two entries in the
+ * library's filter — Grape beside Grapes, Bell Pepper beside Pepper.
+ *
+ * The class list itself cannot be renamed: its order is the model's output
+ * order, and editing it would silently map every prediction to the wrong
+ * disease. So the names are reconciled here, at the one place a class key
+ * becomes words, which is also what the reference library is seeded from.
+ */
+const CROP_ALIASES: Record<string, string> = {
+  grapes: 'grape',
+  pepper: 'bell pepper',
+};
+
+const canonical = (crop: string): string => CROP_ALIASES[crop] ?? crop;
+
 export function readableClass(key: string): { crop: string; condition: string; healthy: boolean } {
   const title = (s: string) =>
-    s.replace(/_/g, ' ').replace(/\b[a-z]/g, (c) => c.toUpperCase()).trim();
+    canonical(s.replace(/_/g, ' ').trim().toLowerCase())
+      .replace(/\b[a-z]/g, (c) => c.toUpperCase());
 
   if (key.startsWith('healthy_')) {
     return { crop: title(key.slice('healthy_'.length)), condition: 'Healthy', healthy: true };

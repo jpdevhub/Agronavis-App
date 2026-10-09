@@ -1,7 +1,7 @@
 
 export const APP_NAME = 'Agronavis';
 
-export { Env, socketUrl } from './env';
+export { Env } from './env';
 
 export const LANGUAGES = [
   { code: 'en', label: 'English' },

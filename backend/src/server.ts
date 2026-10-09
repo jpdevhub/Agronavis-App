@@ -4,7 +4,6 @@ import { env, reportOptionalEnv } from './config/env';
 import { logger } from './config/logger';
 import { db } from './config/supabase';
 import { startJobs, stopJobs } from './jobs';
-import { closeSocketServer, initSocketServer } from './websocket/socket.server';
 
 /** Fails fast if the service-role key cannot reach the database. */
 async function checkDatabase(): Promise<void> {
@@ -31,12 +30,10 @@ async function bootstrap(): Promise<void> {
   reportOptionalEnv((message) => logger.warn(message));
 
   const httpServer = http.createServer(createApp());
-  initSocketServer(httpServer);
 
   httpServer.listen(env.PORT, () => {
     logger.info(`Agronavis API listening on :${env.PORT} (${env.NODE_ENV})`);
     logger.info(`REST      http://localhost:${env.PORT}/api/${env.API_VERSION}`);
-    logger.info(`WebSocket ws://localhost:${env.PORT}`);
     logger.info(`Health    http://localhost:${env.PORT}/health`);
   });
 
@@ -49,7 +46,6 @@ async function bootstrap(): Promise<void> {
     logger.info(`${signal} received — shutting down`);
 
     stopJobs();
-    closeSocketServer();
     httpServer.close(() => {
       logger.info('HTTP server closed');
       process.exit(0);

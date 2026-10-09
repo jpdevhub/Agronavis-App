@@ -3,8 +3,6 @@
 //
 //   database.types.ts  what the tables look like   (generated: npm run db:types)
 //   api.types.ts       what the REST API returns   (hand-written, camelCase)
-//   events.types.ts    what the WebSocket emits
 
 export * from './database.types';
 export * from './api.types';
-export * from './events.types';

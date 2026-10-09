@@ -3,7 +3,6 @@ import type { AppNotification, Json, NotificationRow } from '@agronavis/shared-t
 import { logger } from '../../config/logger';
 import { db } from '../../config/supabase';
 import { fromPostgrest, notFound } from '../../shared/errors';
-import { emitNotification } from '../../websocket/socket.server';
 
 const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 
@@ -90,12 +89,6 @@ export const notificationsService = {
       return null;
     }
 
-    emitNotification(farmerId, {
-      title: payload.title,
-      body: payload.body,
-      type: payload.type ?? 'general',
-      data: payload.data,
-    });
 
     const { data: farmer } = await db
       .from('farmers')
