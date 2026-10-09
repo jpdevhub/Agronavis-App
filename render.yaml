@@ -36,6 +36,10 @@ services:
         value: production
       - key: LOG_LEVEL
         value: info
+      # Skips onnxruntime-node fetching CUDA binaries at install. The CPU ones
+      # it actually uses are bundled, and the instance has no GPU.
+      - key: ONNXRUNTIME_NODE_INSTALL
+        value: skip
 
       # Render injects PORT; the server reads it. Do not set it here.
 
@@ -123,6 +127,8 @@ services:
         value: staging
       - key: LOG_LEVEL
         value: debug
+      - key: ONNXRUNTIME_NODE_INSTALL
+        value: skip
 
       # Render injects PORT; the server reads it. Do not set it here.
 

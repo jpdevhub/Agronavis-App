@@ -1,7 +1,6 @@
 import type { Request, Response } from 'express';
 import { farmerId } from '../../middleware/auth.middleware';
 import { created, noContent, ok } from '../../shared/http';
-import { db } from '../../config/supabase';
 import { communityService } from './community.service';
 
 export const communityController = {
@@ -15,11 +14,9 @@ export const communityController = {
     const id = farmerId(req);
     const post = await communityService.createPost(id, req.body);
 
-    // Notify the author's district so neighbours see the question immediately.
-    const { data: author } = await db.from('farmers').select('district').eq('id', id).maybeSingle();
-    if (author?.district) {
-    }
-
+    // Neighbours in the same district were notified the moment a question was
+    // posted. That went over the realtime server nothing connected to, so the
+    // post is simply stored now and seen when the feed is next opened.
     created(res, post);
   },
 

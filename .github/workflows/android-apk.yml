@@ -17,6 +17,8 @@ on:
         options: [arm64-v8a, armeabi-v7a, 'arm64-v8a,armeabi-v7a']
 
 env:
+  # No GPU on a runner, and the CPU binaries are already in the package.
+  ONNXRUNTIME_NODE_INSTALL: skip
   NODE_VERSION: '22'
   JAVA_VERSION: '17'
   # Fail the build if the APK regresses past this. The target is ~50 MB.

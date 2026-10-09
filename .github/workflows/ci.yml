@@ -12,6 +12,11 @@ concurrency:
 
 env:
   NODE_VERSION: '22'
+  # onnxruntime-node ships the linux-x64 CPU binaries inside the package; its
+  # postinstall only fetches the CUDA ones on top. Runners have no GPU and the
+  # scanner pins the CPU provider, so that download buys nothing — and it is
+  # what was timing out and failing this workflow.
+  ONNXRUNTIME_NODE_INSTALL: skip
 
 jobs:
   verify:

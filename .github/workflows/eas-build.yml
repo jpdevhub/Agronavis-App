@@ -14,6 +14,12 @@ on:
         type: choice
         options: [preview, production]
 
+env:
+  # onnxruntime-node bundles the linux-x64 CPU binaries it needs; its
+  # postinstall only fetches CUDA ones on top, which a runner has no use for
+  # and which time out.
+  ONNXRUNTIME_NODE_INSTALL: skip
+
 jobs:
   build:
     name: Android build

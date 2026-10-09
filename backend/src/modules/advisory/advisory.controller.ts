@@ -57,20 +57,22 @@ export const advisoryController = {
   },
 
   /**
-   * Records a scan result as an advisory and, above the confidence threshold,
-   * warns every farmer in the same district — one detection becomes an early
-   * warning for the whole block.
+   * Records a scan result as an advisory for the farmer who took the scan.
+   *
+   * It used to also warn every other farmer in the district above a confidence
+   * threshold, so one detection became an early warning for the whole block.
+   * That broadcast went out over the realtime server, which no client ever
+   * connected to, and it left with it. Re-delivering it over push is worth
+   * doing — it is the most useful thing this endpoint could do — but it is a
+   * feature to build, not a line to restore.
    */
   async createPestAdvisory(req: Request, res: Response) {
     const id = farmerId(req);
     const { farmId } = req.params as { farmId: string };
     const { disease, confidence } = req.body as { disease: string; confidence: number };
-    const farm = await assertOwnsFarm(id, farmId);
+    await assertOwnsFarm(id, farmId);
 
     const advisory = await advisoryService.createPestAdvisory(id, farmId, disease, confidence);
-    if (farm.district && confidence >= 0.75) {
-    }
-
     ok(res, advisory, undefined, 201);
   },
 };

@@ -1,8 +1,8 @@
 /** Camera capture. The photo is identified on the result screen. */
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, StatusBar,
-  Platform, ScrollView,
+  AppState, Platform, ScrollView,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
@@ -24,19 +24,47 @@ export default function ScanScreen() {
   const [facing, setFacing]   = useState<CameraType>('back');
   const [flash,  setFlash]    = useState<FlashMode>('off');
   const [busy,   setBusy]     = useState(false);
-  // isFocused: true only while this tab is active — gates CameraView mount
-  // so the camera hardware releases when you navigate away.
+  /**
+   * Gates whether CameraView is mounted at all. Unmounting is what actually
+   * releases the hardware — there is no pause — so the camera must be torn
+   * down when the screen is left and when the app goes to the background, not
+   * only when the tab changes.
+   */
   const [isFocused, setIsFocused] = useState(false);
+  const [isForeground, setIsForeground] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       setIsFocused(true);
-      return () => {
-        // Called when screen loses focus — unmounts CameraView, releases camera
-        setIsFocused(false);
-      };
-    }, [])
+      return () => setIsFocused(false);
+    }, []),
   );
+
+  // Leaving the app entirely has to release it too. Without this the indicator
+  // light stays on behind a locked screen, which is alarming and fair enough.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      setIsForeground(next === 'active');
+    });
+    return () => sub.remove();
+  }, []);
+
+  const cameraLive = isFocused && isForeground;
+
+  /**
+   * On the web, unmounting the view does not reliably stop the underlying
+   * MediaStream, and the browser keeps showing the recording indicator. The
+   * tracks have to be stopped by hand. Harmless on native, where there is no
+   * document to query.
+   */
+  useEffect(() => {
+    if (cameraLive || Platform.OS !== 'web') return;
+    for (const video of Array.from(document.querySelectorAll('video'))) {
+      const stream = (video as HTMLVideoElement).srcObject as MediaStream | null;
+      stream?.getTracks().forEach((track) => track.stop());
+      (video as HTMLVideoElement).srcObject = null;
+    }
+  }, [cameraLive]);
 
   // Request permission on mount if not yet decided
   useFocusEffect(
@@ -115,7 +143,7 @@ export default function ScanScreen() {
 
       {/* ── Live camera (only mounted while tab is active) ── */}
       <View style={styles.cameraWrap}>
-        {isFocused && (
+        {cameraLive && (
           <CameraView
             ref={cameraRef}
             style={StyleSheet.absoluteFill}
