@@ -30,7 +30,7 @@ export function MarkdownText({ text, color }: { text: string; color: string }) {
       blocks.push(
         <View key={i} style={styles.row}>
           <Text style={[styles.marker, { color }]}>•</Text>
-          <Text style={[styles.body, { color }]}>{inline(bullet[1], color)}</Text>
+          <Text style={[styles.rowBody, { color }]}>{inline(bullet[1], color)}</Text>
         </View>,
       );
       return;
@@ -41,7 +41,7 @@ export function MarkdownText({ text, color }: { text: string; color: string }) {
       blocks.push(
         <View key={i} style={styles.row}>
           <Text style={[styles.marker, { color }]}>{numbered[1]}.</Text>
-          <Text style={[styles.body, { color }]}>{inline(numbered[2], color)}</Text>
+          <Text style={[styles.rowBody, { color }]}>{inline(numbered[2], color)}</Text>
         </View>,
       );
       return;
@@ -98,7 +98,13 @@ function inline(text: string, color: string): React.ReactNode[] {
 const styles = StyleSheet.create({
   wrap: { gap: Spacing.xs },
   heading: { ...TypeEmphasized.titleMedium, marginTop: Spacing.xs },
-  body: { ...Type.bodyLarge, flex: 1 },
+  // No flex here. A paragraph is a column child, and flex:1 would have it
+  // absorb the block's height — with two paragraphs they share it and both
+  // stretch, which is what the first answer did once a second one arrived.
+  body: { ...Type.bodyLarge },
+  // Beside a bullet or a number, the text IS a row child and must take the
+  // width the marker leaves.
+  rowBody: { ...Type.bodyLarge, flex: 1 },
   row: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-start' },
   marker: { ...Type.bodyLarge, minWidth: 18 },
   bold: { ...TypeEmphasized.bodyLarge, fontWeight: '800' },

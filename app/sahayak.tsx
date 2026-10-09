@@ -10,7 +10,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -57,18 +56,38 @@ export default function SahayakScreen() {
    * already at the bottom, so scrolling up to re-read is never yanked back.
    */
   const stick = useRef(true);
+  const dragging = useRef(false);
   const [atLatest, setAtLatest] = useState(true);
 
   const onContentSizeChange = useCallback(() => {
     if (stick.current) scroller.current?.scrollToEnd({ animated: false });
   }, []);
 
-  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+  const nearBottom = (e: NativeSyntheticEvent<NativeScrollEvent>): boolean => {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    const near = contentSize.height - contentOffset.y - layoutMeasurement.height < 80;
-    stick.current = near;
+    return contentSize.height - contentOffset.y - layoutMeasurement.height < 80;
+  };
+
+  /**
+   * Only a scroll the reader performed may change whether the thread follows
+   * the answer. Programmatic ones must not: scrollToEnd fires onScroll too, so
+   * reading position alone meant every streamed token re-armed the follow and
+   * yanked the reader back the moment they scrolled up.
+   */
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const near = nearBottom(e);
+    if (dragging.current) stick.current = near;
     // Only on a change: this fires every frame while scrolling.
     setAtLatest((was) => (was === near ? was : near));
+  }, []);
+
+  const onScrollBeginDrag = useCallback(() => {
+    dragging.current = true;
+  }, []);
+
+  const onScrollEndDrag = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    dragging.current = false;
+    stick.current = nearBottom(e);
   }, []);
 
   const jumpToLatest = useCallback(() => {
@@ -191,10 +210,13 @@ export default function SahayakScreen() {
             <ScrollView
               ref={scroller}
               style={styles.fill}
-              contentContainerStyle={styles.thread}
+              contentContainerStyle={[styles.thread, messages.length === 0 && styles.threadEmpty]}
               keyboardShouldPersistTaps="handled"
               onContentSizeChange={onContentSizeChange}
               onScroll={onScroll}
+              onScrollBeginDrag={onScrollBeginDrag}
+              onScrollEndDrag={onScrollEndDrag}
+              onMomentumScrollEnd={onScrollEndDrag}
               scrollEventThrottle={16}
             >
               {messages.length === 0 ? (
@@ -214,13 +236,15 @@ export default function SahayakScreen() {
               ) : (
                 messages.map((m) =>
                   m.role === 'user' ? (
-                    <Animated.View
-                      key={m.id}
-                      entering={FadeInDown.duration(220)}
-                      style={[styles.bubble, styles.bubbleUser]}
-                    >
+                    // Plain View. A Reanimated entering animation here
+                    // measures the bubble as it mounts, and a second one
+                    // arriving re-ran that pass over the thread — which is
+                    // what stretched the first answer and left the scroll
+                    // position fighting the layout. It already broke this
+                    // screen once, on the streaming bubble.
+                    <View key={m.id} style={[styles.bubble, styles.bubbleUser]}>
                       <Text style={styles.userText}>{m.text}</Text>
-                    </Animated.View>
+                    </View>
                   ) : (
                     <View
                       key={m.id}
@@ -329,7 +353,14 @@ const styles = StyleSheet.create({
 
   thread: { padding: Spacing.lg, gap: Spacing.md },
   threadEmpty: { flexGrow: 1 },
-  bubble: { maxWidth: '92%', padding: Spacing.md, borderRadius: Shape.extraLarge },
+  bubble: {
+    maxWidth: '92%',
+    padding: Spacing.md,
+    borderRadius: Shape.extraLarge,
+    // Sized by its own text, never by what the thread has room for.
+    flexShrink: 0,
+    flexGrow: 0,
+  },
   bubbleUser: {
     alignSelf: 'flex-end', backgroundColor: Colors.primary,
     borderBottomRightRadius: Shape.small,
