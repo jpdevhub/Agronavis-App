@@ -5,7 +5,7 @@ type Extra = {
   apiTimeout: number;
   supabaseUrl: string;
   supabaseAnonKey: string;
-  googleMapsApiKey: string;
+  mapboxToken: string;
   features: { sahayak: boolean; marketPrices: boolean; iot: boolean };
 };
 
@@ -18,8 +18,7 @@ export const Env = {
   apiTimeout: extra.apiTimeout ?? Number(process.env.EXPO_PUBLIC_API_TIMEOUT ?? 30000),
   supabaseUrl: extra.supabaseUrl ?? process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: extra.supabaseAnonKey ?? process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
-  googleMapsApiKey:
-    extra.googleMapsApiKey ?? process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
+  mapboxToken: extra.mapboxToken ?? process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '',
   features: {
     sahayak: extra.features?.sahayak ?? true,
     marketPrices: extra.features?.marketPrices ?? true,

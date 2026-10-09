@@ -7,15 +7,33 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, Platform, KeyboardAvoidingView,
 } from 'react-native';
-import MapView, { Marker, Polygon, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
+import Mapbox, { Camera, MapView, MarkerView, ShapeSource, FillLayer, LineLayer } from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Env } from '@/constants/env';
 import { MAX_FIELD_ACRES } from '@/constants/field';
 import { Colors, Radii, Type } from '@/constants/theme';
 import { useTabBarHeight } from '@/hooks/useTabBarHeight';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
 import { useCreateField } from '@/hooks/useFarmFields';
+
+/**
+ * Mapbox needs its public token before any map mounts. It is the pk.* one,
+ * safe to ship — the sk.* download token is a build-time secret and never
+ * reaches the app. Satellite imagery is on Mapbox's free tier, which is why
+ * this is not Google Maps: that one watermarks every tile "for development
+ * purposes only" until a billing account is attached to the Cloud project.
+ */
+Mapbox.setAccessToken(Env.mapboxToken || null);
+
+/** Satellite with place labels is what you want for finding your own field. */
+const SATELLITE_STYLE = 'mapbox://styles/mapbox/satellite-streets-v12';
+const STREET_STYLE = 'mapbox://styles/mapbox/streets-v12';
+
+/** Mapbox speaks zoom levels; the old map spoke degree spans. */
+const ZOOM_FIELD = 17;
+const ZOOM_COUNTRY = 4;
 
 type LatLng = { latitude: number; longitude: number };
 
@@ -48,7 +66,7 @@ export default function FarmFieldDrawer({
 }: FarmFieldDrawerProps) {
   const createField   = useCreateField();
   const { setLocation } = useOnboardingStore();
-  const mapRef        = useRef<MapView>(null);
+  const cameraRef     = useRef<Camera>(null);
   const insets        = useSafeAreaInsets();
   const tabBarHeight  = useTabBarHeight();
 
@@ -96,9 +114,10 @@ export default function FarmFieldDrawer({
             const { latitude, longitude } = pos.coords;
             setRegion({ latitude, longitude, latitudeDelta: 0.003, longitudeDelta: 0.003 });
             // animateCamera uses map.moveCamera() — works without LatLngBounds
-            mapRef.current?.animateCamera?.({
-              center: { latitude, longitude },
-              zoom: 16,
+            cameraRef.current?.setCamera({
+              centerCoordinate: [longitude, latitude],
+              zoomLevel: ZOOM_FIELD,
+              animationDuration: 400,
             });
             setLocating(false);
           },
@@ -127,7 +146,11 @@ export default function FarmFieldDrawer({
         const r = { latitude: last.coords.latitude, longitude: last.coords.longitude, latitudeDelta: 0.003, longitudeDelta: 0.003 };
         setRegion(r);
         setMapReady(true);           // ← map mounts only once we have real coords
-        mapRef.current?.animateToRegion(r, 400);
+        cameraRef.current?.setCamera({
+          centerCoordinate: [last.coords.longitude, last.coords.latitude],
+          zoomLevel: ZOOM_FIELD,
+          animationDuration: 400,
+        });
       }
 
       // Precise path: 10-second timeout so it never hangs on Android
@@ -148,7 +171,11 @@ export default function FarmFieldDrawer({
       const r = { latitude: coords.latitude, longitude: coords.longitude, latitudeDelta: 0.003, longitudeDelta: 0.003 };
       setRegion(r);
       if (!mapReady) setMapReady(true);
-      mapRef.current?.animateToRegion(r, 600);
+      cameraRef.current?.setCamera({
+        centerCoordinate: [coords.longitude, coords.latitude],
+        zoomLevel: ZOOM_FIELD,
+        animationDuration: 600,
+      });
 
       // Reverse geocode for label
       const geo = await Location.reverseGeocodeAsync({ latitude: coords.latitude, longitude: coords.longitude });
@@ -169,11 +196,15 @@ export default function FarmFieldDrawer({
     }
   }
 
-  function handleMapPress(e: { nativeEvent: { coordinate: LatLng } }) {
+  // Mapbox reports a tap as a GeoJSON point, which is [longitude, latitude] —
+  // the opposite order to the { latitude, longitude } the rest of this screen
+  // and the API use. Converted once, here, so nothing downstream has to think
+  // about it.
+  function handleMapPress(feature: { geometry?: { coordinates?: number[] } }) {
     if (pins.length >= 4) return;
-    const coord = e?.nativeEvent?.coordinate;
-    if (!coord) return;
-    setPins(prev => [...prev, coord]);
+    const coords = feature?.geometry?.coordinates;
+    if (!coords || coords.length < 2) return;
+    setPins(prev => [...prev, { latitude: coords[1]!, longitude: coords[0]! }]);
   }
 
   function undoPin()  { setPins(p => p.slice(0, -1)); }
@@ -292,53 +323,55 @@ export default function FarmFieldDrawer({
       </View>
 
       {/* ── Map ── */}
-      {/*
-        Web library notes (from source inspection):
-        • `region` prop is IGNORED after mount — only `initialRegion` sets initial center.
-        • `mapType` is NOT passed to GoogleMap — must use `options.mapTypeId` instead.
-        • `animateCamera()` uses map.moveCamera() and works correctly on web.
-        • `animateToRegion()` uses LatLngBounds (crashes if maps not fully loaded).
-      */}
       <MapView
-        ref={mapRef}
-        provider={Platform.OS === 'web' ? 'google' : Platform.OS === 'ios' ? PROVIDER_DEFAULT : PROVIDER_GOOGLE}
-        // @ts-expect-error: googleMapsApiKey is required for react-native-web-maps but missing from react-native-maps types
-        googleMapsApiKey={Platform.OS === 'web' ? process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY : undefined}
         style={styles.map}
-        // On web: use initialRegion (region prop is ignored by this library)
-        // On native: use region as controlled prop
-        {...(Platform.OS === 'web'
-          ? { initialRegion: { latitude: 20.5937, longitude: 78.9629, latitudeDelta: 15, longitudeDelta: 15 } }
-          : { region }
-        )}
-        // On web: mapType prop is ignored; pass via options.mapTypeId instead
-        {...(Platform.OS !== 'web'
-          ? { mapType: mapViewType }
-          : { options: { mapTypeId: mapViewType, mapTypeControl: false } }
-        )}
-        onRegionChangeComplete={setRegion}
+        styleURL={mapViewType === 'hybrid' ? SATELLITE_STYLE : STREET_STYLE}
         onPress={handleMapPress}
-        showsUserLocation
-        showsMyLocationButton={false}
+        scaleBarEnabled={false}
+        logoEnabled
+        attributionEnabled
       >
+        <Camera
+          ref={cameraRef}
+          defaultSettings={{
+            centerCoordinate: [region.longitude, region.latitude],
+            zoomLevel: region.latitudeDelta > 1 ? ZOOM_COUNTRY : ZOOM_FIELD,
+          }}
+        />
+
         {pins.map((pin, i) => (
-          <Marker key={i} coordinate={pin}>
+          <MarkerView
+            key={`pin-${i}`}
+            id={`pin-${i}`}
+            coordinate={[pin.longitude, pin.latitude]}
+            anchor={{ x: 0.5, y: 1 }}
+          >
             <View style={styles.markerWrap}>
               <View style={styles.markerBubble}>
                 <Text style={styles.markerNum}>{i + 1}</Text>
               </View>
               <View style={styles.markerTail} />
             </View>
-          </Marker>
+          </MarkerView>
         ))}
 
+        {/* A polygon is a shape source with a fill and an outline drawn over
+            it. The ring has to close on itself, which the API expects too. */}
         {pins.length >= 3 && (
-          <Polygon
-            coordinates={pins}
-            strokeColor={Colors.primary}
-            fillColor="rgba(0,180,100,0.22)"
-            strokeWidth={3}
-          />
+          <ShapeSource
+            id="field"
+            shape={{
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'Polygon',
+                coordinates: [[...pins.map(p => [p.longitude, p.latitude]), [pins[0]!.longitude, pins[0]!.latitude]]],
+              },
+            }}
+          >
+            <FillLayer id="field-fill" style={{ fillColor: 'rgba(0,180,100,0.22)' }} />
+            <LineLayer id="field-outline" style={{ lineColor: Colors.primary, lineWidth: 3 }} />
+          </ShapeSource>
         )}
       </MapView>
 

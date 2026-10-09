@@ -767,7 +767,7 @@ is the hard part, and we solved it on day one. Sentinel-2 data is free.
 | ------------ | ----------------------------------------------------------------------------------- |
 | App          | React Native 0.81, Expo SDK 54, Expo Router, React 19                               |
 | State        | Zustand, TanStack Query                                                             |
-| Maps         | react-native-maps                                                                   |
+| Maps         | Mapbox satellite imagery via @rnmapbox/maps                                         |
 | On-device AI | Gemma-4 via LiteRT-LM, in a native Android module we wrote                          |
 | Voice        | expo-speech (speaking), expo-speech-recognition (listening)                         |
 | Languages    | i18next — 97 phrases in English and Hindi                                           |

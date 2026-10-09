@@ -13,7 +13,7 @@ const publicEnv = {
   apiTimeout: Number(process.env.EXPO_PUBLIC_API_TIMEOUT ?? 30000),
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
-  googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
+  mapboxToken: process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '',
   features: {
     sahayak: process.env.EXPO_PUBLIC_ENABLE_SAHAYAK !== 'false',
     marketPrices: process.env.EXPO_PUBLIC_ENABLE_MARKET_PRICES !== 'false',
@@ -63,15 +63,6 @@ module.exports = () => ({
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#0E3D1F',
     },
-    // Expo reads the Maps key from android.config.googleMaps.apiKey and writes
-    // it into the manifest as com.google.android.geo.API_KEY. It was previously
-    // set as `android.googleMapsApiKey`, which is not a field Expo knows, so it
-    // was dropped silently and every standalone build shipped with no key at
-    // all — grey tiles in the APK while development stayed fine, because Expo
-    // Go carries a Maps key of its own.
-    config: {
-      googleMaps: { apiKey: publicEnv.googleMapsApiKey },
-    },
     permissions: [
       'android.permission.CAMERA',
       'android.permission.ACCESS_FINE_LOCATION',
@@ -90,6 +81,13 @@ module.exports = () => ({
   plugins: [
     'expo-router',
     'expo-font',
+    // The download token is only needed to fetch Mapbox's native SDK at build
+    // time; it never reaches the app. Set MAPBOX_DOWNLOADS_TOKEN as an EAS
+    // secret. The runtime token is the public pk.* one, read from extra below.
+    [
+      '@rnmapbox/maps',
+      { RNMapboxMapsDownloadToken: process.env.MAPBOX_DOWNLOADS_TOKEN ?? '' },
+    ],
     'expo-location',
     ['expo-camera', { cameraPermission: 'Allow Agronavis to access your camera for crop scanning.' }],
     ['expo-notifications', { icon: './assets/images/notification-icon.png', color: '#0E3D1F' }],
