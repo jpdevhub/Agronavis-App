@@ -180,7 +180,21 @@ export default function RegisterScreen() {
             />
             <Text style={styles.termsText}>
               I agree to the{' '}
-              <Text style={styles.termsLink}>Terms and Conditions</Text>
+              <Text
+                style={styles.termsLink}
+                onPress={() => router.push('/legal/terms' as never)}
+                suppressHighlighting
+              >
+                Terms and Conditions
+              </Text>
+              {' '}and the{' '}
+              <Text
+                style={styles.termsLink}
+                onPress={() => router.push('/legal/privacy' as never)}
+                suppressHighlighting
+              >
+                Privacy Policy
+              </Text>
             </Text>
           </View>
           {errors.agreed && <Text style={[styles.fieldError, { marginTop: -8 }]}>{errors.agreed.message}</Text>}

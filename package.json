@@ -2,7 +2,7 @@
   "name": "agronavis",
   "version": "1.2.0",
   "private": true,
-  "description": "Agronavis — AI-driven geospatial intelligence platform for Indian agriculture",
+  "description": "Agronavis \u2014 AI-driven geospatial intelligence platform for Indian agriculture",
   "license": "UNLICENSED",
   "main": "expo-router/entry",
   "engines": {
@@ -39,7 +39,8 @@
     "db:types": "supabase gen types typescript --linked --schema public > packages/shared-types/src/database.types.ts",
     "clean": "rimraf dist .expo \"**/*.tsbuildinfo\" backend/dist coverage",
     "clean:deps": "rimraf node_modules backend/node_modules \"packages/*/node_modules\"",
-    "reinstall": "npm run clean:deps && npm install"
+    "reinstall": "npm run clean:deps && npm install",
+    "legal": "tsx scripts/legal-docs.ts"
   },
   "dependencies": {
     "@agronavis/shared-types": "*",

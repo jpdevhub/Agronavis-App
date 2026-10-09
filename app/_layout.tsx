@@ -130,6 +130,9 @@ function AppShell() {
         <Stack.Screen name="profile/index" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="profile/edit" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="profile/security" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="legal/terms" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="legal/privacy" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="legal/security" options={{ animation: 'slide_from_bottom' }} />
       </Stack>
 
       {/*

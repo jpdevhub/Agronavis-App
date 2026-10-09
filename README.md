@@ -126,6 +126,11 @@ know:
 
 ## For developers
 
+Legal documents are generated from `features/legal/documents.ts` by
+`npm run legal`, so the app, the website and the Play Store listing cannot
+drift apart: **[TERMS.md](TERMS.md)**, **[PRIVACY.md](PRIVACY.md)**,
+**[SECURITY.md](SECURITY.md)**.
+
 Setup, architecture, scripts and deployment are in
 **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**. How every model works, where
 the data comes from and the limits of each are in

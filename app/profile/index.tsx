@@ -123,6 +123,39 @@ export default function ProfileScreen() {
             <MaterialIcons name="chevron-right" size={22} color={Colors.outline} />
           </TouchableOpacity>
 
+          {/* Reachable in-app, which the Play Store requires of the privacy
+              policy and which a farmer needs anyway once they have agreed to
+              something at sign-up and want to read it properly. */}
+          <TouchableOpacity
+            style={styles.securityBtn}
+            onPress={() => router.push('/legal/privacy' as any)}
+            activeOpacity={0.85}
+          >
+            <MaterialIcons name="lock-outline" size={20} color={Colors.primary} />
+            <Text style={styles.securityText}>Privacy Policy</Text>
+            <MaterialIcons name="chevron-right" size={22} color={Colors.outline} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.securityBtn}
+            onPress={() => router.push('/legal/terms' as any)}
+            activeOpacity={0.85}
+          >
+            <MaterialIcons name="description" size={20} color={Colors.primary} />
+            <Text style={styles.securityText}>Terms and Conditions</Text>
+            <MaterialIcons name="chevron-right" size={22} color={Colors.outline} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.securityBtn}
+            onPress={() => router.push('/legal/security' as any)}
+            activeOpacity={0.85}
+          >
+            <MaterialIcons name="verified-user" size={20} color={Colors.primary} />
+            <Text style={styles.securityText}>How we protect your data</Text>
+            <MaterialIcons name="chevron-right" size={22} color={Colors.outline} />
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.logoutBtn} onPress={() => signOut()} activeOpacity={0.85}>
             <MaterialIcons name="logout" size={20} color={Colors.error} />
             <Text style={styles.logoutText}>Log Out</Text>
