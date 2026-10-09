@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +16,7 @@ import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme'
 import { cropApi } from '@/services/endpoints';
 import { useFarmStore } from '@/store/useFarmStore';
 import { showAlert } from '@/utils/alert';
+import { Loader } from '@/components/ui';
 
 /**
  * Most field crops in the recommendation list run a season of roughly four
@@ -98,7 +98,7 @@ export default function ChooseCropScreen() {
         />
       ) : query.isLoading ? (
         <View style={styles.centre}>
-          <ActivityIndicator color={Colors.primary} />
+          <Loader size={28} />
         </View>
       ) : crops.length === 0 ? (
         <Empty

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  StatusBar, ActivityIndicator, Image,
+  StatusBar, Image,
   KeyboardAvoidingView, Platform, ScrollView, } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { showAlert } from '@/utils/alert';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
 import { farmerApi, storageApi } from '@/services/endpoints';
+import { Loader } from '@/components/ui';
 
 export default function OnboardingStep1() {
   const router = useRouter();
@@ -161,7 +162,7 @@ export default function OnboardingStep1() {
         >
           <View style={[styles.nextBtn, !canContinue && styles.nextBtnIdle]}>
             {saving
-              ? <ActivityIndicator color="#fff" />
+              ? <Loader tone="onColor" size={28} />
               : <>
                   <Text style={styles.nextText}>Next: Map Your Farm</Text>
                   <MaterialIcons name="arrow-forward" size={20} color="#fff" />

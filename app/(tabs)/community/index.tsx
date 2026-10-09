@@ -2,8 +2,7 @@
 import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  StatusBar, Image, TextInput, Modal, ActivityIndicator,
-  KeyboardAvoidingView, Platform, RefreshControl,
+  StatusBar, Image, TextInput, Modal, KeyboardAvoidingView, Platform, RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,7 +17,7 @@ import { storageApi } from '@/services/endpoints';
 import { useCommunityPosts, useCreatePost, useToggleVote } from '@/hooks/useCommunityPosts';
 import { useMarketPrices } from '@/hooks/useMarketPrices';
 import { MandiPricesView } from '@/features/mandi';
-import { Avatar } from '@/components/ui';
+import { Avatar, Loader } from '@/components/ui';
 import { useCommunityReplies, useAddReply } from '@/hooks/useCommunityReplies';
 
 const TREND_MARK: Record<string, string> = { up: '▲', down: '▼', stable: '●' };
@@ -57,7 +56,7 @@ function ReplyPanel({ postId, onClose }: { postId: string; onClose: () => void }
           </View>
 
           {isLoading ? (
-            <ActivityIndicator color={Colors.primary} style={{ margin: 20 }} />
+            <Loader tone="onColor" size={28} style={{ margin: 20 }} />
           ) : replies.length === 0 ? (
             <Text style={styles.emptyReply}>No comments yet. Be the first!</Text>
           ) : (
@@ -89,7 +88,7 @@ function ReplyPanel({ postId, onClose }: { postId: string; onClose: () => void }
               disabled={!text.trim() || addReply.isPending}
             >
               {addReply.isPending
-                ? <ActivityIndicator size="small" color="#fff" />
+                ? <Loader tone="onColor" size={28} />
                 : <MaterialIcons name="send" size={18} color="#fff" />
               }
             </TouchableOpacity>
@@ -228,7 +227,7 @@ function CreatePostModal({ visible, onClose }: { visible: boolean; onClose: () =
               activeOpacity={0.88}
             >
               {uploading
-                ? <><ActivityIndicator color="#fff" size="small" /><Text style={styles.submitBtnText}>Uploading…</Text></>
+                ? <><Loader size={28} /><Text style={styles.submitBtnText}>Uploading…</Text></>
                 : <Text style={styles.submitBtnText}>Post to Community</Text>
               }
             </TouchableOpacity>
@@ -339,7 +338,7 @@ export default function CommunityScreen() {
         </TouchableOpacity>
 
         {isLoading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 30 }} />
+          <Loader size={28} style={{ marginTop: 30 }} />
         ) : posts.length === 0 ? (
           <View style={styles.emptyState}>
             <MaterialIcons name="groups" size={48} color={Colors.outlineVariant} />

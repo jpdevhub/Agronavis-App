@@ -1,6 +1,7 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Shape, Spacing, StateLayer, TypeEmphasized } from '@/constants/theme';
+import { Loader } from './Loader';
 
 type Variant = 'filled' | 'tonal' | 'outlined' | 'text' | 'elevated';
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
@@ -59,7 +60,9 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={color} />
+        // `filled` is the only variant whose surface is dark enough to swallow
+        // the brand green; the rest sit on light ground.
+        <Loader size={28} tone={variant === 'filled' ? 'onColor' : 'brand'} />
       ) : (
         <View style={styles.content}>
           {icon ? <MaterialIcons name={icon} size={18} color={color} /> : null}

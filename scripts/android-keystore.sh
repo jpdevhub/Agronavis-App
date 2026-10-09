@@ -49,6 +49,6 @@ echo "  gh secret set EXPO_PUBLIC_API_URL --body 'https://<your-render-service>.
 echo "  gh secret set EXPO_PUBLIC_SUPABASE_URL --body \"\$(grep '^EXPO_PUBLIC_SUPABASE_URL=' .env | cut -d= -f2-)\""
 echo "  gh secret set EXPO_PUBLIC_SUPABASE_ANON_KEY --body \"\$(grep '^EXPO_PUBLIC_SUPABASE_ANON_KEY=' .env | cut -d= -f2-)\""
 echo "  gh secret set EXPO_PUBLIC_MAPBOX_TOKEN --body \"\$(grep '^EXPO_PUBLIC_MAPBOX_TOKEN=' .env | cut -d= -f2-)\""
-echo "  gh secret set MAPBOX_DOWNLOADS_TOKEN --body \"\$(grep '^MAPBOX_DOWNLOADS_TOKEN=' .env | cut -d= -f2-)\""
+echo "  gh secret set RNMAPBOX_MAPS_DOWNLOAD_TOKEN --body \"\$(grep '^RNMAPBOX_MAPS_DOWNLOAD_TOKEN=' .env | cut -d= -f2-)\""
 echo
 echo "Then: Actions ▸ Android APK ▸ Run workflow."

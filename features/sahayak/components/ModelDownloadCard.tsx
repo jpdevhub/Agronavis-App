@@ -1,9 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { createModelDownload, isOnWifi, type DownloadProgress } from '../ondevice/download';
 import { APPROX_SIZE_GB, type ModelVariant } from '../ondevice/modelFile';
+import { Loader } from '@/components/ui';
 
 interface Props {
   variant: ModelVariant;
@@ -83,7 +84,7 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
           {error && <Text style={styles.error}>{error}</Text>}
           <Pressable onPress={begin} style={styles.primary} accessibilityRole="button">
             {busy ? (
-              <ActivityIndicator color={Colors.onPrimary} />
+              <Loader tone="onColor" size={28} />
             ) : (
               <Text style={styles.primaryText}>
                 {warnMobile ? 'Download anyway' : 'Download model'}

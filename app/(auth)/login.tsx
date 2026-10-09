@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, ActivityIndicator, StatusBar,
+  ScrollView, StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
 import { supabase } from '@/utils/supabase';
+import { Loader } from '@/components/ui';
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -143,7 +144,7 @@ export default function LoginScreen() {
           >
             <View style={styles.submitBtn}>
               {isSubmitting
-                ? <ActivityIndicator color={Colors.onPrimary} />
+                ? <Loader tone="onColor" size={28} />
                 : <Text style={styles.submitText}>Log In</Text>}
             </View>
           </TouchableOpacity>

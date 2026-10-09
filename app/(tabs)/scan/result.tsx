@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -14,7 +13,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { DiseaseReference } from '@agronavis/shared-types';
-import { Button, Card, EmptyState, Skeleton } from '@/components/ui';
+import { Button, Card, EmptyState, Loader, Skeleton } from '@/components/ui';
 import { Colors, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { readCapture, releaseCapture } from '@/features/scan';
 import { useDiseaseLibrary } from '@/hooks/useDiseaseLibrary';
@@ -149,7 +148,7 @@ export default function ScanResultScreen() {
           {scan.isLoading ? (
             <Card variant="filled" style={styles.notice}>
               <View style={styles.noticeHead}>
-                <ActivityIndicator color={Colors.primary} />
+                <Loader size={28} />
                 <Text style={styles.noticeTitle}>Reading the photo…</Text>
               </View>
             </Card>
@@ -357,7 +356,7 @@ function DiseaseCard({
           ) : null}
 
           {busy ? (
-            <ActivityIndicator color={Colors.primary} style={styles.busy} />
+            <Loader size={28} style={styles.busy} />
           ) : (
             <Button
               label={canSave ? 'This matches my photo' : 'No photo to file'}

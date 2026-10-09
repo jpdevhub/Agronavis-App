@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Pressable,
   ScrollView,
@@ -21,6 +20,7 @@ import { ModelDownloadCard } from '@/features/sahayak/components/ModelDownloadCa
 import { useSahayak } from '@/features/sahayak/useSahayak';
 import { useSahayakVoice } from '@/features/sahayak/useSahayakVoice';
 import { LANGUAGES } from '@/constants';
+import { Loader } from '@/components/ui';
 
 const SUGGESTIONS = [
   'When should I irrigate?',
@@ -168,7 +168,7 @@ export default function SahayakScreen() {
         {status === 'unsupported' ? (
           <Notice icon="phonelink-off" title="Not available here" body={error ?? 'Sahayak runs on-device on Android.'} />
         ) : status === 'checking' ? (
-          <View style={styles.centre}><ActivityIndicator color={Colors.primary} /></View>
+          <View style={styles.centre}><Loader size={28} /></View>
         ) : status === 'missing' ? (
           <ScrollView><ModelDownloadCard variant={variant} onReady={onModelReady} /></ScrollView>
         ) : status === 'ready' ? (
@@ -181,7 +181,7 @@ export default function SahayakScreen() {
           />
         ) : status === 'loading' ? (
           <View style={styles.centre}>
-            <ActivityIndicator color={Colors.primary} />
+            <Loader size={28} />
             <Text style={styles.centreText}>Loading the model…</Text>
           </View>
         ) : status === 'error' ? (
@@ -229,7 +229,7 @@ export default function SahayakScreen() {
                       {m.text ? (
                         <MarkdownText text={m.text} color={Colors.onSurface} />
                       ) : (
-                        <ActivityIndicator color={Colors.primary} />
+                        <Loader size={28} />
                       )}
                     </View>
                   ),

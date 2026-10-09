@@ -5,7 +5,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Platform, KeyboardAvoidingView,
+  Platform, KeyboardAvoidingView,
 } from 'react-native';
 import Mapbox, { Camera, MapView, MarkerView, ShapeSource, FillLayer, LineLayer } from '@rnmapbox/maps';
 import * as Location from 'expo-location';
@@ -17,6 +17,7 @@ import { Colors, Radii, Type } from '@/constants/theme';
 import { useTabBarHeight } from '@/hooks/useTabBarHeight';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
 import { useCreateField } from '@/hooks/useFarmFields';
+import { Loader } from '@/components/ui';
 
 /**
  * Mapbox needs its public token before any map mounts. It is the pk.* one,
@@ -279,7 +280,7 @@ export default function FarmFieldDrawer({
   if (!mapReady) {
     return (
       <View style={styles.gpsWait}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <Loader tone="onColor" size={48} />
         <Text style={styles.gpsText}>Finding your location…</Text>
         <Text style={styles.gpsSubText}>This takes a few seconds on first launch</Text>
       </View>
@@ -414,7 +415,7 @@ export default function FarmFieldDrawer({
       {/* ── My Location FAB ── */}
       <TouchableOpacity style={[styles.locFab, { bottom: aboveSheet + 52 }]} onPress={flyToLocation}>
         {locating
-          ? <ActivityIndicator size="small" color={Colors.primary} />
+          ? <Loader size={28} />
           : <MaterialIcons name="my-location" size={22} color={Colors.primary} />
         }
       </TouchableOpacity>
@@ -461,7 +462,7 @@ export default function FarmFieldDrawer({
             <TouchableOpacity onPress={handleSave} disabled={saving || !fieldName.trim()}>
               <View style={[styles.saveBtn, !fieldName.trim() && styles.saveBtnIdle]}>
                 {saving
-                  ? <ActivityIndicator color="#fff" />
+                  ? <Loader size={28} />
                   : <><MaterialIcons name="check" size={20} color="#fff" /><Text style={styles.saveBtnText}>Save & Continue</Text></>
                 }
               </View>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView,
-  ActivityIndicator, StatusBar, } from 'react-native';
+  StatusBar, } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,6 +11,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
 import { showAlert } from '@/utils/alert';
 import { supabase } from '@/utils/supabase';
+import { Loader } from '@/components/ui';
 
 const registerSchema = z.object({
   fullName: z
@@ -186,7 +187,7 @@ export default function RegisterScreen() {
           >
             <View style={[styles.submitBtn, !agreedValue && styles.submitBtnIdle]}>
               {isSubmitting
-                ? <ActivityIndicator color={Colors.onPrimary} />
+                ? <Loader tone="onColor" size={28} />
                 : <Text style={styles.submitText}>Create Account</Text>}
             </View>
           </TouchableOpacity>

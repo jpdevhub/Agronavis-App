@@ -81,13 +81,13 @@ module.exports = () => ({
   plugins: [
     'expo-router',
     'expo-font',
-    // The download token is only needed to fetch Mapbox's native SDK at build
-    // time; it never reaches the app. Set MAPBOX_DOWNLOADS_TOKEN as an EAS
-    // secret. The runtime token is the public pk.* one, read from extra below.
-    [
-      '@rnmapbox/maps',
-      { RNMapboxMapsDownloadToken: process.env.MAPBOX_DOWNLOADS_TOKEN ?? '' },
-    ],
+    // Only the plugin itself is declared here. The download token that fetches
+    // Mapbox's native SDK at build time is read from the environment as
+    // RNMAPBOX_MAPS_DOWNLOAD_TOKEN — passing it as a plugin option is
+    // deprecated and writes it into gradle.properties, where it is one `git
+    // add` away from being committed. It never reaches the app either way; the
+    // runtime token is the public pk.* one in extra above.
+    '@rnmapbox/maps',
     'expo-location',
     ['expo-camera', { cameraPermission: 'Allow Agronavis to access your camera for crop scanning.' }],
     ['expo-notifications', { icon: './assets/images/notification-icon.png', color: '#0E3D1F' }],

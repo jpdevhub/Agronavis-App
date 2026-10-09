@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, StatusBar, Image, ActivityIndicator,
-} from 'react-native';
+  StyleSheet, StatusBar, Image, } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -11,6 +10,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useFarmer, useUpdateFarmer } from '@/hooks/useFarmer';
 import { LANGUAGES } from '@/constants';
 import { setAppLanguage } from '@/i18n';
+import { Loader } from '@/components/ui';
 
 function initialsOf(name: string | undefined, email: string | undefined): string {
   const source = (name || email || 'A').trim();
@@ -41,7 +41,7 @@ export default function ProfileScreen() {
 
       {isLoading ? (
         <View style={styles.loader}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <Loader size={48} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>

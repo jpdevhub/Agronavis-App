@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StatusBar, StyleSheet, Text, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as Linking from 'expo-linking';
@@ -9,6 +9,7 @@ import { setAppLanguage } from '@/i18n';
 import { useFarmer } from '@/hooks/useFarmer';
 import { Colors, Spacing, Type } from '@/constants/theme';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { LoadingScreen } from '@/components/ui';
 import { ConnectivityProvider, NetworkBanner } from '@/shared/network';
 import { useSyncOnReconnect } from '@/shared/offline';
 import { authApi } from '@/services/endpoints';
@@ -37,6 +38,15 @@ function AppShell() {
   const setSession = useAuthStore((s) => s.setSession);
 
   const routingFor = useRef<string | null>(null);
+
+  /**
+   * True while the session is being confirmed against the API, which is also
+   * the call that decides where to send the farmer. It is a real network round
+   * trip and on a cold server runs to several seconds; without this the login
+   * button went idle the moment the password was accepted and the screen sat
+   * blank until the answer arrived.
+   */
+  const [resolving, setResolving] = useState(false);
 
   usePushNotifications();
   useSyncOnReconnect();
@@ -79,8 +89,11 @@ function AppShell() {
     routingFor.current = session.user.id;
 
     // One call decides where to land: it confirms the session against the API
-    // and returns the profile and 2FA state together.
+    // and returns the profile and 2FA state together. Only the leg that starts
+    // on an auth screen shows the full-screen wait — a session restored on a
+    // cold start resolves behind whatever is already drawn.
     (async () => {
+      if (inAuth) setResolving(true);
       try {
         const { profile, twoFactor } = await authApi.me();
         if (twoFactor.enabled && inAuth) {
@@ -94,9 +107,28 @@ function AppShell() {
         // The API is unreachable. Let the user in rather than trapping them on
         // a spinner; screens degrade to their own error states.
         if (inAuth) router.replace('/(tabs)/dashboard');
+      } finally {
+        setResolving(false);
       }
     })();
   }, [session, isLoading, segments, router]);
+
+  // Restoring a stored session at launch, or confirming a fresh sign-in.
+  if (isLoading || resolving) {
+    return (
+      <View style={styles.root}>
+        <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
+        <LoadingScreen
+          message={resolving ? 'Signing you in…' : 'Opening Agronavis…'}
+          detail={
+            resolving
+              ? 'Fetching your farm. This can take a few seconds on a slow connection.'
+              : undefined
+          }
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>

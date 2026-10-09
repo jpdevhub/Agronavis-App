@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import type { SolarDay } from '@agronavis/shared-types';
 import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { useWeather } from '@/hooks/useWeather';
 import { useFarmStore } from '@/store/useFarmStore';
+import { Loader } from '@/components/ui';
 
 /** Deficit thresholds the irrigation advisory uses, in mm over three days. */
 const DEFICIT = { severe: 18, high: 10, mild: 4 };
@@ -159,7 +160,7 @@ export default function WeatherReportScreen() {
 
       {isLoading ? (
         <View style={styles.centre}>
-          <ActivityIndicator color={Colors.primary} />
+          <Loader size={28} />
         </View>
       ) : (
         <ScrollView

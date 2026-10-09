@@ -1,6 +1,6 @@
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, StatusBar, ActivityIndicator, RefreshControl,
+  StyleSheet, StatusBar, RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +14,7 @@ import type { Farm, FarmField } from '@agronavis/shared-types';
 import { Colors, Radii } from '@/constants/theme';
 import { farmApi } from '@/services/endpoints';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Avatar } from '@/components/ui';
+import { Avatar, Loader } from '@/components/ui';
 import { useFarmer } from '@/hooks/useFarmer';
 import { useDeleteField } from '@/hooks/useFarmFields';
 import { useFarmStore } from '@/store/useFarmStore';
@@ -129,7 +129,7 @@ export default function MyFarmsScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <Loader size={48} />
           <Text style={styles.loadingText}>Loading your farms…</Text>
         </View>
       ) : error ? (

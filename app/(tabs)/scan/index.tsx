@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, StatusBar,
-  ActivityIndicator, Platform, ScrollView,
+  Platform, ScrollView,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
 import { holdCapture } from '@/features/scan';
+import { Loader } from '@/components/ui';
 
 const CORNER_SIZE  = 44;
 const CORNER_THICK = 4;
@@ -84,7 +85,7 @@ export default function ScanScreen() {
   if (!permission) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator color={Colors.primary} size="large" />
+        <Loader size={48} />
       </View>
     );
   }
@@ -151,7 +152,7 @@ export default function ScanScreen() {
 
           <TouchableOpacity style={styles.captureBtn} onPress={handleCapture} activeOpacity={0.85} disabled={busy}>
             <View style={styles.captureBtnInner}>
-              {busy && <ActivityIndicator color="#fff" />}
+              {busy && <Loader size={28} />}
             </View>
           </TouchableOpacity>
 

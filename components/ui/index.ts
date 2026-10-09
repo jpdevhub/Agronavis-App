@@ -5,3 +5,5 @@ export { Chip } from './Chip';
 export { EmptyState } from './EmptyState';
 export { Skeleton } from './Skeleton';
 export { Surface } from './Surface';
+export { Loader, type LoaderProps } from './Loader';
+export { LoadingScreen, type LoadingScreenProps } from './LoadingScreen';

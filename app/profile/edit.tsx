@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, StatusBar, ScrollView,
-  Image, ActivityIndicator, KeyboardAvoidingView, Platform,
+  Image, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ import { showAlert } from '@/utils/alert';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFarmer, useUpdateFarmer } from '@/hooks/useFarmer';
 import { storageApi } from '@/services/endpoints';
+import { Loader } from '@/components/ui';
 
 const schema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -122,7 +123,7 @@ export default function EditProfileScreen() {
           )}
           <View style={styles.avatarOverlay}>
             {uploading
-              ? <ActivityIndicator color={Colors.onPrimary} />
+              ? <Loader tone="onColor" size={28} />
               : <MaterialIcons name="photo-camera" size={20} color={Colors.onPrimary} />}
           </View>
         </TouchableOpacity>
@@ -205,7 +206,7 @@ export default function EditProfileScreen() {
           activeOpacity={0.88}
         >
           {isSubmitting
-            ? <ActivityIndicator color={Colors.onPrimary} />
+            ? <Loader tone="onColor" size={28} />
             : <Text style={styles.saveBtnText}>Save Changes</Text>}
         </TouchableOpacity>
 

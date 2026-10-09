@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  StatusBar, Switch, ActivityIndicator, Platform,
+  StatusBar, Switch, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { showAlert } from '@/utils/alert';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
 import { farmerApi } from '@/services/endpoints';
+import { Loader } from '@/components/ui';
 
 type NotifItem = {
   id: string;
@@ -123,7 +124,7 @@ export default function OnboardingStep3() {
         <TouchableOpacity onPress={handleFinish} disabled={finishing} activeOpacity={0.88}>
           <View style={styles.finishGrad}>
             {finishing
-              ? <ActivityIndicator color="#fff" />
+              ? <Loader tone="onColor" size={28} />
               : <>
                   <Text style={styles.finishText}>Go to Dashboard</Text>
                   <MaterialIcons name="check" size={20} color="#fff" />

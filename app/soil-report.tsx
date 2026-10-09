@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import type { MicronutrientSpread, NutrientSpread, SoilReport } from '@agronavis/shared-types';
 import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { soilApi } from '@/services/endpoints';
+import { Loader } from '@/components/ui';
 
 const pct = (part: number, total: number): number => (total > 0 ? (part / total) * 100 : 0);
 
@@ -142,7 +143,7 @@ export default function SoilReportScreen() {
       </View>
 
       {query.isLoading ? (
-        <View style={styles.centre}><ActivityIndicator color={Colors.primary} /></View>
+        <View style={styles.centre}><Loader size={28} /></View>
       ) : !report ? (
         <View style={styles.centre}>
           <MaterialIcons name="science" size={40} color={Colors.onSurfaceVariant} />
