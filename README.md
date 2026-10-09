@@ -127,10 +127,9 @@ know:
 ## For developers
 
 Setup, architecture, scripts and deployment are in
-**[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**. How every model works, and what
-we got right and wrong, is in **[docs/PRESENTATION.md](docs/PRESENTATION.md)**.
-The presentation video script is in
-**[docs/VIDEO_SCRIPT.md](docs/VIDEO_SCRIPT.md)**.
+**[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**. How every model works, where
+the data comes from and the limits of each are in
+**[docs/architecture/](docs/architecture/README.md)**.
 
 ```bash
 git clone https://github.com/jpdevhub/Agronavis-App.git && cd Agronavis-App

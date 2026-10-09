@@ -1,14 +1,18 @@
-# Agronavis — The Complete Guide
+# Architecture
 
-Everything in this app, in plain words. Read it start to finish and you will
-know what we built, how every part works, and where it falls short.
+How Agronavis is put together: the models it runs, where its data comes from,
+how the pieces talk to each other, and the limits of each.
+
+Written for engineers joining the project. It assumes no prior knowledge of the
+codebase and explains the agronomy where it matters, but it is a reference, not
+an introduction to the product.
 
 ---
 
 ## Contents
 
-1. [The problem](#1-the-problem)
-2. [The solution](#2-the-solution)
+1. [What the system is for](#1-what-the-system-is-for)
+2. [Design premise](#2-design-premise)
 3. [What the farmer actually sees](#3-what-the-farmer-actually-sees)
 4. [Architecture](#4-architecture)
 5. [Every model we use](#5-every-model-we-use)
@@ -17,14 +21,14 @@ know what we built, how every part works, and where it falls short.
 8. [Security](#8-security)
 9. [Working without internet](#9-working-without-internet)
 10. [The numbers](#10-the-numbers)
-11. [Advantages](#11-advantages)
-12. [Disadvantages](#12-disadvantages)
-13. [What we would build next](#13-what-we-would-build-next)
+11. [Design properties](#11-design-properties)
+12. [Known limits](#12-known-limits)
+13. [Planned work](#13-planned-work)
 14. [The full stack](#14-the-full-stack)
 
 ---
 
-## 1. The Problem
+## 1. What the system is for
 
 An Indian farmer makes four decisions every season. Each one costs real money
 when it goes wrong. Each one is normally made with no data at all.
@@ -50,7 +54,7 @@ person standing in the field.
 
 ---
 
-## 2. The Solution
+## 2. Design premise
 
 Agronavis is an Android app that delivers those public records to one specific
 field.
@@ -278,7 +282,7 @@ stale weather as current.
 | ------------------- | ------------------------------------------------------------- |
 | **What it does**    | Reads a photo of a leaf and names the disease                 |
 | **Type**            | ResNet-18 — an 18-layer residual convolutional neural network |
-| **Knows**           | 86 conditions across 21 crops                                 |
+| **Knows**           | 86 conditions across 19 crops                                 |
 | **Sees**            | The photo shrunk to 224 × 224 pixels                          |
 | **Says**            | The top 3 most likely conditions, each with a confidence      |
 | **Confidence rule** | Under 50% is shown as a hint, not an answer                   |
@@ -293,7 +297,7 @@ shortcuts that skip layers, so the signal has a clear path back. That single
 idea made very deep networks trainable, and it is one of the most cited results
 in all of computer vision.
 
-#### The engineering decision we are proudest of
+#### Why the model was converted to ONNX
 
 The original version of this scanner needed PyTorch, Transformers and CLIP —
 about **1.1 GB of libraries loaded before a single request arrives.**
@@ -307,8 +311,6 @@ else.
 We checked the conversion was faithful. Across the model's entire output, the
 largest disagreement between the original and the converted version was
 **0.00000763**, and both picked the same answer every time.
-
-> That is the difference between a demo and something that actually runs.
 
 ---
 
@@ -584,7 +586,7 @@ Rural connectivity is the thing most agri apps quietly assume away. We did not.
 | **Leaf scanner**             | ❌ Needs the server                                   |
 | **Fresh weather**            | ❌ Needs a connection                                 |
 
-**The detail we are pleased with:** the AI runs on the phone, but the farm
+The AI runs on the phone, but the farm
 details behind its answers normally come from the server. Without a local copy,
 opening Sahayak offline would give you a model that works perfectly and knows
 nothing about your farm.
@@ -608,7 +610,7 @@ Counts from the live production database, not projections.
 | **4,172**  | mandis in the directory       |
 | **1,812**  | crops in the scheme catalogue |
 | **86**     | diseases the scanner knows    |
-| **21**     | crops the scanner covers      |
+| **19**     | crops the scanner covers      |
 | **23**     | app screens                   |
 | **46**     | API endpoints                 |
 | **25**     | database tables               |
@@ -616,7 +618,7 @@ Counts from the live production database, not projections.
 
 ---
 
-## 11. Advantages
+## 11. Design properties
 
 **It runs on free infrastructure.** The whole server — API, scanner, six
 scheduled jobs — fits in 512 MB of memory. That was not luck. It is why the
@@ -642,14 +644,13 @@ shape.
 **Voice in and voice out,** so a farmer who cannot read comfortably can still
 use every part of it.
 
-**It is genuinely built, not mocked.** 23 screens, 46 endpoints, 25 tables, 111
-automated tests.
+**Coverage.** 23 screens, 46 endpoints, 25 tables, 124 automated tests.
 
 ---
 
-## 12. Disadvantages
+## 12. Known limits
 
-Being straight about these is worth more than hiding them.
+Each of these is a live constraint, not a wishlist item.
 
 **The on-device AI is a 2.4–3.4 GB download.** On rural mobile data that is a
 real barrier. It is a one-time Wi-Fi download, but we are not pretending it is
@@ -659,7 +660,7 @@ nothing.
 samples across a district. It is survey data, not a test of this specific plot.
 We show the sample count so the farmer can judge.
 
-**86 diseases is not every disease in India.** Photograph something outside
+**86 conditions is not every disease in India.** Photograph something outside
 those 86 and the model picks the closest thing it knows. The confidence score
 and the "confirm before spraying" warning are what stand between that and a
 wrong purchase.
@@ -699,7 +700,7 @@ yet look at the field from orbit. See the next section.
 
 ---
 
-## 13. What We Would Build Next
+## 13. Planned work
 
 ### Near term
 
@@ -763,36 +764,22 @@ is the hard part, and we solved it on day one. Sentinel-2 data is free.
 
 ## 14. The Full Stack
 
-| Layer        | Built with                                                                          |
-| ------------ | ----------------------------------------------------------------------------------- |
-| App          | React Native 0.81, Expo SDK 54, Expo Router, React 19                               |
-| State        | Zustand, TanStack Query                                                             |
-| Maps         | Mapbox satellite imagery via @rnmapbox/maps                                         |
-| On-device AI | Gemma-4 via LiteRT-LM, in a native Android module we wrote                          |
-| Voice        | expo-speech (speaking), expo-speech-recognition (listening)                         |
-| Languages    | i18next — 97 phrases in English and Hindi                                           |
-| Server       | Node 22, Express, TypeScript                                                        |
-| Live updates | Expo push notifications                                                            |
-| Vision       | onnxruntime-node, sharp                                                             |
-| Validation   | Zod on every incoming request                                                       |
-| Database     | Supabase — Postgres, Auth, Storage, Row Level Security                              |
-| Hosting      | Render (server, free tier), Supabase (database)                                     |
-| Scheduling   | node-cron — 6 jobs                                                                  |
-| Tests        | 111 automated tests (39 app, 72 server)                                             |
-
----
-
-## If You Remember One Thing
-
-Most teams building this would call a cloud vision API and a cloud AI, and have
-a working demo in a weekend.
-
-We put both models where they actually need to be — the scanner inside our own
-server, the assistant on the farmer's phone — so the running cost is near zero,
-it works without signal, and no farmer's data leaves their device.
-
-And we made it say **"I am not sure"**, because a farmer forgives an app that
-admits doubt, and never opens one again after it was confidently wrong.
+| Layer        | Built with                                                  |
+| ------------ | ----------------------------------------------------------- |
+| App          | React Native 0.81, Expo SDK 54, Expo Router, React 19       |
+| State        | Zustand, TanStack Query                                     |
+| Maps         | Mapbox satellite imagery via @rnmapbox/maps                 |
+| On-device AI | Gemma-4 via LiteRT-LM, in a native Android module we wrote  |
+| Voice        | expo-speech (speaking), expo-speech-recognition (listening) |
+| Languages    | i18next — 97 phrases in English and Hindi                   |
+| Server       | Node 22, Express, TypeScript                                |
+| Live updates | Expo push notifications                                     |
+| Vision       | onnxruntime-node, sharp                                     |
+| Validation   | Zod on every incoming request                               |
+| Database     | Supabase — Postgres, Auth, Storage, Row Level Security      |
+| Hosting      | Render (server, free tier), Supabase (database)             |
+| Scheduling   | node-cron — 6 jobs                                          |
+| Tests        | 124 automated tests (39 app, 85 server)                     |
 
 ---
 

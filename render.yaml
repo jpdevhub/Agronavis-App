@@ -30,8 +30,99 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Which deployment this is. NODE_ENV is a Node concern; this one says
+      # whose data the process is serving. Staging sets it to `staging`.
+      - key: APP_ENV
+        value: production
       - key: LOG_LEVEL
         value: info
+
+      # Render injects PORT; the server reads it. Do not set it here.
+
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      - key: OPENWEATHER_API_KEY
+        sync: false
+      - key: AGMARKNET_API_KEY
+        sync: false
+
+      # Generated once by Render and held for the life of the service.
+      # Changing it makes every existing 2FA enrolment undecryptable.
+      - key: TOTP_ENCRYPTION_KEY
+        generateValue: true
+
+      # Native apps send no Origin header and are unaffected by this list. It
+      # exists for browsers: the Expo web build and the enterprise console.
+      - key: ALLOWED_ORIGINS
+        value: http://localhost:8081,http://localhost:19006
+
+      # The weather and market pollers. A free instance sleeps after 15 minutes
+      # of no traffic and these only run while it is awake, so in practice they
+      # fire when someone is using the app rather than on the hour. The syncs
+      # below are also runnable by hand from the Render shell.
+      - key: ENABLE_JOBS
+        value: "true"
+      - key: WEATHER_POLL_CRON
+        value: "*/30 * * * *"
+      - key: MARKET_POLL_CRON
+        value: "15 * * * *"
+
+      # Reference data, not daily figures. Both are also runnable by hand —
+      # `npm run sync:catalogue` and `npm run sync:soil` — which is how they are
+      # first populated, since a sleeping instance fires no cron.
+      - key: CATALOGUE_SYNC_CRON
+        value: "30 2 * * 0"
+      - key: SOIL_SYNC_CRON
+        value: "0 3 1 * *"
+      - key: FERTILISER_SYNC_CRON
+        value: "0 4 1 * *"
+
+      # The mandi mirrors refresh daily when their own upstream is alive. They
+      # read the same government feed that is currently down, so this mostly
+      # re-confirms what is already cached — and picks the data up the day it
+      # starts moving again.
+      - key: MANDI_MIRROR_CRON
+        value: "45 5 * * *"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Staging. Identical build and runtime to the service above; the difference
+  # is the branch it tracks, the Supabase project its secrets point at, and
+  # that APP_ENV says staging so nothing here can be mistaken for live data.
+  # Point its SUPABASE_URL at a separate project — a staging API writing to the
+  # production database is worse than having no staging at all.
+  # ───────────────────────────────────────────────────────────────────────────
+  - type: web
+    name: agronavis-api-staging
+    runtime: node
+    plan: free
+    region: singapore # closest free region to Indian users
+    branch: staging
+    healthCheckPath: /health
+
+    # Only the API's dependency tree. The repo root is the Expo project, so a
+    # bare `npm ci` would also pull in React Native — hundreds of megabytes the
+    # server never loads. `--workspace=backend` installs that workspace alone.
+    #
+    # `--include=dev` is required, not optional: NODE_ENV is production below, so
+    # npm would otherwise omit devDependencies — and every @types/* package the
+    # TypeScript compiler needs lives there. Without it the build fails on
+    # `Cannot find type definition file for 'jest'`, then express, and so on.
+    # Only the build uses them; `npm run start` runs plain compiled JavaScript.
+    buildCommand: npm ci --include=dev --workspace=backend && npm run build --prefix backend
+    startCommand: npm run start --prefix backend
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Which deployment this is. NODE_ENV is a Node concern; this one says
+      # whose data the process is serving. Staging sets it to `staging`.
+      - key: APP_ENV
+        value: staging
+      - key: LOG_LEVEL
+        value: debug
 
       # Render injects PORT; the server reads it. Do not set it here.
 

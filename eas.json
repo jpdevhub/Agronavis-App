@@ -7,33 +7,38 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": {
-        "npm_config_legacy_peer_deps": "true"
-      },
-      "android": {
-        "buildType": "apk"
-      }
+      "environment": "development",
+      "channel": "development",
+      "env": { "npm_config_legacy_peer_deps": "true" },
+      "android": { "buildType": "apk" }
+    },
+    "staging": {
+      "distribution": "internal",
+      "environment": "preview",
+      "channel": "staging",
+      "autoIncrement": true,
+      "env": { "npm_config_legacy_peer_deps": "true" },
+      "android": { "buildType": "apk" }
     },
     "preview": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      },
-      "env": {
-        "npm_config_legacy_peer_deps": "true"
-      }
+      "extends": "staging",
+      "autoIncrement": false
     },
     "production": {
+      "distribution": "store",
+      "environment": "production",
+      "channel": "production",
       "autoIncrement": true,
-      "android": {
-        "buildType": "apk"
-      },
-      "env": {
-        "npm_config_legacy_peer_deps": "true"
-      }
+      "env": { "npm_config_legacy_peer_deps": "true" },
+      "android": { "buildType": "app-bundle" }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    }
   }
 }

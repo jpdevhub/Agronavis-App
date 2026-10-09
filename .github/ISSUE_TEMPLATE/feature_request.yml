@@ -1,0 +1,31 @@
+name: Feature request
+description: Suggest something the product should do
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve
+      description: Describe the farmer's situation, not the solution you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like to happen
+    validations:
+      required: true
+  - type: dropdown
+    id: who
+    attributes:
+      label: Who is this for
+      options:
+        - Farmers using the app
+        - Cooperatives or FPOs
+        - Agricultural extension officers
+        - Our own team — internal tooling
+        - Not sure
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What they do today instead

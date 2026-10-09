@@ -1,0 +1,10 @@
+# Everything needs an owner's review by default.
+*                       @jpdevhub
+
+# Changes with consequences beyond the code.
+/LICENSE                @jpdevhub
+/PRIVACY.md             @jpdevhub
+/SECURITY.md            @jpdevhub
+/supabase/migrations/   @jpdevhub
+/backend/model/         @jpdevhub
+/.github/workflows/     @jpdevhub

@@ -1,0 +1,60 @@
+name: Bug report
+description: Something behaves incorrectly
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not report a security problem here.** See
+        [SECURITY.md](../blob/main/SECURITY.md) instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Tap …
+        3. See …
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part
+      options:
+        - App — field mapping
+        - App — leaf scanner
+        - App — Sahayak
+        - App — mandi prices
+        - App — weather or soil
+        - App — other screen
+        - API
+        - Scheduled data sync
+        - Build or release
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version and build
+      description: Profile › bottom of the screen, e.g. 1.2.0 (14)
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: Redmi Note 12, Android 13
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error text or screenshots
+      description: Paste any error exactly. Blank out anything personal first.

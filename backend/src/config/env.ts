@@ -31,6 +31,15 @@ dotenv.config({ path: path.join(repoRoot, '.env'), override: false });
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    /**
+     * Which deployment this process is. NODE_ENV stays a Node concern — it
+     * decides whether dependencies and error output are production-shaped —
+     * while this says which data and which audience the process is serving.
+     * Staging runs with NODE_ENV=production and APP_ENV=staging, because it
+     * must behave like production in every way except the database it points
+     * at and who is allowed to see it.
+     */
+    APP_ENV: z.enum(['development', 'staging', 'production']).default('development'),
     PORT: z.coerce.number().int().positive().default(3001),
     API_VERSION: z.string().default('v1'),
     LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),
@@ -69,6 +78,9 @@ const envSchema = z
     ...raw,
     isProduction: raw.NODE_ENV === 'production',
     isTest: raw.NODE_ENV === 'test',
+    /** True only on the deployment real farmers use. */
+    isLive: raw.APP_ENV === 'production',
+    isStaging: raw.APP_ENV === 'staging',
     allowedOrigins: raw.ALLOWED_ORIGINS.split(',')
       .map((o) => o.trim())
       .filter(Boolean),

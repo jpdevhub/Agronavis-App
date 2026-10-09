@@ -1,0 +1,30 @@
+Copyright © 2026 Agronavis. All rights reserved.
+
+This software and its source code are proprietary and confidential.
+
+No part of this repository — source code, models, datasets, schema,
+documentation or configuration — may be copied, reproduced, modified,
+published, distributed, sublicensed, sold, or used to create derivative works,
+in whole or in part, by any person or entity, without prior written permission
+from the copyright holder.
+
+Access to this repository does not grant any licence, express or implied, to
+any patent, trademark, copyright or trade secret held by the copyright holder.
+
+If you have been given access for evaluation, review, interview or judging
+purposes, that access is for reading only and ends when the stated purpose
+ends.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Third-party dependencies remain under their own licences. The disease
+classifier's weights, the Gemma model and all government datasets are governed
+by the terms of their respective publishers; see docs/architecture/README.md
+for the full list of sources.
+
+Contact: [security@agronavis.example] — replace with your real contact address.
