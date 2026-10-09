@@ -113,23 +113,6 @@ function AppShell() {
     })();
   }, [session, isLoading, segments, router]);
 
-  // Restoring a stored session at launch, or confirming a fresh sign-in.
-  if (isLoading || resolving) {
-    return (
-      <View style={styles.root}>
-        <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
-        <LoadingScreen
-          message={resolving ? 'Signing you in…' : 'Opening Agronavis…'}
-          detail={
-            resolving
-              ? 'Fetching your farm. This can take a few seconds on a slow connection.'
-              : undefined
-          }
-        />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
@@ -148,6 +131,26 @@ function AppShell() {
         <Stack.Screen name="profile/edit" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="profile/security" options={{ animation: 'slide_from_right' }} />
       </Stack>
+
+      {/*
+        Drawn OVER the navigator, never instead of it. Returning early here
+        unmounts the Stack, and the router.replace that decides where to land
+        then fires into a navigator that no longer exists — so the redirect is
+        lost and the remount lands back on the login screen. Which is the bug
+        this screen was added to fix.
+      */}
+      {isLoading || resolving ? (
+        <View style={styles.overlay}>
+          <LoadingScreen
+            message={resolving ? 'Signing you in…' : 'Opening Agronavis…'}
+            detail={
+              resolving
+                ? 'Fetching your farm. This can take a few seconds on a slow connection.'
+                : undefined
+            }
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -169,6 +172,15 @@ export default function RootLayout() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surface },
+  /** Covers the navigator without unmounting it. */
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colors.surface,
+  },
   offline: {
     backgroundColor: Colors.tertiaryContainer,
     paddingVertical: Spacing.sm,

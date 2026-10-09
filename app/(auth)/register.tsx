@@ -136,7 +136,7 @@ export default function RegisterScreen() {
                 render={({ field: { onChange, onBlur, value } }) => (
                   <TextInput
                     id="register-password"
-                    style={[styles.input, { paddingRight: 44 }]}
+                    style={styles.input}
                     placeholder="Min 8 chars, 1 number or symbol"
                     placeholderTextColor={Colors.outline}
                     secureTextEntry={!showPass}
@@ -146,7 +146,13 @@ export default function RegisterScreen() {
                   />
                 )}
               />
-              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPass(p => !p)}>
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowPass((p) => !p)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={showPass ? 'Hide password' : 'Show password'}
+              >
                 <MaterialIcons
                   name={showPass ? 'visibility-off' : 'visibility'}
                   size={20}
@@ -239,7 +245,16 @@ const styles = StyleSheet.create({
   inputError:     { borderColor: '#ef4444' },
   icon:           { marginRight: 10 },
   input:          { flex: 1, fontSize: 15, fontWeight: '400', color: Colors.onSurface },
-  eyeBtn:         { padding: 4 },
+  // A 20px glyph in a 44pt square: Material's minimum touch target. The
+  // negative margin pulls it back flush with the field's own padding so the
+  // icon still sits on the edge rather than 14px inside it.
+  eyeBtn: {
+    width: 44,
+    height: 44,
+    marginRight: -10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   fieldError:     { fontSize: 12, color: '#ef4444', fontWeight: '500' },
   terms:          { flexDirection: 'row', alignItems: 'center', gap: 10 },
   checkbox: {

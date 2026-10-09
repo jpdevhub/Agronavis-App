@@ -20,7 +20,7 @@ export function SahayakGateway() {
 
   return (
     <>
-      <View pointerEvents="box-none" style={[styles.wrap, { bottom }]}>
+      <View style={[styles.wrap, { bottom, pointerEvents: 'box-none' }]}>
         <Pressable
           onPress={() => router.push('/sahayak' as never)}
           style={styles.fab}

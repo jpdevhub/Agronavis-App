@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View, Text, type ViewStyle } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, View, Text, type ViewStyle } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Colors, Spacing, Type } from '@/constants/theme';
 
@@ -49,7 +49,9 @@ export function Loader({ size = 48, label, tone = 'brand', style }: LoaderProps)
           toValue: 1,
           duration,
           easing: Easing.linear,
-          useNativeDriver: true,
+          // The web build has no native animated module, and asking for one
+          // logs a warning on every mount before falling back to JS anyway.
+          useNativeDriver: Platform.OS !== 'web',
         }),
       );
     // Slower, and the other way, so the two never lock into one shape.

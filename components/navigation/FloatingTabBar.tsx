@@ -18,7 +18,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   const insets = useSafeAreaInsets();
 
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: insets.bottom + Spacing.md }]}>
+    <View style={[styles.wrap, { paddingBottom: insets.bottom + Spacing.md, pointerEvents: 'box-none' }]}>
       <View style={styles.bar}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
