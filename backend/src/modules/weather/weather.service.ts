@@ -133,8 +133,13 @@ async function getSolar(lat: number, lon: number, days = 7): Promise<SolarDay[]>
           latitude: lat.toFixed(4),
           longitude: lon.toFixed(4),
           community: 'AG',
-          // FAO-56 inputs. POWER publishes no ET₀ of its own; it is computed below.
-          parameters: 'ALLSKY_SFC_SW_DWN,T2M_MAX,T2M_MIN,RH2M,WS2M,PRECTOTCORR',
+          // FAO-56 inputs, then the two soil wetness layers. POWER publishes
+          // no ET₀ of its own; it is computed below. GWETROOT is the one the
+          // irrigation advice checks itself against — a modelled deficit over
+          // a root zone that is already wet usually means rain or irrigation
+          // the balance never saw.
+          parameters:
+            'ALLSKY_SFC_SW_DWN,T2M_MAX,T2M_MIN,RH2M,WS2M,PRECTOTCORR,GWETTOP,GWETROOT',
           format: 'JSON',
         },
         timeout: 15_000,
@@ -147,6 +152,8 @@ async function getSolar(lat: number, lon: number, days = 7): Promise<SolarDay[]>
       const rhAll: Record<string, number> = p.RH2M ?? {};
       const windAll: Record<string, number> = p.WS2M ?? {};
       const precipAll: Record<string, number> = p.PRECTOTCORR ?? {};
+      const wetTopAll: Record<string, number> = p.GWETTOP ?? {};
+      const wetRootAll: Record<string, number> = p.GWETROOT ?? {};
 
       // POWER uses -999 for "no data"; those days must not reach the model.
       const valid = (v: number | undefined): v is number =>
@@ -193,6 +200,15 @@ async function getSolar(lat: number, lon: number, days = 7): Promise<SolarDay[]>
               temperatureMin: Math.round(tMin),
               humidity: Math.round(humidity),
               windSpeed2m: Math.round(windSpeed2m * 10) / 10,
+              // Left null rather than defaulted: a guessed soil moisture would
+              // be checked against the water balance as though it were
+              // measured, which is the opposite of the point.
+              soilWetnessSurface: valid(wetTopAll[key])
+                ? Math.round(wetTopAll[key]! * 1000) / 1000
+                : null,
+              soilWetnessRoot: valid(wetRootAll[key])
+                ? Math.round(wetRootAll[key]! * 1000) / 1000
+                : null,
               substituted,
             },
           ];
