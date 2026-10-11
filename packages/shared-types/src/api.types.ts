@@ -313,6 +313,17 @@ export interface SolarDay {
   /** Wind speed at 2 m, m/s. */
   windSpeed2m: number;
   /**
+   * Soil wetness as a fraction of saturation, 0 to 1, measured by POWER rather
+   * than derived from the water balance. Null on a day POWER did not publish
+   * it, which is why nothing may assume they are present.
+   *
+   * `root` is the zone a crop actually drinks from and is the one worth
+   * acting on; `surface` is the top centimetres, which matters for
+   * germination and crusting and dries far faster.
+   */
+  soilWetnessSurface: number | null;
+  soilWetnessRoot: number | null;
+  /**
    * Fields POWER had no value for, where FAO-56's standard substitutes were
    * used instead (60% humidity, 2 m/s wind). ET₀ for such a day is weaker.
    */

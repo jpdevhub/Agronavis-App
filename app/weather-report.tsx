@@ -24,6 +24,13 @@ function normalise(day: SolarDay): SolarDay {
     humidity: typeof day.humidity === 'number' ? day.humidity : 0,
     windSpeed2m: typeof day.windSpeed2m === 'number' ? day.windSpeed2m : 0,
     substituted: Array.isArray(day.substituted) ? day.substituted : [],
+    // Added after this screen shipped. An app in the wild talks to whichever
+    // API version is deployed, so a field the server has not learned to send
+    // yet must read as absent rather than crash the screen — which is how
+    // this guard came to exist in the first place.
+    soilWetnessSurface:
+      typeof day.soilWetnessSurface === 'number' ? day.soilWetnessSurface : null,
+    soilWetnessRoot: typeof day.soilWetnessRoot === 'number' ? day.soilWetnessRoot : null,
   };
 }
 
@@ -82,6 +89,21 @@ function DayCard({ day }: { day: SolarDay }) {
           value={`${day.precipitation}`}
           unit="mm"
           assumed={day.substituted.includes('precipitation')}
+        />
+        {/* Measured by satellite, not derived from the balance above — which
+            is why they are worth showing beside it. A dash means POWER
+            published nothing for that day. */}
+        <Metric
+          label="Root zone water"
+          value={day.soilWetnessRoot === null ? '—' : `${Math.round(day.soilWetnessRoot * 100)}`}
+          unit={day.soilWetnessRoot === null ? '' : '% of saturation'}
+        />
+        <Metric
+          label="Surface water"
+          value={
+            day.soilWetnessSurface === null ? '—' : `${Math.round(day.soilWetnessSurface * 100)}`
+          }
+          unit={day.soilWetnessSurface === null ? '' : '% of saturation'}
         />
       </View>
 

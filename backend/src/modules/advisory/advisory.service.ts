@@ -45,18 +45,67 @@ const today = (): string => new Date().toISOString().slice(0, 10);
 const hoursFromNow = (h: number): string => new Date(Date.now() + h * 3_600_000).toISOString();
 
 /**
+ * Above this fraction of saturation the root zone is holding enough water that
+ * a modelled shortfall is not credible. POWER reports wetness 0 to 1; a
+ * reading this high over a claimed deficit almost always means rain or
+ * irrigation the balance never saw.
+ */
+const ROOT_ZONE_WET = 0.5;
+
+/** The most recent day POWER published a root-zone reading, or null. */
+export function latestRootWetness(solar: SolarDay[]): { value: number; date: string } | null {
+  for (let i = solar.length - 1; i >= 0; i -= 1) {
+    const day = solar[i]!;
+    if (typeof day.soilWetnessRoot === 'number') {
+      return { value: day.soilWetnessRoot, date: day.date };
+    }
+  }
+  return null;
+}
+
+/**
  * Irrigation advice from the FAO-56 water balance: ET₀ leaving the field minus
  * rainfall entering it, accumulated over the last three days.
+ *
+ * The balance is a model, and it only knows the rain POWER recorded — not a
+ * canal turn, a pump run, or a shower the satellite missed. So where a measured
+ * root-zone reading is available it is allowed to contradict the model, and the
+ * farmer is told the two disagree rather than sent to water a wet field.
+ * POWER publishes two to three days behind, so the reading is dated in the text.
  */
-export function buildIrrigationAdvisory(deficitMm: number): DraftAdvisory | null {
+export function buildIrrigationAdvisory(
+  deficitMm: number,
+  rootZone?: { value: number; date: string } | null,
+): DraftAdvisory | null {
   const rounded = Math.round(deficitMm * 10) / 10;
+
+  if (rootZone && rounded > 4 && rootZone.value >= ROOT_ZONE_WET) {
+    const pct = Math.round(rootZone.value * 100);
+    return {
+      category: 'irrigation',
+      severity: 'low',
+      title: 'Check before you irrigate',
+      body: `The water balance suggests a ${rounded} mm shortfall, but satellite readings put your root zone at ${pct}% of saturation on ${rootZone.date} — wet enough that the shortfall is probably already covered by rain or irrigation we have no record of. Dig 15 cm down before watering. If the soil crumbles rather than holding together, irrigate; otherwise wait.`,
+      source: 'fao56_penman_monteith+nasa_power_gwetroot',
+      dedupeKey: `irrigation:${today()}`,
+      validUntil: hoursFromNow(24),
+      metadata: { deficitMm: rounded, rootWetness: rootZone.value, rootWetnessDate: rootZone.date, conflict: true },
+    };
+  }
+
+  // When the measurement agrees, say so: the same instruction carries more
+  // weight when the farmer can see two independent things pointing one way.
+  const confirmed =
+    rootZone && rootZone.value < ROOT_ZONE_WET
+      ? ` Satellite readings put your root zone at ${Math.round(rootZone.value * 100)}% of saturation on ${rootZone.date}, which agrees.`
+      : '';
 
   if (rounded > 18) {
     return {
       category: 'irrigation',
       severity: 'critical',
       title: 'Irrigate today',
-      body: `Your field has lost ${rounded} mm more water than it received over the last three days. That is severe stress for most crops — irrigate today, ideally before 9 am, and apply roughly ${Math.round(rounded)} mm (${Math.round(rounded * 4.05)} m³ per acre).`,
+      body: `Your field has lost ${rounded} mm more water than it received over the last three days. That is severe stress for most crops — irrigate today, ideally before 9 am, and apply roughly ${Math.round(rounded)} mm (${Math.round(rounded * 4.05)} m³ per acre).${confirmed}`,
       source: 'fao56_penman_monteith',
       dedupeKey: `irrigation:${today()}`,
       validUntil: hoursFromNow(24),
@@ -68,7 +117,7 @@ export function buildIrrigationAdvisory(deficitMm: number): DraftAdvisory | null
       category: 'irrigation',
       severity: 'high',
       title: 'Irrigate within 48 hours',
-      body: `A ${rounded} mm water deficit has built up over three days. Schedule irrigation in the next two days — about ${Math.round(rounded)} mm will bring the root zone back to field capacity.`,
+      body: `A ${rounded} mm water deficit has built up over three days. Schedule irrigation in the next two days — about ${Math.round(rounded)} mm will bring the root zone back to field capacity.${confirmed}`,
       source: 'fao56_penman_monteith',
       dedupeKey: `irrigation:${today()}`,
       validUntil: hoursFromNow(48),
@@ -80,7 +129,7 @@ export function buildIrrigationAdvisory(deficitMm: number): DraftAdvisory | null
       category: 'irrigation',
       severity: 'medium',
       title: 'Check soil moisture',
-      body: `A mild ${rounded} mm deficit is building. Dig 15 cm down — if the soil crumbles rather than holding together, irrigate within three days.`,
+      body: `A mild ${rounded} mm deficit is building. Dig 15 cm down — if the soil crumbles rather than holding together, irrigate within three days.${confirmed}`,
       source: 'fao56_penman_monteith',
       dedupeKey: `irrigation:${today()}`,
       validUntil: hoursFromNow(72),
@@ -308,7 +357,7 @@ export const advisoryService = {
 
     const deficit = waterDeficit(solar, 3);
     if (deficit !== null) {
-      const irrigation = buildIrrigationAdvisory(deficit);
+      const irrigation = buildIrrigationAdvisory(deficit, latestRootWetness(solar));
       if (irrigation) drafts.push(irrigation);
     }
 
