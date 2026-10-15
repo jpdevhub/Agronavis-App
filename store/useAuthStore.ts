@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Session, User } from '@supabase/supabase-js';
+import { clearLanding } from '@/features/auth/landingCache';
 import { supabase } from '@/utils/supabase';
 
 interface AuthState {
@@ -32,6 +33,11 @@ export const useAuthStore = create<AuthState & AuthActions>((set) => ({
   setOffline: (isOffline) => set({ isOffline }),
 
   signOut: async () => {
+    // Forget where this farmer landed. Another account signing in on the same
+    // handset must not be sent straight past onboarding on their behalf.
+    const current = useAuthStore.getState().user?.id;
+    if (current) await clearLanding(current);
+
     await supabase.auth.signOut();
     set({ session: null, user: null });
   },
