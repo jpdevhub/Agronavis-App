@@ -256,6 +256,19 @@ export type WeatherSnapshotRow = {
   updated_at: string;
 };
 
+export type FireDetectionRow = {
+  id: string;
+  latitude: number;
+  longitude: number;
+  /** Brightness temperature of the fire pixel, kelvin. */
+  brightness_k: number | null;
+  /** FIRMS' own: 'l' low, 'n' nominal, 'h' high. */
+  confidence: string;
+  acquired_at: string;
+  source: string;
+  created_at: string;
+};
+
 export type NotificationRow = {
   id: string;
   farmer_id: string;
@@ -523,6 +536,10 @@ export interface Database {
         | 'source'
       >;
       weather_snapshots: Table<WeatherSnapshotRow, 'id' | Timestamps | 'snapshot_date'>;
+      fire_detections: Table<
+        FireDetectionRow,
+        'id' | 'created_at' | 'confidence' | 'source' | 'brightness_k'
+      >;
       notifications: Table<
         NotificationRow,
         | 'id'

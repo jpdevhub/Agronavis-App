@@ -13,6 +13,7 @@ const day = (overrides: Partial<ForecastDay>): ForecastDay => ({
   humidity: 60,
   rainMm: 0,
   windSpeed: 10,
+  windFromDeg: null,
   description: 'clear sky',
   icon: '01d',
   rainProbability: 10,

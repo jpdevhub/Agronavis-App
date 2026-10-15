@@ -52,6 +52,10 @@ services:
         sync: false
       - key: AGMARKNET_API_KEY
         sync: false
+      # NASA FIRMS, for the stubble-burning warnings. Optional: the poller
+      # skips itself when it is unset.
+      - key: FIRMS_MAP_KEY
+        sync: false
 
       # Generated once by Render and held for the life of the service.
       # Changing it makes every existing 2FA enrolment undecryptable.
@@ -140,6 +144,10 @@ services:
       - key: OPENWEATHER_API_KEY
         sync: false
       - key: AGMARKNET_API_KEY
+        sync: false
+      # NASA FIRMS, for the stubble-burning warnings. Optional: the poller
+      # skips itself when it is unset.
+      - key: FIRMS_MAP_KEY
         sync: false
 
       # Generated once by Render and held for the life of the service.

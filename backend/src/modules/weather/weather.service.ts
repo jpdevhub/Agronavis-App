@@ -21,7 +21,7 @@ const NASA_POWER_BASE = 'https://power.larc.nasa.gov/api/temporal/daily/point';
 interface OwmSlot {
   dt_txt: string;
   main: { temp: number; humidity: number };
-  wind?: { speed?: number };
+  wind?: { speed?: number; deg?: number };
   rain?: { '3h'?: number };
   pop?: number;
   weather?: { description?: string; icon?: string }[];
@@ -106,6 +106,8 @@ async function getForecast(lat: number, lon: number): Promise<ForecastDay[]> {
             ),
             rainMm: Math.round(rain * 10) / 10,
             windSpeed: Math.round((noon.wind?.speed ?? 0) * 3.6),
+            windFromDeg:
+              typeof noon.wind?.deg === 'number' ? Math.round(noon.wind.deg) : null,
             description: noon.weather?.[0]?.description ?? '',
             icon: noon.weather?.[0]?.icon ?? '01d',
             rainProbability: Math.round(pop * 100),
