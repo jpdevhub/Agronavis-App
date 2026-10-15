@@ -16,12 +16,24 @@ import { EmptyState, Loader } from '@/components/ui';
 import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { useNotifications } from '@/hooks/useNotifications';
 
-/** Which icon and colour an alert wears, by the kind of thing it is about. */
-const LOOK: Record<string, { icon: keyof typeof MaterialIcons.glyphMap; tint: string }> = {
-  irrigation: { icon: 'water-drop', tint: Colors.primary },
-  weather_alert: { icon: 'thunderstorm', tint: Colors.onTertiaryContainer },
-  pest_control: { icon: 'coronavirus', tint: Colors.onTertiaryContainer },
-  general: { icon: 'eco', tint: Colors.primary },
+/** Which icon an alert wears, by the kind of thing it is about. */
+const LOOK: Record<string, keyof typeof MaterialIcons.glyphMap> = {
+  irrigation: 'water-drop',
+  weather_alert: 'thunderstorm',
+  pest_control: 'coronavirus',
+  general: 'eco',
+};
+
+/**
+ * Urgency, shown rather than described. Critical and high were pushed to the
+ * handset; medium and low were not, so the list is the only place they appear
+ * and has to make the difference visible at a glance.
+ */
+const URGENCY: Record<string, { tint: string; ground: string; label?: string }> = {
+  critical: { tint: Colors.onErrorContainer, ground: Colors.errorContainer, label: 'Act today' },
+  high: { tint: Colors.onTertiaryContainer, ground: Colors.tertiaryContainer, label: 'Soon' },
+  medium: { tint: Colors.primary, ground: Colors.secondaryContainer },
+  low: { tint: Colors.onSurfaceVariant, ground: Colors.surfaceContainerHigh },
 };
 
 function when(iso: string): string {
@@ -42,15 +54,16 @@ function AlertRow({
   alert: AppNotification;
   onPress: () => void;
 }) {
-  const look = LOOK[alert.type] ?? LOOK.general!;
+  const icon = LOOK[alert.type] ?? LOOK.general!;
+  const urgency = URGENCY[alert.severity] ?? URGENCY.medium!;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       style={[styles.row, !alert.read && styles.rowUnread]}
     >
-      <View style={[styles.icon, { backgroundColor: Colors.secondaryContainer }]}>
-        <MaterialIcons name={look.icon} size={20} color={look.tint} />
+      <View style={[styles.icon, { backgroundColor: urgency.ground }]}>
+        <MaterialIcons name={icon} size={20} color={urgency.tint} />
       </View>
       <View style={styles.rowText}>
         <View style={styles.rowHead}>
@@ -60,7 +73,14 @@ function AlertRow({
           {!alert.read ? <View style={styles.dot} /> : null}
         </View>
         <Text style={styles.body}>{alert.body}</Text>
-        <Text style={styles.when}>{when(alert.createdAt)}</Text>
+        <View style={styles.rowFoot}>
+          {urgency.label ? (
+            <Text style={[styles.urgency, { color: urgency.tint, backgroundColor: urgency.ground }]}>
+              {urgency.label}
+            </Text>
+          ) : null}
+          <Text style={styles.when}>{when(alert.createdAt)}</Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -205,5 +225,13 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   body: { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
-  when: { ...Type.bodySmall, color: Colors.outline, marginTop: 2 },
+  rowFoot: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 4 },
+  urgency: {
+    ...Type.labelSmall,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: Shape.small,
+    overflow: 'hidden',
+  },
+  when: { ...Type.bodySmall, color: Colors.outline },
 });

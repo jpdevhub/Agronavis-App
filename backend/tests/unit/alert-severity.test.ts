@@ -6,9 +6,9 @@ import {
 import type { ForecastDay } from '@agronavis/shared-types';
 
 /**
- * Severity decides whether a farmer's phone buzzes. weather.job pushes
- * critical and high; everything below reaches them as a card and a row in the
- * alerts screen instead.
+ * Every advisory is stored as a notification and listed in the app. Severity
+ * decides only which ones also light up the handset: the service pushes
+ * critical and high and marks the rest `skipped`.
  *
  * The line matters in both directions. Push too little and the warning that
  * mattered is missed; push everything and notifications get turned off, which
@@ -30,7 +30,7 @@ const day = (o: Partial<ForecastDay>): ForecastDay => ({
   ...o,
 });
 
-describe('which alerts are allowed to interrupt a farmer', () => {
+describe('which stored alerts are allowed to interrupt a farmer', () => {
   it('pushes a severe water shortfall', () => {
     expect(PUSHES).toContain(buildIrrigationAdvisory(21)!.severity);
   });

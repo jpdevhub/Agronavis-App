@@ -487,6 +487,13 @@ export interface AppNotification {
   title: string;
   body: string;
   type: string;
+  /**
+   * How urgent the alert was when it was raised. Critical and high are pushed
+   * to the handset; everything is stored and listed either way, so this is
+   * also what lets the list rank "do not spray tomorrow" above "check your
+   * soil moisture".
+   */
+  severity: 'low' | 'medium' | 'high' | 'critical';
   data: Json;
   read: boolean;
   createdAt: string;

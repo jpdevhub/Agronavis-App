@@ -144,6 +144,10 @@ export const farmersService = {
         title: name ? `Welcome to Agronavis, ${name}` : 'Welcome to Agronavis',
         body: 'Map a field and you will start getting alerts here — when to irrigate, when disease weather is coming, and what your crop is worth.',
         type: 'general',
+        // High so it is actually delivered: this is the one notification whose
+        // job is to prove the channel works, and an in-app-only welcome proves
+        // nothing.
+        severity: 'high',
         data: { welcome: true },
       });
     }

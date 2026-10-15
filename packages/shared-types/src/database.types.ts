@@ -262,8 +262,15 @@ export type NotificationRow = {
   title: string;
   body: string;
   type: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
   data: Json;
+  /** Generated from read_at; the timestamp is the fact, this is the shorthand. */
   read: boolean;
+  read_at: string | null;
+  /** pending → sent | failed | skipped. See migration 0017. */
+  delivery: 'pending' | 'sent' | 'failed' | 'skipped';
+  delivered_at: string | null;
+  delivery_error: string | null;
   created_at: string;
 };
 
@@ -518,7 +525,16 @@ export interface Database {
       weather_snapshots: Table<WeatherSnapshotRow, 'id' | Timestamps | 'snapshot_date'>;
       notifications: Table<
         NotificationRow,
-        'id' | 'created_at' | 'type' | 'data' | 'read'
+        | 'id'
+        | 'created_at'
+        | 'type'
+        | 'data'
+        | 'read'
+        | 'read_at'
+        | 'severity'
+        | 'delivery'
+        | 'delivered_at'
+        | 'delivery_error'
       >;
       yield_history: Table<
         YieldHistoryRow,
