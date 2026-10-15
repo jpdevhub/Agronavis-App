@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView,
@@ -8,6 +8,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { MaterialIcons } from '@expo/vector-icons';
+import { warmApi } from '@/services/warmup';
 import { Colors, Radii } from '@/constants/theme';
 import { showAlert } from '@/utils/alert';
 import { supabase } from '@/utils/supabase';
@@ -32,6 +33,12 @@ type RegisterFields = z.infer<typeof registerSchema>;
 
 export default function RegisterScreen() {
   const router = useRouter();
+
+  // The instance sleeps after fifteen minutes. Waking it now means the
+  // boot overlaps with reading this screen rather than with signing in.
+  useEffect(() => {
+    warmApi();
+  }, []);
   const [showPass, setShowPass] = useState(false);
 
   const {

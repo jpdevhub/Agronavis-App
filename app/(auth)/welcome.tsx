@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { ImageBackground, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import { warmApi } from '@/services/warmup';
 import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 
 /**
@@ -16,6 +18,12 @@ const FIELD_IMAGE = require('@/assets/images/agronavis.png');
 
 export default function WelcomeScreen() {
   const router = useRouter();
+
+  // The instance sleeps after fifteen minutes. Waking it now means the
+  // boot overlaps with reading this screen rather than with signing in.
+  useEffect(() => {
+    warmApi();
+  }, []);
   const insets = useSafeAreaInsets();
 
   return (

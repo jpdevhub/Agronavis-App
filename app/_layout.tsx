@@ -10,6 +10,7 @@ import { useFarmer } from '@/hooks/useFarmer';
 import { Colors, Spacing, Type } from '@/constants/theme';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { LoadingScreen } from '@/components/ui';
+import { readLanding, writeLanding, type Landing } from '@/features/auth/landingCache';
 import { ConnectivityProvider, NetworkBanner } from '@/shared/network';
 import { useSyncOnReconnect } from '@/shared/offline';
 import { authApi } from '@/services/endpoints';
@@ -88,25 +89,51 @@ function AppShell() {
     if (inOnboarding || routingFor.current === session.user.id) return;
     routingFor.current = session.user.id;
 
-    // One call decides where to land: it confirms the session against the API
-    // and returns the profile and 2FA state together. Only the leg that starts
-    // on an auth screen shows the full-screen wait — a session restored on a
-    // cold start resolves behind whatever is already drawn.
+    const userId = session.user.id;
+
+    const land = (landing: Landing): void => {
+      if (landing.twoFactorEnabled && inAuth) {
+        router.replace('/(auth)/two-factor' as never);
+      } else if (!landing.onboardingComplete) {
+        router.replace('/(onboarding)/language' as never);
+      } else if (inAuth) {
+        router.replace('/(tabs)/dashboard');
+      }
+    };
+
     (async () => {
-      if (inAuth) setResolving(true);
+      // Where a returning farmer lands was decided last time and almost never
+      // changes, so it is answered from the device and the screen moves at
+      // once. Only a first sign-in on this device has nothing to go on, and
+      // only that one waits.
+      const remembered = await readLanding(userId);
+      if (remembered) {
+        land(remembered);
+      } else if (inAuth) {
+        setResolving(true);
+      }
+
       try {
+        // Still asked either way. When it was answered from the cache this
+        // runs behind whatever is now on screen and corrects the rare case
+        // where onboarding was finished, or two-factor turned on, elsewhere.
         const { profile, twoFactor } = await authApi.me();
-        if (twoFactor.enabled && inAuth) {
-          router.replace('/(auth)/two-factor' as never);
-        } else if (!profile.onboardingComplete) {
-          router.replace('/(onboarding)/language' as never);
-        } else if (inAuth) {
-          router.replace('/(tabs)/dashboard');
-        }
+        const fresh: Landing = {
+          onboardingComplete: profile.onboardingComplete,
+          twoFactorEnabled: twoFactor.enabled,
+        };
+        await writeLanding(userId, fresh);
+
+        const changed =
+          !remembered ||
+          remembered.onboardingComplete !== fresh.onboardingComplete ||
+          remembered.twoFactorEnabled !== fresh.twoFactorEnabled;
+        if (changed) land(fresh);
       } catch {
-        // The API is unreachable. Let the user in rather than trapping them on
-        // a spinner; screens degrade to their own error states.
-        if (inAuth) router.replace('/(tabs)/dashboard');
+        // Unreachable, or still booting. Someone with nothing remembered is
+        // let through rather than held on a loader; the screens they land on
+        // have their own empty and error states.
+        if (!remembered && inAuth) router.replace('/(tabs)/dashboard');
       } finally {
         setResolving(false);
       }
@@ -147,9 +174,10 @@ function AppShell() {
         <View style={styles.overlay}>
           <LoadingScreen
             message={resolving ? 'Signing you in…' : 'Opening Agronavis…'}
-            detail={
+            detail={resolving ? 'Setting up your farm.' : undefined}
+            slowDetail={
               resolving
-                ? 'Fetching your farm. This can take a few seconds on a slow connection.'
+                ? 'Our server was asleep and is starting up. This happens on the first sign-in of the day and takes about half a minute — after that it is instant.'
                 : undefined
             }
           />

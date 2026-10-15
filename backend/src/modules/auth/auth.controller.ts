@@ -13,8 +13,12 @@ export const authController = {
    */
   async me(req: Request, res: Response) {
     const id = farmerId(req);
-    const profile = await farmersService.getProfile(id, req.user?.email ?? null);
-    const twoFactor = await totpService.status(id);
+    // Independent reads. Run together: this is the one call a sign-in waits
+    // on, so its latency is the farmer's.
+    const [profile, twoFactor] = await Promise.all([
+      farmersService.getProfile(id, req.user?.email ?? null),
+      totpService.status(id),
+    ]);
     ok(res, { user: { id, email: req.user?.email ?? null }, profile, twoFactor });
   },
 
