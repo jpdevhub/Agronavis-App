@@ -52,6 +52,16 @@ shows you both figures and asks you to dig fifteen centimetres and judge for
 yourself. When they agree, it says so — the same instruction is worth more when
 two independent things point the same way.
 
+> **#12** — added `GWETTOP` and `GWETROOT` to the existing NASA POWER request
+> and surfaced both on `SolarDay` as nullable fields. `buildIrrigationAdvisory`
+> takes the most recent root-zone reading and overrides its own thresholds when
+> wetness at or above 0.5 of saturation contradicts a deficit over 4 mm,
+> downgrading to severity `low` with both figures quoted. POWER lags two to
+> three days, so every reading is rendered with its measurement date. Nulls are
+> preserved rather than defaulted — a substituted value would be cross-checked
+> as though it had been measured. No key, no migration, two extra parameters on
+> a call already being made.
+
 ---
 
 ## Know when disease is coming
@@ -77,6 +87,17 @@ a preventive spray ready.
 Humidity alone gets this wrong in both directions. A muggy afternoon that never
 cools wets nothing. A clear night at moderate humidity wets every leaf in the
 field.
+
+> **#13** — replaced the `humidity >= 85%` test with a dew-point one. Dew point
+> is computed per forecast day by Magnus-Tetens (Alduchov-Eskridge
+> coefficients, ±0.1 °C from −40 to 50 °C) from the day's mean temperature and
+> mean relative humidity, then a day counts as wet when
+> `tempMin − dewPoint ≤ 2 °C`. Relative humidity is a ratio against a
+> temperature-dependent ceiling and swings 50–95% across one day at constant
+> absolute moisture; dew point does not move, which is why it is the
+> thresholdable quantity. The 2 °C allowance is radiative cooling of the leaf
+> surface below ambient. Sporulation band of 18–32 °C unchanged; two qualifying
+> days in five trigger. Server-side only — no API, schema or credential change.
 
 ---
 
