@@ -245,7 +245,10 @@ export default function MyFarmsScreen() {
         </ScrollView>
       )}
 
-      {!loading && (
+      {/* Only once there is something to add to. The empty state carries its
+          own Map New Field button, and rendering the floating one as well put
+          two identical buttons on top of each other. */}
+      {!loading && farms.length > 0 && (
         <TouchableOpacity
           style={[styles.fab, { bottom: tabBarHeight + SAHAYAK_FAB_SPACE }]}
           onPress={() => router.push('/(tabs)/farm/map' as any)}

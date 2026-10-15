@@ -38,6 +38,11 @@ export function useCreateField() {
     mutationFn: (payload: CreateFieldPayload) => farmApi.createField(payload),
     onSuccess: (field) => {
       queryClient.invalidateQueries({ queryKey: ['fields'] });
+      // The API resolves or creates the parent farm as part of saving a field,
+      // so the farm list is stale too. Without this, mapping a first field
+      // left My Farms still reporting no farms — the field existed, the farm
+      // existed, and only the cache disagreed.
+      queryClient.invalidateQueries({ queryKey: ['farms'] });
       setActiveField(field.id, field.farmId);
     },
   });
@@ -53,6 +58,8 @@ export function useDeleteField() {
     onSuccess: (_result, fieldId) => {
       if (fieldId === activeFieldId) clearActiveField();
       queryClient.invalidateQueries({ queryKey: ['fields'] });
+      // Acreage and field counts are read off the farm list as well.
+      queryClient.invalidateQueries({ queryKey: ['farms'] });
     },
   });
 }

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { FarmTask } from '@agronavis/shared-types';
 import { Colors, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
+import { SAHAYAK_FAB_SPACE } from '@/features/sahayak';
 import { useTabBarHeight } from '@/hooks/useTabBarHeight';
 import { useFarmer } from '@/hooks/useFarmer';
 import { useFarmFields } from '@/hooks/useFarmFields';
@@ -217,7 +218,13 @@ export default function DashboardScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: tabBarHeight + Spacing.xl }]}
+        // Clear of the tab bar AND the Sahayak pill that floats above it,
+        // otherwise the last card — Add a crop, on a farm with none — sits
+        // behind one or the other and cannot be tapped.
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: tabBarHeight + SAHAYAK_FAB_SPACE + Spacing.xl },
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >

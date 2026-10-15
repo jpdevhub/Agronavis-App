@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
+  Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -33,11 +34,37 @@ export default function SahayakScreen() {
 
   /**
    * Android reports a bottom inset of zero while the keyboard is up, because
-   * the navigation bar is behind it. Reading it live made the composer jump by
-   * the height of that bar every time the keyboard opened or closed. Captured
-   * once, it stays where the farmer last saw it.
+   * the navigation bar sits behind it. Reading it live made the composer jump
+   * by the height of that bar every time the keyboard opened. Captured once,
+   * it stays where the farmer last saw it.
    */
   const [bottomInset] = useState(() => insets.bottom);
+
+  /**
+   * The keyboard's height, tracked rather than inferred.
+   *
+   * KeyboardAvoidingView was doing this, and on Android under edge-to-edge it
+   * kept its padding after the keyboard closed — so once the first message was
+   * sent the composer stayed lifted with a band of empty screen beneath it.
+   * Listening to the keyboard directly means the value returns to zero when
+   * the keyboard goes, because that is what the dismiss event says.
+   */
+  const [keyboard, setKeyboard] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => setKeyboard(e.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboard(0),
+    );
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
   const {
     status, error, messages, streaming, summary, send, stop, load, variant,
     onModelReady, language, setLanguage,
@@ -175,15 +202,14 @@ export default function SahayakScreen() {
 
       {/*
         SDK 54 draws Android edge to edge, and under that the window is no
-        longer resized for the keyboard however windowSoftInputMode is set —
-        so nothing lifted the composer and the keyboard covered it. Padding
-        behaviour works on both platforms here because neither resizes.
+        longer resized for the keyboard however windowSoftInputMode is set — so
+        something has to lift the composer. KeyboardAvoidingView did it, but on
+        Android it kept its padding after the keyboard closed, leaving the
+        composer stranded above a band of empty screen from the first message
+        onward. A plain View padded by the tracked keyboard height goes back
+        down, because the dismiss event says so.
       */}
-      <KeyboardAvoidingView
-        style={styles.fill}
-        behavior="padding"
-        keyboardVerticalOffset={0}
-      >
+      <View style={[styles.fill, { paddingBottom: keyboard }]}>
         {status === 'unsupported' ? (
           <Notice icon="phonelink-off" title="Not available here" body={error ?? 'Sahayak runs on-device on Android.'} />
         ) : status === 'checking' ? (
@@ -307,7 +333,7 @@ export default function SahayakScreen() {
             </View>
           </>
         )}
-      </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }
