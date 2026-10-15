@@ -1,5 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -47,16 +50,51 @@ function when(iso: string): string {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
+/** How far apart the rows arrive, and how long each takes. */
+const STAGGER_MS = 45;
+const ENTER_MS = 240;
+
 function AlertRow({
   alert,
+  index,
   onPress,
 }: {
   alert: AppNotification;
+  index: number;
   onPress: () => void;
 }) {
+  /**
+   * Rises into place rather than appearing. A list that arrives in order reads
+   * as newest-first; one that materialises whole reads as a screen that was
+   * already there and leaves the eye no starting point. Capped so a long
+   * history does not stagger for a second and a half.
+   */
+  const enter = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.timing(enter, {
+      toValue: 1,
+      duration: ENTER_MS,
+      delay: Math.min(index, 8) * STAGGER_MS,
+      easing: Easing.out(Easing.cubic),
+      // No native animated module on web; asking for one logs a warning on
+      // every mount before falling back to JS regardless.
+      useNativeDriver: Platform.OS !== 'web',
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [enter, index]);
   const icon = LOOK[alert.type] ?? LOOK.general!;
   const urgency = URGENCY[alert.severity] ?? URGENCY.medium!;
   return (
+    <Animated.View
+      style={{
+        opacity: enter,
+        transform: [
+          { translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) },
+        ],
+      }}
+    >
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
@@ -83,6 +121,7 @@ function AlertRow({
         </View>
       </View>
     </Pressable>
+    </Animated.View>
   );
 }
 
@@ -139,11 +178,27 @@ export default function AlertsScreen() {
           onAction={() => refetch()}
         />
       ) : notifications.length === 0 ? (
-        <EmptyState
-          icon="notifications-none"
-          title="Nothing yet"
-          description="Irrigation reminders, disease warnings and weather alerts for your fields will appear here."
-        />
+        // Inside a scroll view purely so it can be pulled. This is the one
+        // screen where someone is waiting for something to arrive — a welcome
+        // that is still in flight, a first advisory — and leaving the screen
+        // and coming back was the only way to look again.
+        <ScrollView
+          contentContainerStyle={styles.emptyScroll}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.primary}
+            />
+          }
+        >
+          <EmptyState
+            icon="notifications-none"
+            title="Nothing yet"
+            description="Irrigation reminders, disease warnings and weather alerts for your fields will appear here. Pull down to check."
+          />
+        </ScrollView>
       ) : (
         <ScrollView
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + Spacing.xxxl }]}
@@ -156,10 +211,11 @@ export default function AlertsScreen() {
             />
           }
         >
-          {notifications.map((alert) => (
+          {notifications.map((alert, i) => (
             <AlertRow
               key={alert.id}
               alert={alert}
+              index={i}
               onPress={() => {
                 if (!alert.read) markRead(alert.id);
               }}
@@ -196,6 +252,8 @@ const styles = StyleSheet.create({
   markAll: { ...Type.labelLarge, color: Colors.primary },
 
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // Grows to fill so the empty state stays centred and still accepts a pull.
+  emptyScroll: { flexGrow: 1, justifyContent: 'center' },
   list: { padding: Spacing.lg, gap: Spacing.sm },
 
   row: {
