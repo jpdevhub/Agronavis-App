@@ -28,6 +28,16 @@ an introduction to the product.
 
 ---
 
+## Feature notes
+
+Individual features are written up under [features/](../features/) as they
+ship — what problem each solves, why the first attempt was wrong where that is
+instructive, and where the code lives.
+
+- [Fungal disease risk warning](../features/disease-risk-warning.md)
+
+---
+
 ## 1. What the system is for
 
 An Indian farmer makes four decisions every season. Each one costs real money
@@ -62,7 +72,6 @@ field.
 The farmer draws their field boundary on a satellite map, once. Everything after
 that is about **that** field — not a district average, not a village estimate,
 not the nearest weather station.
-
 
 ![alt text](<Farmer's Crop Management-2026-10-09-164632.png>)
 
