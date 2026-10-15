@@ -40,16 +40,19 @@ export async function runWeatherPoll(): Promise<{ farms: number; calls: number; 
         });
         advisoryCount += created.length;
 
+        // Every advisory becomes a notification, so it is there to read in the
+        // app whichever way it arrived. Whether it also lights up the handset
+        // is the service's decision, taken on severity — this loop no longer
+        // gates on it, which is what previously meant a medium advisory was
+        // never stored and so could not be read anywhere at all.
         for (const advisory of created) {
-          // Only interrupt someone's day for something they must act on today.
-          if (advisory.severity === 'critical') {
-            await notificationsService.send(farm.farmerId, {
-              title: advisory.title,
-              body: advisory.body.slice(0, 160),
-              type: advisory.category,
-              data: { advisoryId: advisory.id, farmId: farm.farmId },
-            });
-          }
+          await notificationsService.send(farm.farmerId, {
+            title: advisory.title,
+            body: advisory.body.slice(0, 160),
+            type: advisory.category,
+            severity: advisory.severity,
+            data: { advisoryId: advisory.id, farmId: farm.farmId },
+          });
         }
       }
     } catch (error) {

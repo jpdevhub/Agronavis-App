@@ -15,6 +15,7 @@ import { useFarmFields } from '@/hooks/useFarmFields';
 import { useTimelineTasks } from '@/hooks/useTimelineTasks';
 import { useWeather } from '@/hooks/useWeather';
 import { useSoilHealth } from '@/hooks/useSoilHealth';
+import { useNotifications } from '@/hooks/useNotifications';
 import { useFarmStore } from '@/store/useFarmStore';
 
 function Skeleton({ width, height, borderRadius = 8 }: { width: number | string; height: number; borderRadius?: number }) {
@@ -179,13 +180,20 @@ export default function DashboardScreen() {
   const { data: tasks, isLoading: tasksLoading, completeTask, refetch: refetchTasks } = useTimelineTasks();
   const { levels, isLoading: soilLoading, isRegional, hasNoCoverage } = useSoilHealth();
   const { current: weather, isLoading: weatherLoading, refetch: refetchWeather } = useWeather(activeFarmId, activeFieldId);
+  const { unread, refetch: refetchAlerts } = useNotifications();
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchFarmer(), refetchFields(), refetchTasks(), refetchWeather()]);
+    await Promise.all([
+      refetchFarmer(),
+      refetchFields(),
+      refetchTasks(),
+      refetchWeather(),
+      refetchAlerts(),
+    ]);
     setRefreshing(false);
-  }, [refetchFarmer, refetchFields, refetchTasks, refetchWeather]);
+  }, [refetchFarmer, refetchFields, refetchTasks, refetchWeather, refetchAlerts]);
 
   const activeField = fields?.find((f) => f.id === activeFieldId);
   const hasFields = fields && fields.length > 0;
@@ -212,8 +220,23 @@ export default function DashboardScreen() {
           )}
         </TouchableOpacity>
         <Text style={styles.logo}>Agronavis</Text>
-        <TouchableOpacity style={styles.notifBtn} activeOpacity={0.8}>
-          <MaterialIcons name="notifications-none" size={24} color={Colors.primary} />
+        <TouchableOpacity
+          style={styles.notifBtn}
+          activeOpacity={0.8}
+          onPress={() => router.push('/alerts' as never)}
+          accessibilityRole="button"
+          accessibilityLabel={unread > 0 ? `Alerts, ${unread} unread` : 'Alerts'}
+        >
+          <MaterialIcons
+            name={unread > 0 ? 'notifications-active' : 'notifications-none'}
+            size={24}
+            color={Colors.primary}
+          />
+          {unread > 0 ? (
+            <View style={styles.notifBadge}>
+              <Text style={styles.notifBadgeText}>{unread > 9 ? '9+' : unread}</Text>
+            </View>
+          ) : null}
         </TouchableOpacity>
       </View>
 
@@ -434,6 +457,16 @@ const styles = StyleSheet.create({
   avatarInitials:{ fontSize: 15, fontWeight: '800', color: Colors.onPrimaryContainer },
   logo:          { ...TypeEmphasized.headlineSmall, color: Colors.primary },
   notifBtn:      { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  // Sits on the bell's top-right corner. Minimum 18px so a two-character
+  // count still reads at arm's length in sunlight.
+  notifBadge: {
+    position: 'absolute', top: 4, right: 2,
+    minWidth: 18, height: 18, borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: Colors.error,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  notifBadgeText: { fontSize: 11, fontWeight: '800', color: '#fff' },
   scroll:        { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl, gap: Spacing.lg },
   skeleton:      { backgroundColor: Colors.surfaceContainerHigh },
 
