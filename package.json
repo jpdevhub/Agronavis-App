@@ -2,7 +2,7 @@
   "name": "agronavis",
   "version": "1.2.0",
   "private": true,
-  "description": "Agronavis \u2014 AI-driven geospatial intelligence platform for Indian agriculture",
+  "description": "Agronavis — AI-driven geospatial intelligence platform for Indian agriculture",
   "license": "UNLICENSED",
   "main": "expo-router/entry",
   "engines": {
@@ -56,6 +56,7 @@
     "@tanstack/react-query": "^5.101.0",
     "axios": "^1.12.2",
     "expo": "~54.0.10",
+    "expo-blur": "~15.0.8",
     "expo-build-properties": "~1.0.10",
     "expo-camera": "^17.0.8",
     "expo-clipboard": "~8.0.7",

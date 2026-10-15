@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -19,6 +20,23 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
 
   return (
     <View style={[styles.wrap, { paddingBottom: insets.bottom + Spacing.md, pointerEvents: 'box-none' }]}>
+      {/*
+        The strip the content scrolls behind. Without it a card sliding under
+        the bar stayed perfectly legible right down to the system navigation,
+        which reads as a layout fault rather than depth — the bar looked like
+        it was floating over a bug. Frosted, the content clearly passes
+        beneath something.
+
+        Android needs the Dimezis path to blur at all; where it is unavailable
+        the view falls back to its own translucent background, which still
+        softens what is behind it rather than failing open to nothing.
+      */}
+      <BlurView
+        intensity={Platform.OS === 'android' ? 24 : 32}
+        tint="light"
+        experimentalBlurMethod="dimezisBlurView"
+        style={[StyleSheet.absoluteFill, styles.scrim]}
+      />
       <View style={styles.bar}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
@@ -87,6 +105,13 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     alignItems: 'center',
+  },
+  scrim: {
+    // Tints the frost toward the app's surface and stands in for the blur
+    // entirely on a device that cannot do one. Never fully opaque: the point
+    // is that content is visible but clearly behind.
+    backgroundColor: 'rgba(248, 249, 255, 0.72)',
+    pointerEvents: 'none',
   },
   bar: {
     flexDirection: 'row',
