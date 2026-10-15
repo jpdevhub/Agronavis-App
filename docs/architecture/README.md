@@ -63,7 +63,6 @@ The farmer draws their field boundary on a satellite map, once. Everything after
 that is about **that** field — not a district average, not a village estimate,
 not the nearest weather station.
 
-
 ![alt text](<Farmer's Crop Management-2026-10-09-164632.png>)
 
 ### Why "one field" is the whole idea

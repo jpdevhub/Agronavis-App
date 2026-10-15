@@ -28,6 +28,29 @@ const toRadians = (deg: number): number => (deg * Math.PI) / 180;
 const saturationVapourPressure = (t: number): number =>
   0.6108 * Math.exp((17.27 * t) / (t + 237.3));
 
+/**
+ * Dew point in °C from air temperature and relative humidity.
+ *
+ * The Magnus-Tetens form with the Alduchov-Eskridge coefficients, accurate to
+ * about 0.1 °C between -40 and 50 °C, which covers anywhere a crop grows.
+ *
+ * Dew point is the temperature at which the air gives up its water. It is
+ * nearly constant across a day, because it tracks how much moisture the air
+ * holds rather than how warm it happens to be — which is exactly why it is a
+ * better question to ask than relative humidity, a figure that swings from 50%
+ * to 95% over one day without a drop of extra water being present.
+ */
+const MAGNUS_A = 17.625;
+const MAGNUS_B = 243.04;
+
+export function dewPoint(temperatureC: number, relativeHumidity: number): number {
+  // Below 1% the logarithm runs away; no real reading is that dry.
+  const rh = Math.min(100, Math.max(1, relativeHumidity));
+  const gamma =
+    Math.log(rh / 100) + (MAGNUS_A * temperatureC) / (MAGNUS_B + temperatureC);
+  return (MAGNUS_B * gamma) / (MAGNUS_A - gamma);
+}
+
 /** Extraterrestrial radiation Ra, MJ·m⁻²·day⁻¹ (FAO-56 eq. 21). */
 export function extraterrestrialRadiation(latitude: number, dayOfYear: number): number {
   const phi = toRadians(latitude);

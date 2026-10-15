@@ -12,6 +12,7 @@ import { db } from '../../config/supabase';
 import { fromPostgrest, notFound } from '../../shared/errors';
 import { assertOwnsFarm } from '../../shared/ownership';
 import { waterDeficit, weatherService } from '../weather/weather.service';
+import { dewPoint } from '../weather/et0';
 
 function toAdvisory(row: AdvisoryRow): Advisory {
   return {
@@ -190,9 +191,40 @@ export function buildWeatherAdvisory(forecast: ForecastDay[]): DraftAdvisory | n
  * Prolonged leaf wetness with warm nights is the classic blast/blight window.
  * Flagging the conditions is cheaper for the farmer than treating the outbreak.
  */
+/**
+ * How close the night has to come to the dew point before leaves are taken as
+ * wet. Not zero: a leaf radiates heat to a clear sky and sits a degree or two
+ * below the air around it, so dew forms on the crop before the thermometer
+ * says it should.
+ */
+const LEAF_WETNESS_MARGIN_C = 2;
+
+/** The band blast and blight actually sporulate in. */
+const FUNGAL_MIN_C = 18;
+const FUNGAL_MAX_C = 32;
+
+/**
+ * Does this day's night bring dew onto the leaves?
+ *
+ * Relative humidity alone cannot answer that, which is what this rule used to
+ * ask. 85% at midday in May and 85% at dawn in November describe completely
+ * different amounts of water, because relative humidity is a fraction of what
+ * the air could hold at its current temperature — it swings from 50% to 95%
+ * over a single day without a drop of moisture being added.
+ *
+ * The dew point does not move like that. When the night's low falls to it, the
+ * air gives up its water onto whatever is coolest, which is the crop. Hours of
+ * leaf wetness are what a fungal spore needs to germinate, so that is the
+ * question worth asking.
+ */
+export function leavesWetOvernight(day: ForecastDay): boolean {
+  const meanTemp = (day.tempMin + day.tempMax) / 2;
+  return day.tempMin - dewPoint(meanTemp, day.humidity) <= LEAF_WETNESS_MARGIN_C;
+}
+
 export function buildDiseaseRiskAdvisory(forecast: ForecastDay[]): DraftAdvisory | null {
   const risky = forecast.filter(
-    (d) => d.humidity >= 85 && d.tempMin >= 18 && d.tempMax <= 32,
+    (d) => leavesWetOvernight(d) && d.tempMin >= FUNGAL_MIN_C && d.tempMax <= FUNGAL_MAX_C,
   );
   if (risky.length < 2) return null;
 
@@ -200,7 +232,7 @@ export function buildDiseaseRiskAdvisory(forecast: ForecastDay[]): DraftAdvisory
     category: 'pest_control',
     severity: 'medium',
     title: 'Fungal disease risk rising',
-    body: `${risky.length} of the next five days are humid (>85%) and mild — the conditions blast and blight need. Scout the lower leaves every morning, and keep a preventive spray ready rather than waiting for visible lesions.`,
+    body: `On ${risky.length} of the next five days the night cools to near the dew point, so the leaves will be wet by morning, and the days stay mild — the conditions blast and blight need to take hold. Scout the lower leaves each morning, and keep a preventive spray ready rather than waiting for visible lesions.`,
     source: 'openweathermap',
     dedupeKey: `disease_risk:${risky[0]!.date}`,
     validUntil: hoursFromNow(120),
