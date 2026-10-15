@@ -126,6 +126,9 @@ know:
 
 ## For developers
 
+What the app does for a farmer, feature by feature with the release each
+arrived in, is in **[docs/FEATURES.md](docs/FEATURES.md)**.
+
 Legal documents are generated from `features/legal/documents.ts` by
 `npm run legal`, so the app, the website and the Play Store listing cannot
 drift apart: **[TERMS.md](TERMS.md)**, **[PRIVACY.md](PRIVACY.md)**,
