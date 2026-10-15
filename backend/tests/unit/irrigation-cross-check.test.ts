@@ -66,10 +66,19 @@ describe('irrigation advice against a measured root zone', () => {
   });
 
   it('behaves exactly as before when there is no reading', () => {
-    const without = buildIrrigationAdvisory(21, null);
-    expect(without?.title).toBe('Irrigate today');
-    expect(without?.body).not.toContain('agrees');
-    expect(buildIrrigationAdvisory(21)).toEqual(without);
+    // Under a frozen clock. An advisory carries validUntil, which is computed
+    // from Date.now(), so two calls that straddle a millisecond are unequal
+    // for a reason that has nothing to do with what is being asserted — this
+    // passed locally and failed on a slower runner.
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-15T06:00:00.000Z'));
+    try {
+      const without = buildIrrigationAdvisory(21, null);
+      expect(without?.title).toBe('Irrigate today');
+      expect(without?.body).not.toContain('agrees');
+      expect(buildIrrigationAdvisory(21)).toEqual(without);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('does not let a wet root zone invent advice where there was none', () => {
