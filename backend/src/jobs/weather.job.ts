@@ -41,8 +41,13 @@ export async function runWeatherPoll(): Promise<{ farms: number; calls: number; 
         advisoryCount += created.length;
 
         for (const advisory of created) {
-          // Only interrupt someone's day for something they must act on today.
-          if (advisory.severity === 'critical') {
+          // What earns a buzz. Critical and high are things to act on within a
+          // day or two — irrigate, do not spray, clear the drains. Medium and
+          // below still reach the farmer, as a card on the dashboard and a row
+          // in the alerts screen, but they do not interrupt anyone: an app
+          // that notifies about everything gets its notifications turned off,
+          // and then the one that mattered is lost with them.
+          if (advisory.severity === 'critical' || advisory.severity === 'high') {
             await notificationsService.send(farm.farmerId, {
               title: advisory.title,
               body: advisory.body.slice(0, 160),

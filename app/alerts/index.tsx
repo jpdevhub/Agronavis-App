@@ -1,0 +1,209 @@
+import { useCallback, useState } from 'react';
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
+import type { AppNotification } from '@agronavis/shared-types';
+import { EmptyState, Loader } from '@/components/ui';
+import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
+import { useNotifications } from '@/hooks/useNotifications';
+
+/** Which icon and colour an alert wears, by the kind of thing it is about. */
+const LOOK: Record<string, { icon: keyof typeof MaterialIcons.glyphMap; tint: string }> = {
+  irrigation: { icon: 'water-drop', tint: Colors.primary },
+  weather_alert: { icon: 'thunderstorm', tint: Colors.onTertiaryContainer },
+  pest_control: { icon: 'coronavirus', tint: Colors.onTertiaryContainer },
+  general: { icon: 'eco', tint: Colors.primary },
+};
+
+function when(iso: string): string {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`;
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
+function AlertRow({
+  alert,
+  onPress,
+}: {
+  alert: AppNotification;
+  onPress: () => void;
+}) {
+  const look = LOOK[alert.type] ?? LOOK.general!;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={[styles.row, !alert.read && styles.rowUnread]}
+    >
+      <View style={[styles.icon, { backgroundColor: Colors.secondaryContainer }]}>
+        <MaterialIcons name={look.icon} size={20} color={look.tint} />
+      </View>
+      <View style={styles.rowText}>
+        <View style={styles.rowHead}>
+          <Text style={[styles.title, !alert.read && styles.titleUnread]} numberOfLines={2}>
+            {alert.title}
+          </Text>
+          {!alert.read ? <View style={styles.dot} /> : null}
+        </View>
+        <Text style={styles.body}>{alert.body}</Text>
+        <Text style={styles.when}>{when(alert.createdAt)}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+export default function AlertsScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { notifications, unread, isLoading, error, refetch, markRead, markAllRead, isMarkingAll } =
+    useNotifications();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
+  return (
+    <View style={styles.root}>
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
+
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.back}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          hitSlop={8}
+        >
+          <MaterialIcons name="arrow-back" size={22} color={Colors.onSurface} />
+        </Pressable>
+        <View style={styles.headerText}>
+          <Text style={styles.headerTitle}>Alerts</Text>
+          <Text style={styles.headerSub}>
+            {unread > 0 ? `${unread} unread` : 'All caught up'}
+          </Text>
+        </View>
+        {unread > 0 && !isMarkingAll ? (
+          <Pressable onPress={() => markAllRead()} hitSlop={8} accessibilityRole="button">
+            <Text style={styles.markAll}>Mark all read</Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      {isLoading ? (
+        <View style={styles.centre}>
+          <Loader size={48} />
+        </View>
+      ) : error ? (
+        <EmptyState
+          icon="cloud-off"
+          title="Could not load your alerts"
+          description={error.message}
+          actionLabel="Try again"
+          onAction={() => refetch()}
+        />
+      ) : notifications.length === 0 ? (
+        <EmptyState
+          icon="notifications-none"
+          title="Nothing yet"
+          description="Irrigation reminders, disease warnings and weather alerts for your fields will appear here."
+        />
+      ) : (
+        <ScrollView
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + Spacing.xxxl }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.primary}
+            />
+          }
+        >
+          {notifications.map((alert) => (
+            <AlertRow
+              key={alert.id}
+              alert={alert}
+              onPress={() => {
+                if (!alert.read) markRead(alert.id);
+              }}
+            />
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: Colors.surface },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
+  },
+  back: {
+    width: 40,
+    height: 40,
+    borderRadius: Shape.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surfaceContainerHigh,
+  },
+  headerText: { flex: 1 },
+  headerTitle: { ...TypeEmphasized.titleLarge, color: Colors.onSurface },
+  headerSub: { ...Type.bodySmall, color: Colors.onSurfaceVariant },
+  markAll: { ...Type.labelLarge, color: Colors.primary },
+
+  centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  list: { padding: Spacing.lg, gap: Spacing.sm },
+
+  row: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: Shape.large,
+    backgroundColor: Colors.surfaceContainerLow,
+  },
+  rowUnread: { backgroundColor: Colors.surfaceContainerHigh },
+  icon: {
+    width: 40,
+    height: 40,
+    borderRadius: Shape.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowText: { flex: 1, gap: 2 },
+  rowHead: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
+  title: { ...Type.titleSmall, color: Colors.onSurface, flex: 1 },
+  titleUnread: { ...TypeEmphasized.titleSmall, color: Colors.onSurface, flex: 1 },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+    marginTop: 6,
+  },
+  body: { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
+  when: { ...Type.bodySmall, color: Colors.outline, marginTop: 2 },
+});

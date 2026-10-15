@@ -65,8 +65,13 @@ export const notificationsService = {
   },
 
   /**
-   * Stores a notification, pushes it over the socket, and delivers it via Expo
-   * when the device has a token. Delivery failures are logged, never thrown.
+   * Stores a notification and delivers it to the handset.
+   *
+   * Expo's push service is the one call that reaches both platforms: it hands
+   * off to FCM on Android and APNs on iOS, so neither credential has to live
+   * in this process. The row is written first and the push attempted second —
+   * delivery is best effort, and a farmer who had their phone off must still
+   * find the alert waiting when they open the app.
    */
   async send(
     farmerId: string,
@@ -107,6 +112,10 @@ export const notificationsService = {
             data: payload.data ?? {},
             sound: 'default',
             priority: 'high',
+            // Android 8 and later drop a notification with no channel. The app
+            // creates this one on first launch; naming it here is what gets
+            // the alert through with sound and a heads-up banner.
+            channelId: 'default',
           },
           { timeout: 8_000, headers: { 'Content-Type': 'application/json' } },
         );
