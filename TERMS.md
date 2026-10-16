@@ -87,7 +87,7 @@ We may suspend or close an account that breaches these terms, that is used unlaw
 
 ## 12. Grievance redressal
 
-In accordance with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, complaints about content or about your use of Agronavis may be sent to our Grievance Officer: [Name of Grievance Officer], contact@agronavis.in, Barrackpore, Kolkata, West Bengal, India.
+In accordance with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, complaints about content or about your use of Agronavis may be sent to our Grievance Officer at contact@agronavis.in, or by post to Agronavis, Barrackpore, Kolkata, West Bengal, India.
 
 We acknowledge a complaint within 24 hours of receiving it and work to resolve it within 15 days.
 
