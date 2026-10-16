@@ -78,9 +78,9 @@ export function RootZoneCard() {
 
   return (
     <Pressable
-      onPress={() => router.push('/weather-report' as never)}
+      onPress={() => router.push('/root-zone' as never)}
       accessibilityRole="button"
-      accessibilityLabel={`Root zone water ${pct} percent of saturation. Open the weather record.`}
+      accessibilityLabel={`Root zone water ${pct} percent of saturation. Open soil water and disease watch.`}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.head}>
