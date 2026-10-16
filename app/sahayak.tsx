@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
@@ -30,6 +31,7 @@ const SUGGESTIONS = [
 
 export default function SahayakScreen() {
   const router = useRouter();
+  const goBack = useGoBack('/(tabs)/dashboard');
   const insets = useSafeAreaInsets();
 
   /**
@@ -146,7 +148,7 @@ export default function SahayakScreen() {
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
-        <Pressable onPress={() => router.back()} style={styles.iconBtn} accessibilityLabel="Back">
+        <Pressable onPress={() => goBack()} style={styles.iconBtn} accessibilityLabel="Back">
           <MaterialIcons name="arrow-back" size={22} color={Colors.onSurface} />
         </Pressable>
         <View style={styles.headerText}>
@@ -227,7 +229,7 @@ export default function SahayakScreen() {
         ) : status === 'loading' ? (
           <View style={styles.centre}>
             <Loader size={28} />
-            <Text style={styles.centreText}>Loading the model…</Text>
+            <Text style={styles.centreText}>Waking Sahayak up</Text>
           </View>
         ) : status === 'error' ? (
           <Notice icon="error-outline" title="Could not start" body={error ?? 'Unknown error.'} actionLabel="Try again" onAction={load} />

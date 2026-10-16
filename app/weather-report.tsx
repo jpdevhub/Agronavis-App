@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { SolarDay } from '@agronavis/shared-types';
@@ -140,6 +141,7 @@ function Metric({
 
 export default function WeatherReportScreen() {
   const router = useRouter();
+  const goBack = useGoBack('/(tabs)/dashboard');
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ fieldId?: string; farmId?: string }>();
 
@@ -169,7 +171,7 @@ export default function WeatherReportScreen() {
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
-        <Pressable onPress={() => router.back()} style={styles.iconBtn} accessibilityLabel="Back">
+        <Pressable onPress={() => goBack()} style={styles.iconBtn} accessibilityLabel="Back">
           <MaterialIcons name="arrow-back" size={22} color={Colors.onSurface} />
         </Pressable>
         <View style={styles.headerText}>

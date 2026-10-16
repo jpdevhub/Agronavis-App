@@ -28,7 +28,7 @@ export interface LoadingScreenProps {
 /** Past this, the wait stops being normal and gets explained. */
 const SLOW_MS = 6_000;
 
-export function LoadingScreen({ message = 'Just a moment…', detail, slowDetail }: LoadingScreenProps) {
+export function LoadingScreen({ message = 'One sec', detail, slowDetail }: LoadingScreenProps) {
   const [slow, setSlow] = useState(false);
 
   useEffect(() => {

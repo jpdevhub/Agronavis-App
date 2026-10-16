@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, Image, } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
@@ -19,6 +20,7 @@ function initialsOf(name: string | undefined, email: string | undefined): string
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const goBack = useGoBack('/(tabs)/dashboard');
   const insets = useSafeAreaInsets();
   const signOut = useAuthStore((state) => state.signOut);
   const { data: farmer, isLoading } = useFarmer();
@@ -32,7 +34,7 @@ export default function ProfileScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
 
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+        <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
           <MaterialIcons name="arrow-back" size={22} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>

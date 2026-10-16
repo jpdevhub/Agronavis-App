@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
@@ -29,6 +30,7 @@ export interface LegalDocumentProps {
 
 export function LegalDocument({ title, updated, intro, sections }: LegalDocumentProps) {
   const router = useRouter();
+  const goBack = useGoBack('/profile');
   const insets = useSafeAreaInsets();
 
   return (
@@ -37,7 +39,7 @@ export function LegalDocument({ title, updated, intro, sections }: LegalDocument
 
       <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => goBack()}
           style={styles.back}
           accessibilityRole="button"
           accessibilityLabel="Go back"

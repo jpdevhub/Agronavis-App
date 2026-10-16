@@ -488,6 +488,52 @@ export interface CommunityReply {
   isOwn: boolean;
 }
 
+/** One satellite detection, as the app receives it. */
+export interface NearbyFire {
+  latitude: number;
+  longitude: number;
+  distanceKm: number;
+  /** Compass degrees from the farm to the fire. */
+  bearingDeg: number;
+  /** True when its smoke is heading this way; null when the wind is unknown. */
+  upwind: boolean | null;
+  /** Brightness temperature of the fire pixel, kelvin. */
+  brightnessK: number;
+  /** FIRMS' own: 'l' low, 'n' nominal, 'h' high. */
+  confidence: string;
+  acquiredDate: string;
+  /** HHMM, UTC. */
+  acquiredTime: string;
+  region: string | null;
+}
+
+export interface FarmFireReport {
+  /** False when the farm has no coordinates yet. */
+  mapped: boolean;
+  region: string | null;
+  /** Degrees the wind blows from, or null when the forecast cannot say. */
+  windFromDeg: number | null;
+  days: number;
+  radiusKm: number;
+  upwindCount: number;
+  fires: NearbyFire[];
+}
+
+export interface FireRegionCount {
+  region: string;
+  fires: number;
+  peakBrightnessK: number;
+}
+
+export interface FireSummary {
+  totalFires: number;
+  days: number;
+  regions: FireRegionCount[];
+  /** Regions the satellite service could not answer for, not regions at zero. */
+  unavailable: string[];
+  latestAcquired: string | null;
+}
+
 export interface AppNotification {
   id: string;
   title: string;

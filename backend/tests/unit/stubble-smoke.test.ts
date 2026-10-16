@@ -2,8 +2,10 @@ import {
   angleBetween,
   bearingDeg,
   boundingBox,
+  BURN_REGIONS,
   distanceKm,
   parseFirmsCsv,
+  regionFor,
 } from '../../src/modules/fires/fires.service';
 import { buildSmokeAdvisory, type NearbyFire } from '../../src/modules/advisory/advisory.service';
 import { acquiredAt } from '../../src/jobs/fires.job';
@@ -137,3 +139,41 @@ describe('who gets warned about smoke', () => {
     expect(buildSmokeAdvisory([], 315)).toBeNull();
   });
 });
+
+describe('naming where a fire is', () => {
+  it.each([
+    ['Punjab', 30.9, 75.85],
+    ['Haryana', 29.4, 76.5],
+    ['Bihar', 25.6, 85.1],
+    ['Gujarat', 22.3, 70.8],
+  ])('places a %s fire', (expected, lat, lon) => {
+    expect(regionFor(lat, lon)).toBe(expected);
+  });
+
+  it('prefers the smaller region where two overlap', () => {
+    // Delhi sits inside the Uttar Pradesh and Haryana rectangles.
+    expect(regionFor(28.61, 77.21)).toBe('Delhi NCR');
+  });
+
+  it('is null well outside the farmed regions', () => {
+    expect(regionFor(5.0, 60.0)).toBeNull();
+  });
+
+  it('covers the states that actually burn after the kharif harvest', () => {
+    const names = BURN_REGIONS.map((r) => r.name);
+    for (const must of ['Punjab', 'Haryana', 'Uttar Pradesh', 'Madhya Pradesh']) {
+      expect(names).toContain(must);
+    }
+  });
+
+  it('gives every region a box that is the right way round', () => {
+    for (const r of BURN_REGIONS) {
+      const [s, w, n, e] = r.box;
+      expect(s).toBeLessThan(n);
+      expect(w).toBeLessThan(e);
+      // Small enough that FIRMS will answer for it in one request.
+      expect((n - s) * (e - w)).toBeLessThan(80);
+    }
+  });
+});
+

@@ -158,6 +158,7 @@ function AppShell() {
         <Stack.Screen name="profile/edit" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="profile/security" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="alerts/index" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="fires/index" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="legal/terms" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="legal/privacy" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="legal/security" options={{ animation: 'slide_from_bottom' }} />
@@ -173,11 +174,11 @@ function AppShell() {
       {isLoading || resolving ? (
         <View style={styles.overlay}>
           <LoadingScreen
-            message={resolving ? 'Signing you in…' : 'Opening Agronavis…'}
-            detail={resolving ? 'Setting up your farm.' : undefined}
+            message={resolving ? 'Getting your farm ready' : 'Warming up'}
+            detail={resolving ? 'Two seconds. Promise.' : undefined}
             slowDetail={
               resolving
-                ? 'Our server was asleep and is starting up. This happens on the first sign-in of the day and takes about half a minute — after that it is instant.'
+                ? 'Okay, slightly more than two seconds — our server naps when nobody is around and is stretching now. First sign-in of the day only, then it is instant.'
                 : undefined
             }
           />
