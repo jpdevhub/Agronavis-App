@@ -78,7 +78,6 @@ function FireRow({ fire }: { fire: NearbyFire }) {
 }
 
 export default function FiresScreen() {
-  const router = useRouter();
   const goBack = useGoBack('/(tabs)/dashboard');
   const insets = useSafeAreaInsets();
   // Six months of history. FIRMS itself answers five days at a time, so the

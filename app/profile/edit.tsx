@@ -29,7 +29,6 @@ const schema = z.object({
 type FormFields = z.infer<typeof schema>;
 
 export default function EditProfileScreen() {
-  const router = useRouter();
   const goBack = useGoBack('/profile');
   const insets = useSafeAreaInsets();
   const user = useAuthStore(state => state.user);

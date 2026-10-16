@@ -37,7 +37,6 @@ function describe(crop: EligibleCrop): string[] {
 }
 
 export default function ChooseCropScreen() {
-  const router = useRouter();
   const goBack = useGoBack('/(tabs)/dashboard');
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();

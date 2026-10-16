@@ -127,7 +127,6 @@ function AlertRow({
 }
 
 export default function AlertsScreen() {
-  const router = useRouter();
   const goBack = useGoBack('/(tabs)/dashboard');
   const insets = useSafeAreaInsets();
   const { notifications, unread, isLoading, error, refetch, markRead, markAllRead, isMarkingAll } =
