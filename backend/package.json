@@ -17,6 +17,7 @@
     "sync:soil": "tsx src/jobs/soil.cli.ts",
     "sync:fertiliser": "tsx src/jobs/fertiliser.cli.ts",
     "sync:mandi": "tsx src/jobs/mandi.cli.ts",
+    "sync:fires": "tsx src/jobs/fires.cli.ts",
     "seed:diseases": "tsx src/jobs/diseases.cli.ts"
   },
   "dependencies": {
