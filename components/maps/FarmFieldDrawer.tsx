@@ -281,8 +281,8 @@ export default function FarmFieldDrawer({
     return (
       <View style={styles.gpsWait}>
         <Loader tone="onColor" size={48} />
-        <Text style={styles.gpsText}>Finding your location…</Text>
-        <Text style={styles.gpsSubText}>This takes a few seconds on first launch</Text>
+        <Text style={styles.gpsText}>Finding you on the map</Text>
+        <Text style={styles.gpsSubText}>Takes a moment the first time</Text>
       </View>
     );
   }

@@ -4,6 +4,7 @@ import {
   StatusBar, Switch, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useGoBack } from '@/hooks/useGoBack';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii } from '@/constants/theme';
 import { showAlert } from '@/utils/alert';
@@ -28,6 +29,7 @@ const NOTIFICATIONS: NotifItem[] = [
 
 export default function OnboardingStep3() {
   const router  = useRouter();
+  const goBack  = useGoBack('/(onboarding)/step2');
   const user    = useAuthStore((s) => s.user);
   const { state, district, reset } = useOnboardingStore();
   const [finishing, setFinishing] = useState(false);
@@ -69,7 +71,7 @@ export default function OnboardingStep3() {
       <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => goBack()} style={styles.backBtn}>
           <MaterialIcons name="arrow-back" size={22} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.brand}>Agronavis</Text>

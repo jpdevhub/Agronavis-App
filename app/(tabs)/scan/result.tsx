@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useGoBack } from '@/hooks/useGoBack';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { DiseaseReference } from '@agronavis/shared-types';
 import { Button, Card, EmptyState, Loader, Skeleton } from '@/components/ui';
@@ -24,6 +25,7 @@ type SaveState = { status: 'idle' | 'saving' | 'saved'; error?: string };
 
 export default function ScanResultScreen() {
   const router = useRouter();
+  const goBack = useGoBack('/(tabs)/scan');
   const { capture } = useLocalSearchParams<{ capture?: string }>();
   const activeFarmId = useFarmStore((s) => s.activeFarmId);
 
@@ -139,7 +141,7 @@ export default function ScanResultScreen() {
               <MaterialIcons name="image-not-supported" size={40} color={Colors.onSurfaceVariant} />
             </View>
           )}
-          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
+          <Pressable onPress={() => goBack()} style={styles.backBtn} accessibilityRole="button">
             <MaterialIcons name="arrow-back" size={22} color={Colors.onSurface} />
           </Pressable>
         </View>
@@ -149,7 +151,7 @@ export default function ScanResultScreen() {
             <Card variant="filled" style={styles.notice}>
               <View style={styles.noticeHead}>
                 <Loader size={28} />
-                <Text style={styles.noticeTitle}>Reading the photo…</Text>
+                <Text style={styles.noticeTitle}>Having a look at that leaf</Text>
               </View>
             </Card>
           ) : result && !result.plantDetected ? (

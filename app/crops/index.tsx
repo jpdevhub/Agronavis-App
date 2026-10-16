@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useGoBack } from '@/hooks/useGoBack';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -37,6 +38,7 @@ function describe(crop: EligibleCrop): string[] {
 
 export default function ChooseCropScreen() {
   const router = useRouter();
+  const goBack = useGoBack('/(tabs)/dashboard');
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const activeFieldId = useFarmStore((s) => s.activeFieldId);
@@ -71,7 +73,7 @@ export default function ChooseCropScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crops'] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      router.back();
+      goBack();
     },
     onError: (e: Error) => showAlert('Could not add the crop', e.message),
   });
@@ -79,7 +81,7 @@ export default function ChooseCropScreen() {
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
-        <Pressable onPress={() => router.back()} style={styles.iconBtn} accessibilityLabel="Back">
+        <Pressable onPress={() => goBack()} style={styles.iconBtn} accessibilityLabel="Back">
           <MaterialIcons name="arrow-back" size={22} color={Colors.onSurface} />
         </Pressable>
         <View style={styles.headerText}>
@@ -184,7 +186,7 @@ export default function ChooseCropScreen() {
                 accessibilityRole="button"
               >
                 <Text style={styles.ctaText}>
-                  {save.isPending ? 'Adding…' : `Add ${chosen.name} and build its plan`}
+                  {save.isPending ? 'Setting it up' : `Add ${chosen.name} and build its plan`}
                 </Text>
               </Pressable>
             </View>

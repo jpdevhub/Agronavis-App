@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NearbyFire } from '@agronavis/shared-types';
@@ -55,6 +56,7 @@ function FireRow({ fire }: { fire: NearbyFire }) {
 
 export default function FiresScreen() {
   const router = useRouter();
+  const goBack = useGoBack('/(tabs)/dashboard');
   const insets = useSafeAreaInsets();
   const near = useFarmFires(3, 150);
   const national = useFireSummary(1);
@@ -74,7 +76,7 @@ export default function FiresScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
 
       <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
-        <Pressable onPress={() => router.back()} style={styles.back} hitSlop={8} accessibilityRole="button">
+        <Pressable onPress={() => goBack()} style={styles.back} hitSlop={8} accessibilityRole="button">
           <MaterialIcons name="arrow-back" size={22} color={Colors.onSurface} />
         </Pressable>
         <View style={styles.headerText}>

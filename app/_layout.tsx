@@ -174,11 +174,11 @@ function AppShell() {
       {isLoading || resolving ? (
         <View style={styles.overlay}>
           <LoadingScreen
-            message={resolving ? 'Signing you in…' : 'Opening Agronavis…'}
-            detail={resolving ? 'Setting up your farm.' : undefined}
+            message={resolving ? 'Getting your farm ready' : 'Warming up'}
+            detail={resolving ? 'Two seconds. Promise.' : undefined}
             slowDetail={
               resolving
-                ? 'Our server was asleep and is starting up. This happens on the first sign-in of the day and takes about half a minute — after that it is instant.'
+                ? 'Okay, slightly more than two seconds — our server naps when nobody is around and is stretching now. First sign-in of the day only, then it is instant.'
                 : undefined
             }
           />

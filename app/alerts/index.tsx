@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { AppNotification } from '@agronavis/shared-types';
@@ -127,6 +128,7 @@ function AlertRow({
 
 export default function AlertsScreen() {
   const router = useRouter();
+  const goBack = useGoBack('/(tabs)/dashboard');
   const insets = useSafeAreaInsets();
   const { notifications, unread, isLoading, error, refetch, markRead, markAllRead, isMarkingAll } =
     useNotifications();
@@ -144,7 +146,7 @@ export default function AlertsScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => goBack()}
           style={styles.back}
           accessibilityRole="button"
           accessibilityLabel="Go back"

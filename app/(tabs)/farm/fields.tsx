@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarHeight } from '@/hooks/useTabBarHeight';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -20,6 +21,7 @@ import { useFarmStore } from '@/store/useFarmStore';
 
 export default function MappedFieldsScreen() {
   const router = useRouter();
+  const goBack = useGoBack('/(tabs)/farm');
   const insets = useSafeAreaInsets();
   const tabBarHeight = useTabBarHeight();
   const { data: fields, isLoading, error, refetch } = useFarmFields();
@@ -48,7 +50,7 @@ export default function MappedFieldsScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
 
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
+        <Pressable onPress={() => goBack()} style={styles.backBtn} accessibilityRole="button">
           <MaterialIcons name="arrow-back" size={22} color={Colors.onSurface} />
         </Pressable>
         <Text style={styles.headerTitle}>Mapped fields</Text>

@@ -5,6 +5,7 @@ import {
   Image, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useForm, Controller } from 'react-hook-form';
@@ -29,6 +30,7 @@ type FormFields = z.infer<typeof schema>;
 
 export default function EditProfileScreen() {
   const router = useRouter();
+  const goBack = useGoBack('/profile');
   const insets = useSafeAreaInsets();
   const user = useAuthStore(state => state.user);
 
@@ -94,7 +96,7 @@ export default function EditProfileScreen() {
         state: data.state || null,
         district: data.district || null,
       });
-      router.back();
+      goBack();
     } catch (error) {
       showAlert('Save failed', (error as Error).message);
     }
@@ -105,7 +107,7 @@ export default function EditProfileScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
 
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+        <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
           <MaterialIcons name="arrow-back" size={22} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
