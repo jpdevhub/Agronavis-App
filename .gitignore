@@ -89,3 +89,15 @@ expo-env.d.ts
 # @end expo-cli
 # Scratch folder for building the pitch deck; not part of the app.
 .deck-build/
+
+# Agent tooling and the skills it installs. Local to whoever is working on
+# the repo, versioned by its own lockfile, and 60 MB of it — not something a
+# clone needs to build or run the app.
+.claude/
+.agents/
+skills-lock.json
+
+# Rendered promo and launch videos. Generated artefacts, tens of megabytes
+# each; the compositions that produce them are what would be worth keeping.
+brag-output/
+promo-output/
