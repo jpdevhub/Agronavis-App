@@ -1,4 +1,5 @@
 import axios from 'axios';
+import https from 'node:https';
 import { env } from '../../config/env';
 import { logger } from '../../config/logger';
 import { db } from '../../config/supabase';
@@ -209,14 +210,40 @@ function rememberNear(key: string, fires: FireDetection[]): void {
  * free tier can be a long time. One retry after a short pause covers the
  * common case without turning an outage into a pile of queued requests.
  */
+/**
+ * IPv4 only, and connections reused.
+ *
+ * Production failed with `ENETUNREACH 2001:4d0:241a:40c0::34:443 - Local
+ * (:::0)` beside an IPv4 timeout: Node tries both families, Render has no
+ * IPv6 route out, and the attempt is spent before the IPv4 one gets its turn.
+ * Pinning the family skips the dead half.
+ */
+const firmsAgent = new https.Agent({ family: 4, keepAlive: true, timeout: 30_000 });
+
+/** The last thing FIRMS did, so /health can say whether it is reachable. */
+export const firmsStatus: { at: string | null; ok: boolean; detail: string } = {
+  at: null, ok: false, detail: 'not yet called',
+};
+
 async function getWithRetry(url: string, attempts = 2): Promise<{ data: string }> {
   let lastError: unknown;
 
   for (let i = 0; i < attempts; i += 1) {
     try {
-      return await axios.get<string>(url, { timeout: 20_000, responseType: 'text' });
+      const response = await axios.get<string>(url, {
+        timeout: 30_000,
+        responseType: 'text',
+        httpsAgent: firmsAgent,
+      });
+      firmsStatus.at = new Date().toISOString();
+      firmsStatus.ok = true;
+      firmsStatus.detail = 'ok';
+      return response;
     } catch (error) {
       lastError = error;
+      firmsStatus.at = new Date().toISOString();
+      firmsStatus.ok = false;
+      firmsStatus.detail = `${(error as { code?: string }).code ?? ''} ${(error as Error).message}`.trim();
       // Only a connection-level failure is worth repeating. A rejected key or
       // a bad day range will be rejected again just as fast.
       const code = (error as { code?: string }).code ?? '';

@@ -4,6 +4,7 @@ import express, { type Application, type Request, type Response } from 'express'
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { env } from './config/env';
+import { firmsStatus } from './modules/fires/fires.service';
 import { errorMiddleware, notFoundMiddleware } from './middleware/error.middleware';
 import { requestContext } from './middleware/request-context.middleware';
 
@@ -71,6 +72,12 @@ export function createApp(): Application {
        * from one that was never fixed. Render sets this; it is absent locally.
        */
       commit: process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? 'local',
+      /**
+       * Whether NASA FIRMS is answering this server. It reached the point of
+       * timing out in production while working fine from a laptop, and
+       * without this there was no way to tell from outside.
+       */
+      firms: firmsStatus,
       environment: env.NODE_ENV,
       timestamp: new Date().toISOString(),
     });
