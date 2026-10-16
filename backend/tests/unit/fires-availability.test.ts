@@ -127,6 +127,38 @@ describe('near() never reports an all-clear it has not earned', () => {
   });
 });
 
+describe('a long history still shows the fires happening now', () => {
+  /**
+   * The dashboard card asks for two days and the fires screen asks for six
+   * months. They were answered by different code paths, so the card warned
+   * "1 fire upwind, 18 km away" while the screen underneath it said "nothing
+   * burning within 150 km" — the long request skipped the live fetch
+   * entirely and read only a store that had not been backfilled yet.
+   */
+  it('caps the live request rather than skipping it', async () => {
+    mockedAxios.get.mockResolvedValue({ data: CSV });
+    await firesService.near(30.9, 75.85, 150, 180);
+
+    expect(mockedAxios.get).toHaveBeenCalled();
+    const url = mockedAxios.get.mock.calls[0]![0] as string;
+    expect(url.endsWith(`/${MAX_DAY_RANGE}`)).toBe(true);
+  });
+
+  it('never sends a day range FIRMS rejects', async () => {
+    mockedAxios.get.mockResolvedValue({ data: CSV });
+
+    // 7 was the old clamp, and FIRMS answers it with "Invalid day range.
+    // Expects [1..5]" — which parsed to zero fires and read as an all-clear.
+    for (const requested of [1, 2, 3, 5, 7, 30, 180]) {
+      mockedAxios.get.mockClear();
+      await firesService.near(30.9, 75.85, 150, requested);
+      const range = Number((mockedAxios.get.mock.calls[0]![0] as string).split('/').pop());
+      expect(range).toBeGreaterThanOrEqual(1);
+      expect(range).toBeLessThanOrEqual(MAX_DAY_RANGE);
+    }
+  });
+});
+
 describe('stored() — the fallback that stands in for a failed request', () => {
   it('returns nothing and no timestamp when the store errors', async () => {
     chain.limit.mockResolvedValue({ data: null, error: { message: 'down' } });

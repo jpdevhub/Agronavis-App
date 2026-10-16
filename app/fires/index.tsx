@@ -9,6 +9,16 @@ import { EmptyState, Loader } from '@/components/ui';
 import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { useFarmFires, useFireSummary } from '@/hooks/useFires';
 
+/** A day count as a farmer would say it, not as the API counts it. */
+function windowText(days: number | undefined): string {
+  const d = days ?? 0;
+  if (d >= 150) return 'the last six months';
+  if (d >= 50) return `the last ${Math.round(d / 30)} months`;
+  if (d >= 13) return `the last ${Math.round(d / 7)} weeks`;
+  if (d <= 1) return 'the last day';
+  return `the last ${d} days`;
+}
+
 /** "2 hours ago" rather than a timestamp a farmer has to subtract from. */
 function sinceText(iso: string | null | undefined): string {
   if (!iso) return 'a short while ago';
@@ -205,7 +215,7 @@ export default function FiresScreen() {
                 <Text style={styles.calmTitle}>Nothing burning nearby</Text>
               </View>
               <Text style={styles.calmBody}>
-                No fires within {near.report.radiusKm} km over the last {near.report.days} days.
+                No fires within {near.report.radiusKm} km in {windowText(near.report.days)}.
                 {near.report.region ? ` You are in ${near.report.region}.` : ''}
               </Text>
             </View>

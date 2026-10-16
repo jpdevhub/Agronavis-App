@@ -25,11 +25,12 @@ const UPWIND_ARC_DEG = 60;
  */
 async function reportFor(lat: number, lon: number, days: number, radiusKm: number) {
   const [live, forecast] = await Promise.all([
-    // FIRMS answers at most five days. Anything longer is served from the
-    // store, which the backfill and the poller keep filled.
-    days <= MAX_DAY_RANGE
-      ? firesService.near(lat, lon, radiusKm, days)
-      : Promise.resolve({ available: false, reason: 'window_too_long', fires: [] }),
+    // Always ask for the live window, however long a history the caller
+    // wanted. FIRMS answers at most five days, so a six-month request is
+    // capped here and the rest comes from the store — skipping the live call
+    // entirely, as this did at first, meant the fires screen could not see
+    // the very fires the dashboard card was warning about.
+    firesService.near(lat, lon, radiusKm, Math.min(days, MAX_DAY_RANGE)),
     weatherService.getForecast(lat, lon).catch(() => []),
   ]);
 
