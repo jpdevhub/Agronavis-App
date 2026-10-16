@@ -95,8 +95,70 @@ export default function FiresScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
           }
         >
+          {/* ── Across India ───────────────────────────────────────────── */}
+          <View style={styles.sectionHead}>
+            <Text style={styles.section}>Across India</Text>
+            <Text style={styles.sectionWindow}>last 24 hours</Text>
+          </View>
+
+          {national.totalFires === 0 && national.unavailable.length > 0 ? (
+            // Every region failed. Saying "nothing detected" here would be
+            // claiming the country is clear on the strength of requests that
+            // never came back.
+            <View style={[styles.card, styles.cardWatch]}>
+              <Text style={styles.cardTitle}>Could not reach the satellite service</Text>
+              <Text style={styles.cardBody}>
+                No region answered just now, so there is no national figure to show. Pull down to
+                try again. What is around your field, below, was fetched separately.
+              </Text>
+            </View>
+          ) : national.totalFires === 0 ? (
+            <EmptyState
+              icon="satellite-alt"
+              title="Nothing detected today"
+              description="No crop fires reported anywhere the satellites looked in the last 24 hours."
+            />
+          ) : (
+            <>
+              <View style={[styles.card, styles.cardTotal]}>
+                <Text style={styles.totalNumber}>{national.totalFires}</Text>
+                <Text style={styles.totalLabel}>
+                  fires detected in the last day{worst ? `, most of them in ${worst.region}` : ''}
+                </Text>
+              </View>
+
+              {national.regions
+                .filter((r) => r.fires > 0)
+                .map((r) => {
+                  const share = worst?.fires ? r.fires / worst.fires : 0;
+                  return (
+                    <View key={r.region} style={styles.regionRow}>
+                      <View style={styles.regionText}>
+                        <Text style={styles.regionName}>{r.region}</Text>
+                        <Text style={styles.regionMeta}>{intensity(r.peakBrightnessK)} at its worst</Text>
+                      </View>
+                      <View style={styles.regionBarWrap}>
+                        <View style={[styles.regionBar, { width: `${Math.max(4, share * 100)}%` }]} />
+                      </View>
+                      <Text style={styles.regionCount}>{r.fires}</Text>
+                    </View>
+                  );
+                })}
+
+              {national.unavailable.length > 0 ? (
+                <Text style={styles.unavailable}>
+                  Could not reach the satellite service for {national.unavailable.join(', ')} — those
+                  are not counted above rather than being zero.
+                </Text>
+              ) : null}
+            </>
+          )}
+
           {/* ── Near this farm ─────────────────────────────────────────── */}
-          <Text style={styles.section}>Around your field</Text>
+          <View style={styles.sectionHead}>
+            <Text style={styles.section}>Around your field</Text>
+            <Text style={styles.sectionWindow}>last {near.report?.days ?? 3} days</Text>
+          </View>
 
           {!near.report?.mapped ? (
             <View style={styles.card}>
@@ -138,51 +200,6 @@ export default function FiresScreen() {
             </>
           )}
 
-          {/* ── Across India ───────────────────────────────────────────── */}
-          <Text style={styles.section}>Across India today</Text>
-
-          {national.totalFires === 0 ? (
-            <EmptyState
-              icon="satellite-alt"
-              title="Nothing detected"
-              description="No crop fires reported by the satellites in the last day."
-            />
-          ) : (
-            <>
-              <View style={[styles.card, styles.cardTotal]}>
-                <Text style={styles.totalNumber}>{national.totalFires}</Text>
-                <Text style={styles.totalLabel}>
-                  fires detected in the last day{worst ? `, most of them in ${worst.region}` : ''}
-                </Text>
-              </View>
-
-              {national.regions
-                .filter((r) => r.fires > 0)
-                .map((r) => {
-                  const share = worst?.fires ? r.fires / worst.fires : 0;
-                  return (
-                    <View key={r.region} style={styles.regionRow}>
-                      <View style={styles.regionText}>
-                        <Text style={styles.regionName}>{r.region}</Text>
-                        <Text style={styles.regionMeta}>{intensity(r.peakBrightnessK)} at its worst</Text>
-                      </View>
-                      <View style={styles.regionBarWrap}>
-                        <View style={[styles.regionBar, { width: `${Math.max(4, share * 100)}%` }]} />
-                      </View>
-                      <Text style={styles.regionCount}>{r.fires}</Text>
-                    </View>
-                  );
-                })}
-
-              {national.unavailable.length > 0 ? (
-                <Text style={styles.unavailable}>
-                  Could not reach the satellite service for {national.unavailable.join(', ')} — those
-                  are not counted above rather than being zero.
-                </Text>
-              ) : null}
-            </>
-          )}
-
           <Text style={styles.footnote}>
             NASA FIRMS, VIIRS at 375 m. Regions are approximate — a detection near a border may be
             attributed to its neighbour. A detection is a hot spot, which is almost always a crop
@@ -212,7 +229,15 @@ const styles = StyleSheet.create({
 
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: Spacing.lg, gap: Spacing.sm },
-  section: { ...TypeEmphasized.titleMedium, color: Colors.onSurface, marginTop: Spacing.md },
+  sectionHead: {
+    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
+    marginTop: Spacing.lg,
+  },
+  section: { ...TypeEmphasized.titleMedium, color: Colors.onSurface },
+  // The two sections cover different windows. Unlabelled, forty fires nearby
+  // beside "nothing across India" reads as a contradiction rather than as two
+  // questions with different answers.
+  sectionWindow: { ...Type.labelSmall, color: Colors.onSurfaceVariant },
 
   card: {
     borderRadius: Shape.extraLarge, padding: Spacing.lg, gap: Spacing.xs,

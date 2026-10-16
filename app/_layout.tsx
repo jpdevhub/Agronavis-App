@@ -15,6 +15,7 @@ import { ConnectivityProvider, NetworkBanner } from '@/shared/network';
 import { useSyncOnReconnect } from '@/shared/offline';
 import { authApi } from '@/services/endpoints';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useFarmStore } from '@/store/useFarmStore';
 import { supabase } from '@/utils/supabase';
 
 const queryClient = new QueryClient({
@@ -48,6 +49,12 @@ function AppShell() {
    * blank until the answer arrived.
    */
   const [resolving, setResolving] = useState(false);
+
+  // Read the remembered field back once, before anything asks for it.
+  const hydrateFarm = useFarmStore((s) => s.hydrate);
+  useEffect(() => {
+    void hydrateFarm();
+  }, [hydrateFarm]);
 
   usePushNotifications();
   useSyncOnReconnect();
