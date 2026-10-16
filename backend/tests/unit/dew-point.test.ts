@@ -21,6 +21,7 @@ const day = (o: Partial<ForecastDay>): ForecastDay => ({
   humidity: 70,
   rainMm: 0,
   windSpeed: 5,
+  windFromDeg: null,
   description: '',
   icon: '01d',
   rainProbability: 0,

@@ -57,6 +57,12 @@ const envSchema = z
 
     OPENWEATHER_API_KEY: z.string().optional(),
     AGMARKNET_API_KEY: z.string().optional(),
+    /**
+     * NASA FIRMS. Free, instant, from firms.modaps.eosdis.nasa.gov/api/map_key.
+     * Optional: without it the stubble-burning warnings stay off and nothing
+     * else changes.
+     */
+    FIRMS_MAP_KEY: z.string().optional(),
     TOTP_ENCRYPTION_KEY: z.string().optional(),
 
     ENABLE_JOBS: z
@@ -73,6 +79,10 @@ const envSchema = z
     FERTILISER_SYNC_CRON: z.string().default('0 4 1 * *'),
     // The mirror refreshes daily when its own upstream is alive.
     MANDI_MIRROR_CRON: z.string().default('45 5 * * *'),
+    // FIRMS publishes about three hours behind the satellite. Four times a day
+    // is enough to catch a burning front moving and cheap enough to leave on
+    // outside the season, when it simply finds nothing.
+    FIRE_POLL_CRON: z.string().default('0 */6 * * *'),
   })
   .transform((raw) => ({
     ...raw,

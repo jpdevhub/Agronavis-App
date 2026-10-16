@@ -287,6 +287,12 @@ export interface ForecastDay {
   humidity: number;
   rainMm: number;
   windSpeed: number;
+  /**
+   * Compass degrees the wind blows *from*, the meteorological convention —
+   * which is also the direction a fire has to be in for its smoke to arrive.
+   * Null when the forecast did not carry one.
+   */
+  windFromDeg: number | null;
   description: string;
   icon: string;
   rainProbability: number;

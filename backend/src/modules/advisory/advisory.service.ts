@@ -13,6 +13,7 @@ import { fromPostgrest, notFound } from '../../shared/errors';
 import { assertOwnsFarm } from '../../shared/ownership';
 import { waterDeficit, weatherService } from '../weather/weather.service';
 import { dewPoint } from '../weather/et0';
+import { angleBetween } from '../fires/fires.service';
 
 function toAdvisory(row: AdvisoryRow): Advisory {
   return {
@@ -240,6 +241,67 @@ export function buildDiseaseRiskAdvisory(forecast: ForecastDay[]): DraftAdvisory
   };
 }
 
+/**
+ * Fires close enough, and upwind enough, to be worth telling someone about.
+ *
+ * Both halves matter. Thirty fires forty kilometres away are irrelevant if the
+ * wind is carrying the smoke in the other direction, and warning about them
+ * anyway is how a farmer learns to ignore this app in the one season it has
+ * something urgent to say.
+ */
+const SMOKE_RADIUS_KM = 60;
+/** Within this many degrees of straight upwind counts as "coming this way". */
+const UPWIND_ARC_DEG = 60;
+/** Below this it is a bonfire, not a burning season. */
+const SMOKE_MIN_FIRES = 5;
+
+export interface NearbyFire {
+  distanceKm: number;
+  bearingDeg: number;
+}
+
+/**
+ * Warns that stubble smoke is heading for the field.
+ *
+ * `windFromDeg` is the direction the wind blows *from*, which is the
+ * meteorological convention and also, conveniently, the direction a fire has
+ * to be in for its smoke to arrive.
+ */
+export function buildSmokeAdvisory(
+  fires: NearbyFire[],
+  windFromDeg: number | null,
+): DraftAdvisory | null {
+  const near = fires.filter((f) => f.distanceKm <= SMOKE_RADIUS_KM);
+  if (near.length < SMOKE_MIN_FIRES) return null;
+
+  // With no wind reading, fall back to proximity alone rather than guessing a
+  // direction — but say less, because less is known.
+  const upwind =
+    windFromDeg === null
+      ? near
+      : near.filter((f) => angleBetween(f.bearingDeg, windFromDeg) <= UPWIND_ARC_DEG);
+
+  if (upwind.length < SMOKE_MIN_FIRES) return null;
+
+  const closest = Math.round(Math.min(...upwind.map((f) => f.distanceKm)));
+  const heavy = upwind.length >= 20;
+
+  return {
+    category: 'weather_alert',
+    severity: heavy ? 'high' : 'medium',
+    title: heavy ? 'Heavy smoke heading your way' : 'Stubble smoke expected',
+    body:
+      `${upwind.length} field fires are burning upwind of you, the nearest about ${closest} km away. ` +
+      'Expect smoke over the next day or two. Keep children and anyone with a chest complaint indoors ' +
+      'in the early morning when it settles lowest, and hold off spraying — smoke and ash on the leaf ' +
+      'stop it being taken up.',
+    source: 'nasa_firms_viirs',
+    dedupeKey: `smoke:${today()}`,
+    validUntil: hoursFromNow(36),
+    metadata: { fires: upwind.length, nearestKm: closest, windFromDeg },
+  };
+}
+
 export function buildPestAdvisory(disease: string, confidence: number): DraftAdvisory {
   const pct = Math.round(confidence * 100);
   return {
@@ -254,7 +316,7 @@ export function buildPestAdvisory(disease: string, confidence: number): DraftAdv
   };
 }
 
-async function insertDrafts(
+export async function insertDrafts(
   farmerId: string,
   farmId: string,
   drafts: DraftAdvisory[],
