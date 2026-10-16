@@ -12,7 +12,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { EligibleCrop } from '@agronavis/shared-types';
-import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
+import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { cropApi } from '@/services/endpoints';
 import { useFarmStore } from '@/store/useFarmStore';
 import { showAlert } from '@/utils/alert';
@@ -132,24 +132,43 @@ export default function ChooseCropScreen() {
                 <Pressable
                   key={crop.shcId}
                   onPress={() => setChosen(selected ? null : crop)}
-                  style={[styles.row, selected && styles.rowSelected]}
+                  style={({ pressed }) => [
+                    styles.card,
+                    selected && styles.cardSelected,
+                    pressed && styles.cardPressed,
+                  ]}
                   accessibilityRole="button"
+                  accessibilityState={{ selected }}
                 >
-                  <View style={styles.rowText}>
-                    <Text style={[styles.rowName, selected && styles.rowNameSelected]}>
+                  {/* Leading avatar: the crop's initial, so a long list has
+                      something to scan down other than left-aligned text. */}
+                  <View style={[styles.avatar, selected && styles.avatarSelected]}>
+                    {selected ? (
+                      <MaterialIcons name="check" size={22} color={Colors.onPrimary} />
+                    ) : (
+                      <Text style={styles.avatarText}>{crop.name.charAt(0).toUpperCase()}</Text>
+                    )}
+                  </View>
+
+                  <View style={styles.cardText}>
+                    <Text
+                      style={[styles.cardName, selected && styles.cardNameSelected]}
+                      numberOfLines={2}
+                    >
                       {crop.name}
                     </Text>
                     {tags.length > 0 && (
                       <View style={styles.tags}>
                         {tags.map((tag) => (
-                          <View key={tag} style={styles.tag}>
-                            <Text style={styles.tagText}>{tag}</Text>
+                          <View key={tag} style={[styles.tag, selected && styles.tagSelected]}>
+                            <Text style={[styles.tagText, selected && styles.tagTextSelected]}>
+                              {tag}
+                            </Text>
                           </View>
                         ))}
                       </View>
                     )}
                   </View>
-                  {selected && <MaterialIcons name="check" size={22} color={Colors.primary} />}
                 </Pressable>
               );
             })}
@@ -220,24 +239,44 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, ...Type.bodyLarge, color: Colors.onSurface },
 
   list: { flex: 1 },
-  listContent: { padding: Spacing.lg, gap: Spacing.sm },
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    padding: Spacing.md, borderRadius: Shape.large,
+  listContent: { padding: Spacing.lg, gap: Spacing.md },
+
+  // An outlined card that fills when chosen, which is the M3 pattern for a
+  // selection in a list — not a tinted row with a tick hanging off the end.
+  card: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: Shape.largeIncreased,
     backgroundColor: Colors.surfaceContainerLowest,
     borderWidth: 1, borderColor: Colors.outlineVariant,
   },
-  rowSelected: { borderColor: Colors.primary, backgroundColor: Colors.primaryFixed },
-  rowText: { flex: 1, gap: Spacing.xs },
-  rowName: { ...Type.bodyLarge, color: Colors.onSurface },
-  rowNameSelected: { ...TypeEmphasized.bodyLarge, color: Colors.onPrimaryContainer },
+  cardSelected: {
+    backgroundColor: Colors.secondaryContainer,
+    borderColor: 'transparent',
+    ...Elevation.level1,
+  },
+  cardPressed: { opacity: 0.85 },
+
+  avatar: {
+    width: 44, height: 44, borderRadius: Shape.full,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.surfaceContainerHigh,
+  },
+  avatarSelected: { backgroundColor: Colors.primary },
+  avatarText: { ...TypeEmphasized.titleMedium, color: Colors.onSurfaceVariant },
+
+  cardText: { flex: 1, gap: Spacing.xs },
+  cardName: { ...TypeEmphasized.titleSmall, color: Colors.onSurface },
+  cardNameSelected: { color: Colors.onSecondaryContainer },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
   tag: {
-    paddingHorizontal: Spacing.sm, paddingVertical: 2,
-    borderRadius: Shape.full, backgroundColor: Colors.surfaceContainerHigh,
+    paddingHorizontal: Spacing.sm, height: 24, justifyContent: 'center',
+    borderRadius: Shape.small, backgroundColor: Colors.surfaceContainerHigh,
   },
-  tagText: { ...Type.bodySmall, color: Colors.onSurfaceVariant },
-  noMatch: { ...Type.bodyMedium, color: Colors.onSurfaceVariant, padding: Spacing.lg },
+  tagSelected: { backgroundColor: 'rgba(255,255,255,0.5)' },
+  tagText: { ...Type.labelSmall, color: Colors.onSurfaceVariant },
+  tagTextSelected: { color: Colors.onSecondaryContainer },
+  noMatch: { ...Type.bodyMedium, color: Colors.onSurfaceVariant, padding: Spacing.lg, textAlign: 'center' },
 
   footer: {
     paddingHorizontal: Spacing.lg, paddingTop: Spacing.md,
@@ -245,8 +284,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   cta: {
-    height: 56, borderRadius: Shape.full, backgroundColor: Colors.primary,
+    height: 60, borderRadius: Shape.full, backgroundColor: Colors.primary,
     alignItems: 'center', justifyContent: 'center',
+    ...Elevation.level2,
   },
   ctaBusy: { backgroundColor: Colors.outlineVariant },
   ctaText: { ...TypeEmphasized.titleMedium, color: Colors.onPrimary },
