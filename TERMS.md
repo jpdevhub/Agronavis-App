@@ -103,4 +103,4 @@ Questions about these terms: [support@agronavis.example]
 
 ---
 
-[Registered business name] · [Registered address, India]
+Agronavis · [Registered address, India]

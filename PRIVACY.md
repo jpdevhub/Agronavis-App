@@ -76,8 +76,8 @@ Agronavis is for adults who farm. We do not knowingly collect data from anyone u
 
 Material changes will be announced in the app before they take effect, and the date at the top of this page will change.
 
-[Registered business name] · [Registered address, India] · [privacy@agronavis.example]
+Agronavis · [Registered address, India] · [privacy@agronavis.example]
 
 ---
 
-[Registered business name] · [Registered address, India]
+Agronavis · [Registered address, India]
