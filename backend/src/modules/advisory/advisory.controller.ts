@@ -1,8 +1,31 @@
 import type { Request, Response } from 'express';
 import { farmerId } from '../../middleware/auth.middleware';
 import { ok } from '../../shared/http';
-import { assertOwnsFarm } from '../../shared/ownership';
+import { assertOwnsFarm, assertOwnsField } from '../../shared/ownership';
+import { db } from '../../config/supabase';
 import { advisoryService } from './advisory.service';
+
+/**
+ * Centre of one field, when the caller named one it owns.
+ *
+ * Returns null rather than throwing for a field with no mapped boundary — the
+ * caller then falls back to the farm, which is the best point available.
+ */
+async function fieldCoords(farmerIdValue: string, fieldId?: string) {
+  if (!fieldId) return null;
+  await assertOwnsField(farmerIdValue, fieldId);
+
+  const { data } = await db
+    .from('farm_fields')
+    .select('center_latitude, center_longitude')
+    .eq('id', fieldId)
+    .maybeSingle();
+
+  const latitude = data?.center_latitude == null ? null : Number(data.center_latitude);
+  const longitude = data?.center_longitude == null ? null : Number(data.center_longitude);
+  if (latitude == null || longitude == null) return null;
+  return { latitude, longitude };
+}
 
 export const advisoryController = {
   async list(req: Request, res: Response) {
@@ -33,15 +56,27 @@ export const advisoryController = {
     ok(res, data, { count: unread });
   },
 
-  /** On-demand regeneration — the pull-to-refresh path on the dashboard. */
+  /**
+   * On-demand regeneration — the pull-to-refresh path on the dashboard.
+   *
+   * Takes an optional `fieldId` and prefers that field's coordinates. A farm
+   * stores one point, fixed by whichever field was mapped first, so without
+   * this a farmer looking at their Assam field pulled to refresh and was given
+   * irrigation and disease advice calculated for Punjab weather.
+   *
+   * The advisories themselves are still stored against the farm. Making them
+   * per-field is a schema change, not a patch.
+   */
   async generate(req: Request, res: Response) {
     const id = farmerId(req);
     const { farmId } = req.params as { farmId: string };
     const farm = await assertOwnsFarm(id, farmId);
 
+    const coords = await fieldCoords(id, req.query.fieldId as string | undefined);
+
     const created = await advisoryService.generateForFarm(id, farmId, {
-      latitude: farm.latitude ?? 0,
-      longitude: farm.longitude ?? 0,
+      latitude: coords?.latitude ?? farm.latitude ?? 0,
+      longitude: coords?.longitude ?? farm.longitude ?? 0,
     });
 
     ok(res, created, { count: created.length });

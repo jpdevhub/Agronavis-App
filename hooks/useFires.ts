@@ -4,7 +4,15 @@ import { fireApi } from '@/services/endpoints';
 import { useFarmStore } from '@/store/useFarmStore';
 
 /**
- * What is burning near this farm, and whether its smoke is coming this way.
+ * What is burning near the land the farmer is currently looking at, and
+ * whether its smoke is coming this way.
+ *
+ * Scoped to the selected *field*, falling back to the farm only for land with
+ * no mapped boundary yet. This matters more than it sounds: a farm stores one
+ * pair of coordinates, fixed by whichever field was mapped first, so a farmer
+ * who switched to their Assam field was being shown the fires around Punjab —
+ * and the Punjab wind direction deciding whether they were upwind. `useWeather`
+ * already prefers the field; this now matches it.
  *
  * Half an hour stale is fine. The satellites pass a few times a day and FIRMS
  * publishes about three hours behind, so asking more often returns the same
@@ -12,11 +20,15 @@ import { useFarmStore } from '@/store/useFarmStore';
  */
 export function useFarmFires(days = 2, radiusKm = 100) {
   const farmId = useFarmStore((s) => s.activeFarmId);
+  const fieldId = useFarmStore((s) => s.activeFieldId);
 
   const query = useQuery({
-    queryKey: ['fires', 'farm', farmId, days, radiusKm],
-    queryFn: () => fireApi.forFarm(farmId!, days, radiusKm),
-    enabled: Boolean(farmId),
+    queryKey: fieldId
+      ? ['fires', 'field', fieldId, days, radiusKm]
+      : ['fires', 'farm', farmId, days, radiusKm],
+    queryFn: () =>
+      fieldId ? fireApi.forField(fieldId, days, radiusKm) : fireApi.forFarm(farmId!, days, radiusKm),
+    enabled: Boolean(fieldId ?? farmId),
     staleTime: 30 * 60_000,
   });
 

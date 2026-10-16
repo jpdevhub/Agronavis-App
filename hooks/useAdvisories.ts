@@ -14,6 +14,7 @@ const SEVERITY_ORDER: Record<AdvisorySeverity, number> = {
 
 export function useAdvisories() {
   const activeFarmId = useFarmStore((s) => s.activeFarmId);
+  const activeFieldId = useFarmStore((s) => s.activeFieldId);
   const queryClient = useQueryClient();
   const queryKey = ['advisories', activeFarmId];
 
@@ -49,7 +50,8 @@ export function useAdvisories() {
   });
 
   const refresh = useMutation({
-    mutationFn: () => advisoryApi.generate(activeFarmId!),
+    // Named field, so the advice is worked out for the land on screen.
+    mutationFn: () => advisoryApi.generate(activeFarmId!, activeFieldId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 

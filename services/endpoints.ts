@@ -156,6 +156,12 @@ export const marketApi = {
 export const fireApi = {
   /** The national picture. Needs no farm, so it works before a field exists. */
   summary: (days = 1) => api.get<FireSummary>('/fires/summary', { days }),
+  /**
+   * Prefer this over `forFarm`. A farm has one pair of coordinates; its fields
+   * can be in different states entirely.
+   */
+  forField: (fieldId: string, days = 2, radiusKm = 100) =>
+    api.get<FarmFireReport>(`/fires/field/${fieldId}`, { days, radiusKm }),
   forFarm: (farmId: string, days = 2, radiusKm = 100) =>
     api.get<FarmFireReport>(`/fires/farm/${farmId}`, { days, radiusKm }),
   history: (farmId: string) =>
@@ -166,7 +172,11 @@ export const advisoryApi = {
   list: (params?: { farmId?: string; unreadOnly?: boolean; limit?: number }) =>
     api.getWithMeta<Advisory[]>('/advisory', params),
   forFarm: (farmId: string) => api.getWithMeta<Advisory[]>(`/advisory/farm/${farmId}`),
-  generate: (farmId: string) => api.post<Advisory[]>(`/advisory/farm/${farmId}/generate`),
+  /** `fieldId` picks the land the advice is calculated for; see fires. */
+  generate: (farmId: string, fieldId?: string | null) =>
+    api.post<Advisory[]>(
+      `/advisory/farm/${farmId}/generate${fieldId ? `?fieldId=${fieldId}` : ''}`,
+    ),
   markRead: (id: string) => api.patch<Advisory>(`/advisory/${id}/read`),
   markAllRead: (farmId?: string) =>
     api.patch<{ updated: number }>(`/advisory/read-all${farmId ? `?farmId=${farmId}` : ''}`),
