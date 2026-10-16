@@ -5,6 +5,7 @@ import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/const
 import { Loader } from '@/components/ui';
 import { useWeather } from '@/hooks/useWeather';
 import { useFarmStore } from '@/store/useFarmStore';
+import { rootZoneState } from '@/features/insight/cardState';
 
 /**
  * How much water is actually in the root zone, beside what the balance says.
@@ -36,7 +37,32 @@ export function RootZoneCard() {
   // Same reasoning as the fire card: never vanish. A missing reading is a
   // thing worth saying, because NASA genuinely does not publish one for every
   // day and the farmer should know that is why the number is absent.
-  if (isLoading) {
+  // Decided in `cardState`, so each branch is asserted without rendering.
+  // See features/insight/__tests__/cardState.test.ts.
+  const state = rootZoneState({
+    hasField: Boolean(fieldId ?? farmId),
+    isLoading,
+    latest,
+    waterDeficitMm,
+  });
+
+  if (state.kind === 'no-field') {
+    return (
+      <View style={[styles.card, styles.quiet]}>
+        <View style={styles.head}>
+          <View style={[styles.badge, { backgroundColor: Colors.surfaceContainerHigh }]}>
+            <MaterialIcons name="water-drop" size={22} color={Colors.onSurfaceVariant} />
+          </View>
+          <View style={styles.headText}>
+            <Text style={styles.eyebrow}>ROOT ZONE WATER</Text>
+            <Text style={styles.headline}>Map a field first</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (state.kind === 'loading') {
     return (
       <View style={[styles.card, styles.quiet]}>
         <View style={styles.head}>
@@ -52,7 +78,7 @@ export function RootZoneCard() {
     );
   }
 
-  if (!latest || latest.soilWetnessRoot === null) {
+  if (state.kind !== 'ready') {
     return (
       <View style={[styles.card, styles.quiet]}>
         <View style={styles.head}>
@@ -72,8 +98,9 @@ export function RootZoneCard() {
     );
   }
 
-  const pct = Math.round(latest.soilWetnessRoot * 100);
-  const tone = band(latest.soilWetnessRoot);
+  // `state.kind` is 'ready' past this point, so the reading is present.
+  const pct = state.pct!;
+  const tone = band(pct / 100);
   const deficit = waterDeficitMm ?? null;
 
   return (
@@ -105,15 +132,15 @@ export function RootZoneCard() {
 
       <Text style={styles.detail}>
         {deficit !== null && deficit > 4
-          ? `The water balance shows a ${deficit} mm shortfall. ${
-              latest.soilWetnessRoot >= 0.5
+          ? `The water balance shows a ${Math.round(deficit)} mm shortfall. ${
+              state.disagreement === 'wetter-than-balance'
                 ? 'The measurement disagrees — dig before you irrigate.'
                 : 'The measurement agrees.'
             }`
           : 'Measured by satellite, not worked out from rainfall.'}
       </Text>
 
-      <Text style={styles.source}>NASA POWER · measured {latest.date}</Text>
+      <Text style={styles.source}>NASA POWER · measured {state.measuredOn}</Text>
     </Pressable>
   );
 }

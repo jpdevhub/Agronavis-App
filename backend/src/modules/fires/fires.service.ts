@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { env } from '../../config/env';
 import { logger } from '../../config/logger';
+import { db } from '../../config/supabase';
 
 /**
  * Active fire detections from NASA FIRMS.
@@ -16,6 +17,19 @@ import { logger } from '../../config/logger';
  * where MODIS at 1 km mostly resolves that something, somewhere, is alight.
  */
 const FIRMS_BASE = 'https://firms.modaps.eosdis.nasa.gov/api/area/csv';
+
+/**
+ * Standard processing — the same instrument, reprocessed. Near real time is
+ * retained for weeks; this is what carries months-old detections.
+ */
+const ARCHIVE_SOURCE = 'VIIRS_SNPP_SP';
+
+/**
+ * The most days FIRMS will answer for in one request. Longer is rejected
+ * outright, so history is walked in windows of this size rather than asked
+ * for at once.
+ */
+export const MAX_DAY_RANGE = 5;
 
 /** 375 m, near real time. The resolution a field fire needs. */
 const SOURCE = 'VIIRS_SNPP_NRT';
@@ -145,6 +159,16 @@ export function parseFirmsCsv(csv: string): FireDetection[] {
 const SUMMARY_TTL_MS = 30 * 60_000;
 const summaryCache = new Map<number, { at: number; value: FireSummary }>();
 
+/**
+ * The last summary that actually worked, kept past its TTL and never evicted.
+ *
+ * When every region fails the screen showed a bare error. A farmer would
+ * rather see this morning's picture labelled with when it was taken than
+ * nothing at all, so the stale value is served with `stale: true` and the
+ * time it was fetched.
+ */
+const lastGoodSummary = new Map<number, { at: number; value: FireSummary }>();
+
 export const firesService = {
   /** True when a key is configured. Without one the whole feature stays off. */
   get enabled(): boolean {
@@ -167,7 +191,11 @@ export const firesService = {
    */
   async summary(days = 1): Promise<FireSummary> {
     if (!env.FIRMS_MAP_KEY) {
-      return { totalFires: 0, days, regions: [], unavailable: [], latestAcquired: null };
+      return {
+        totalFires: 0, days, regions: [],
+        unavailable: BURN_REGIONS.map((r) => r.name),
+        latestAcquired: null, stale: false, fetchedAt: null,
+      };
     }
 
     const cached = summaryCache.get(days);
@@ -225,27 +253,49 @@ export const firesService = {
       regions: regions.sort((a, b) => b.fires - a.fires),
       unavailable,
       latestAcquired: latest,
+      stale: false,
+      fetchedAt: new Date().toISOString(),
     };
+    // Every region failed. Rather than hand the screen an empty country, give
+    // back the last picture that did work, labelled with when it was taken.
+    if (unavailable.length === BURN_REGIONS.length) {
+      const fallback = lastGoodSummary.get(days);
+      if (fallback) {
+        return {
+          ...fallback.value,
+          stale: true,
+          fetchedAt: new Date(fallback.at).toISOString(),
+        };
+      }
+    }
+
     summaryCache.set(days, { at: Date.now(), value });
+    if (unavailable.length < BURN_REGIONS.length) {
+      lastGoodSummary.set(days, { at: Date.now(), value });
+    }
     return value;
   },
 
   /**
-   * Fires seen within `radiusKm` of a point over the last `days`.
+   * Fires within a radius of one point.
    *
-   * Returns an empty list rather than throwing: a smoke warning is worth
-   * having when it works and must never be the reason the rest of the poller
-   * stops running.
+   * Returns a status rather than a bare array, because "no fires" and "could
+   * not ask" are different answers and the screen must never print the first
+   * when it means the second. It used to return `[]` for a missing key, a
+   * rejected key and a network failure alike, so a misconfigured server told
+   * every farmer their field was clear.
    */
   async near(
     lat: number,
     lon: number,
     radiusKm = 60,
     days = 1,
-  ): Promise<FireDetection[]> {
-    if (!env.FIRMS_MAP_KEY) return [];
+  ): Promise<{ available: boolean; reason: string | null; fires: FireDetection[] }> {
+    if (!env.FIRMS_MAP_KEY) {
+      return { available: false, reason: 'not_configured', fires: [] };
+    }
 
-    const url = `${FIRMS_BASE}/${env.FIRMS_MAP_KEY}/${SOURCE}/${boundingBox(lat, lon, radiusKm)}/${days}`;
+    const url = `${FIRMS_BASE}/${env.FIRMS_MAP_KEY}/${SOURCE}/${boundingBox(lat, lon, radiusKm)}/${Math.min(MAX_DAY_RANGE, days)}`;
     try {
       const { data } = await axios.get<string>(url, {
         timeout: 20_000,
@@ -254,19 +304,155 @@ export const firesService = {
 
       if (typeof data !== 'string' || data.toLowerCase().includes('invalid map_key')) {
         logger.warn('FIRMS rejected the key');
-        return [];
+        return { available: false, reason: 'rejected', fires: [] };
       }
 
       // The box is a rectangle; the farmer's question is a circle.
-      return parseFirmsCsv(data).filter(
+      const fires = parseFirmsCsv(data).filter(
         (f) => distanceKm(lat, lon, f.latitude, f.longitude) <= radiusKm,
       );
+      return { available: true, reason: null, fires };
     } catch (error) {
-      logger.warn('FIRMS request failed; continuing without fire data', {
+      logger.warn('FIRMS request failed; falling back to stored detections', {
         error: (error as Error).message,
       });
-      return [];
+      return { available: false, reason: 'unreachable', fires: [] };
     }
+  },
+
+  /**
+   * Fills the store with real history for one point, walking backwards.
+   *
+   * FIRMS answers at most five days per request — it rejects anything longer
+   * with "Invalid day range. Expects [1..5]" — so six months is thirty-six
+   * dated windows.
+   *
+   * Near real time only carries the recent weeks and the standard processing
+   * source carries the rest, which is why each window tries both: probing one
+   * box showed NRT returning rows for September and nothing for June, and SP
+   * the exact reverse. Every row written here is a real detection from NASA.
+   * Nothing is interpolated to fill a gap, and a window that cannot be fetched
+   * simply leaves one.
+   *
+   * Slow by design, and not on any request path: the screen reads the store.
+   */
+  async backfill(
+    lat: number,
+    lon: number,
+    radiusKm: number,
+    days: number,
+  ): Promise<{ windows: number; fetched: number; stored: number }> {
+    if (!env.FIRMS_MAP_KEY) return { windows: 0, fetched: 0, stored: 0 };
+
+    const box = boundingBox(lat, lon, radiusKm);
+    const WINDOW = MAX_DAY_RANGE;
+    let fetched = 0;
+    let stored = 0;
+    let windows = 0;
+
+    for (let back = 0; back < days; back += WINDOW) {
+      const start = new Date(Date.now() - (back + WINDOW) * 86_400_000);
+      const startDate = start.toISOString().slice(0, 10);
+      windows += 1;
+
+      let rows: FireDetection[] = [];
+      for (const source of [SOURCE, ARCHIVE_SOURCE]) {
+        try {
+          const { data } = await axios.get<string>(
+            `${FIRMS_BASE}/${env.FIRMS_MAP_KEY}/${source}/${box}/${WINDOW}/${startDate}`,
+            { timeout: 30_000, responseType: 'text' },
+          );
+          if (typeof data !== 'string' || data.toLowerCase().includes('invalid')) continue;
+          rows = parseFirmsCsv(data);
+          if (rows.length > 0) break;
+        } catch {
+          // Try the other source, then give up on this window.
+        }
+      }
+
+      const inRange = rows.filter(
+        (f) => distanceKm(lat, lon, f.latitude, f.longitude) <= radiusKm,
+      );
+      fetched += inRange.length;
+      if (inRange.length === 0) continue;
+
+      const { error } = await db.from('fire_detections').upsert(
+        inRange.map((f) => ({
+          latitude: f.latitude,
+          longitude: f.longitude,
+          brightness_k: f.brightnessK || null,
+          confidence: f.confidence,
+          acquired_at: new Date(
+            `${f.acquiredDate}T${(f.acquiredTime || '0000').padStart(4, '0').replace(/(\d{2})(\d{2})/, '$1:$2')}:00Z`,
+          ).toISOString(),
+          source: 'VIIRS_SNPP_NRT',
+        })),
+        { onConflict: 'latitude,longitude,acquired_at,source', ignoreDuplicates: true },
+      );
+      if (error) logger.warn('Backfill window not stored', { startDate, error: error.message });
+      else stored += inRange.length;
+    }
+
+    return { windows, fetched, stored };
+  },
+
+  /**
+   * What the poller has already stored near a point.
+   *
+   * This is what the screen shows when FIRMS cannot be reached. The detections
+   * are real — they were fetched and written when the poller last ran — so the
+   * farmer sees the last known picture with the time it was taken, rather than
+   * an error or, worse, a false all-clear.
+   */
+  async stored(
+    lat: number,
+    lon: number,
+    radiusKm: number,
+    days: number,
+  ): Promise<{ fires: FireDetection[]; lastUpdated: string | null }> {
+    const since = new Date(Date.now() - days * 86_400_000).toISOString();
+
+    // A degree of latitude is ~111 km everywhere; longitude narrows with it.
+    const dLat = radiusKm / 111;
+    const dLon = radiusKm / (111 * Math.max(0.2, Math.cos((lat * Math.PI) / 180)));
+
+    const { data, error } = await db
+      .from('fire_detections')
+      .select('latitude, longitude, brightness_k, confidence, acquired_at')
+      .gte('acquired_at', since)
+      .gte('latitude', lat - dLat)
+      .lte('latitude', lat + dLat)
+      .gte('longitude', lon - dLon)
+      .lte('longitude', lon + dLon)
+      .order('acquired_at', { ascending: false })
+      .limit(500);
+
+    if (error) {
+      logger.warn('Stored fire detections unavailable', { error: error.message });
+      return { fires: [], lastUpdated: null };
+    }
+
+    const rows = (data ?? []) as {
+      latitude: number; longitude: number; brightness_k: number | null;
+      confidence: string | null; acquired_at: string;
+    }[];
+
+    const fires = rows
+      .map((r) => {
+        const at = new Date(r.acquired_at);
+        return {
+          latitude: Number(r.latitude),
+          longitude: Number(r.longitude),
+          brightnessK: r.brightness_k ?? 0,
+          confidence: r.confidence ?? '',
+          acquiredDate: at.toISOString().slice(0, 10),
+          acquiredTime: at.toISOString().slice(11, 16).replace(':', ''),
+        } as FireDetection;
+      })
+      // The box is a rectangle; the question is still a circle.
+      .filter((f) => distanceKm(lat, lon, f.latitude, f.longitude) <= radiusKm);
+
+    return { fires, lastUpdated: rows[0]?.acquired_at ?? null };
   },
 };
 
@@ -342,4 +528,12 @@ export interface FireSummary {
   unavailable: string[];
   /** When FIRMS last saw anything in this set. */
   latestAcquired: string | null;
+  /**
+   * True when every region failed and this is the last answer that worked,
+   * served rather than discarded. `fetchedAt` says when it was taken, so the
+   * screen shows a picture with its age instead of an error or a blank
+   * country.
+   */
+  stale: boolean;
+  fetchedAt: string | null;
 }

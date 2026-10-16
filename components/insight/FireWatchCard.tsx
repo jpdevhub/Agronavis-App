@@ -4,6 +4,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { Loader } from '@/components/ui';
 import { useFarmFires } from '@/hooks/useFires';
+import { useFarmStore } from '@/store/useFarmStore';
+import { fireWatchState } from '@/features/insight/cardState';
 
 /**
  * Whether stubble smoke is heading for this field.
@@ -15,12 +17,24 @@ import { useFarmFires } from '@/hooks/useFires';
  */
 export function FireWatchCard() {
   const router = useRouter();
-  const { report, fires, upwindCount, nearestKm, isLoading } = useFarmFires();
+  const { report, fires, upwindCount, nearestKm, isLoading, live } = useFarmFires();
+  const hasField = Boolean(useFarmStore((s) => s.activeFieldId ?? s.activeFarmId));
+
+  // The decision lives in `cardState` so every branch below is assertable
+  // without rendering. See features/insight/__tests__/cardState.test.ts.
+  const state = fireWatchState({
+    hasField,
+    isLoading,
+    mapped: report?.mapped,
+    live,
+    fires,
+    upwindCount,
+  });
 
   // Deliberately not `return null`. A card that disappears when its data is
   // missing is indistinguishable from a card that was never built — which is
   // exactly how this one read on a farm whose field had not been selected yet.
-  if (isLoading) {
+  if (state.kind === 'loading') {
     return (
       <View style={[styles.card, styles.cardQuiet]}>
         <View style={styles.head}>
@@ -36,7 +50,7 @@ export function FireWatchCard() {
     );
   }
 
-  if (!report?.mapped) {
+  if (state.kind === 'no-field') {
     return (
       <View style={[styles.card, styles.cardQuiet]}>
         <View style={styles.head}>
@@ -56,8 +70,29 @@ export function FireWatchCard() {
     );
   }
 
-  const upwind = upwindCount > 0;
-  const anyNear = fires.length > 0;
+  // Nothing came back and nothing answered. The green all-clear below would
+  // be a lie, so this says what is actually true.
+  if (state.kind === 'unavailable') {
+    return (
+      <View style={[styles.card, styles.cardQuiet]}>
+        <View style={styles.head}>
+          <View style={[styles.badge, { backgroundColor: Colors.surfaceContainerHigh }]}>
+            <MaterialIcons name="local-fire-department" size={22} color={Colors.onSurfaceVariant} />
+          </View>
+          <View style={styles.headText}>
+            <Text style={[styles.eyebrow, { color: Colors.onSurfaceVariant }]}>STUBBLE WATCH</Text>
+            <Text style={[styles.headline, { color: Colors.onSurface }]}>Checking for fires</Text>
+          </View>
+        </View>
+        <Text style={[styles.detail, { color: Colors.onSurfaceVariant }]}>
+          Nothing recorded around your field yet. This is not an all-clear — open it to try again.
+        </Text>
+      </View>
+    );
+  }
+
+  const upwind = state.tone === 'upwind';
+  const anyNear = state.fireCount > 0;
 
   const tone = upwind
     ? { ground: Colors.errorContainer, ink: Colors.onErrorContainer, icon: 'local-fire-department' as const }
@@ -75,7 +110,7 @@ export function FireWatchCard() {
     ? `Nearest about ${Math.round(nearestKm ?? 0)} km away. Expect smoke — keep children indoors early morning and hold off spraying.`
     : anyNear
       ? `The nearest is about ${Math.round(nearestKm ?? 0)} km away, but the wind is carrying its smoke elsewhere.`
-      : `Nothing burning within ${report.radiusKm} km in the last ${report.days} days.`;
+      : `Nothing burning within ${report?.radiusKm ?? 150} km in the window checked.`;
 
   return (
     <Pressable
@@ -95,7 +130,10 @@ export function FireWatchCard() {
         <MaterialIcons name="chevron-right" size={24} color={tone.ink} />
       </View>
 
-      <Text style={[styles.detail, { color: tone.ink }]}>{detail}</Text>
+      <Text style={[styles.detail, { color: tone.ink }]}>
+        {detail}
+        {state.stale ? ' Shown from the last successful check.' : ''}
+      </Text>
 
       <Text style={[styles.source, { color: tone.ink }]}>
         NASA FIRMS · satellite, about 3 hours behind

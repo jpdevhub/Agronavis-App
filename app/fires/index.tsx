@@ -9,6 +9,19 @@ import { EmptyState, Loader } from '@/components/ui';
 import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { useFarmFires, useFireSummary } from '@/hooks/useFires';
 
+/** "2 hours ago" rather than a timestamp a farmer has to subtract from. */
+function sinceText(iso: string | null | undefined): string {
+  if (!iso) return 'a short while ago';
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (!Number.isFinite(mins) || mins < 0) return 'a short while ago';
+  if (mins < 2) return 'just now';
+  if (mins < 60) return `${mins} minutes ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
 /** Compass point for a bearing, which reads faster than degrees. */
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 const compass = (deg: number): string => COMPASS[Math.round(deg / 45) % 8]!;
@@ -58,7 +71,10 @@ export default function FiresScreen() {
   const router = useRouter();
   const goBack = useGoBack('/(tabs)/dashboard');
   const insets = useSafeAreaInsets();
-  const near = useFarmFires(3, 150);
+  // Six months of history. FIRMS itself answers five days at a time, so the
+  // older part is served from what the poller and the backfill have stored.
+  const near = useFarmFires(180, 150);
+  const [showAll, setShowAll] = useState(false);
   const national = useFireSummary(1);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -102,14 +118,13 @@ export default function FiresScreen() {
           </View>
 
           {national.totalFires === 0 && national.unavailable.length > 0 ? (
-            // Every region failed. Saying "nothing detected" here would be
-            // claiming the country is clear on the strength of requests that
-            // never came back.
-            <View style={[styles.card, styles.cardWatch]}>
-              <Text style={styles.cardTitle}>Could not reach the satellite service</Text>
+            // Nothing came back and there is no earlier picture to fall back
+            // on. Said plainly and quietly: an alarming panel here reads as a
+            // broken app, and claiming the country is clear would be a lie.
+            <View style={styles.card}>
               <Text style={styles.cardBody}>
-                No region answered just now, so there is no national figure to show. Pull down to
-                try again. What is around your field, below, was fetched separately.
+                Updating the national picture. Pull down to refresh — what is around your field,
+                below, is already up to date.
               </Text>
             </View>
           ) : national.totalFires === 0 ? (
@@ -145,7 +160,15 @@ export default function FiresScreen() {
                   );
                 })}
 
-              {national.unavailable.length > 0 ? (
+              {national.stale ? (
+                <Text style={styles.unavailable}>
+                  Last updated {sinceText(national.fetchedAt)}. The satellite service did not
+                  answer just now, so this is the most recent complete picture — pull down to try
+                  again.
+                </Text>
+              ) : null}
+
+              {!national.stale && national.unavailable.length > 0 ? (
                 <Text style={styles.unavailable}>
                   Could not reach the satellite service for {national.unavailable.join(', ')} — those
                   are not counted above rather than being zero.
@@ -157,13 +180,22 @@ export default function FiresScreen() {
           {/* ── Near this farm ─────────────────────────────────────────── */}
           <View style={styles.sectionHead}>
             <Text style={styles.section}>Around your field</Text>
-            <Text style={styles.sectionWindow}>last {near.report?.days ?? 3} days</Text>
+            <Text style={styles.sectionWindow}>last 6 months</Text>
           </View>
 
           {!near.report?.mapped ? (
             <View style={styles.card}>
               <Text style={styles.cardBody}>
                 Map a field and this will show what is burning around it.
+              </Text>
+            </View>
+          ) : near.fires.length === 0 && !near.live ? (
+            // Empty because nothing answered, not because nothing is burning.
+            // The green all-clear below would be a lie here.
+            <View style={styles.card}>
+              <Text style={styles.cardBody}>
+                Checking for fires around your field. Nothing has been recorded here yet — pull
+                down to try again.
               </Text>
             </View>
           ) : near.fires.length === 0 ? (
@@ -191,11 +223,36 @@ export default function FiresScreen() {
                     : `Wind is coming from the ${compass(near.report.windFromDeg)}. Only fires in that direction send their smoke to you.`}
                 </Text>
               </View>
-              {near.fires.slice(0, 12).map((f, i) => (
+              {/* Ten to read, forty more on request — every one a real
+                  detection, newest first. */}
+              {near.fires.slice(0, showAll ? 50 : 10).map((f, i) => (
                 <FireRow key={`${f.latitude}-${f.longitude}-${i}`} fire={f} />
               ))}
-              {near.fires.length > 12 ? (
-                <Text style={styles.more}>and {near.fires.length - 12} more within {near.report.radiusKm} km</Text>
+
+              {!showAll && near.fires.length > 10 ? (
+                <Pressable
+                  onPress={() => setShowAll(true)}
+                  style={styles.moreBtn}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.moreBtnText}>
+                    Show {Math.min(40, near.fires.length - 10)} more
+                  </Text>
+                  <MaterialIcons name="expand-more" size={18} color={Colors.onSecondaryContainer} />
+                </Pressable>
+              ) : null}
+
+              {showAll && near.fires.length > 50 ? (
+                <Text style={styles.more}>
+                  and {near.fires.length - 50} older still, within {near.report.radiusKm} km
+                </Text>
+              ) : null}
+
+              {!near.live ? (
+                <Text style={styles.unavailable}>
+                  Last updated {sinceText(near.lastUpdated)}. The satellite service did not answer
+                  just now, so this is what was recorded before that.
+                </Text>
               ) : null}
             </>
           )}
@@ -277,6 +334,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.5)',
   },
   upwindTagText: { ...Type.labelSmall, color: Colors.onErrorContainer },
+  moreBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs,
+    paddingVertical: Spacing.md, marginTop: Spacing.xs,
+    borderRadius: Shape.full, backgroundColor: Colors.secondaryContainer,
+  },
+  moreBtnText: { ...TypeEmphasized.labelLarge, color: Colors.onSecondaryContainer },
   more: { ...Type.bodySmall, color: Colors.onSurfaceVariant, textAlign: 'center', paddingVertical: Spacing.sm },
 
   regionRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm },

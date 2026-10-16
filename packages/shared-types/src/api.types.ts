@@ -508,6 +508,15 @@ export interface NearbyFire {
 }
 
 export interface FarmFireReport {
+  /**
+   * False when FIRMS could not be reached and everything here came from the
+   * store. The screen must say so: an empty list from a failed request is not
+   * an all-clear.
+   */
+  live?: boolean;
+  unavailableReason?: string | null;
+  /** When this picture was last refreshed from NASA. */
+  lastUpdated?: string | null;
   /** False when the farm has no coordinates yet. */
   mapped: boolean;
   region: string | null;
@@ -526,6 +535,13 @@ export interface FireRegionCount {
 }
 
 export interface FireSummary {
+  /**
+   * True when every region failed and this is the last answer that worked.
+   * `fetchedAt` then says when that was, so the screen can show the picture
+   * with its age rather than an error or a blank country.
+   */
+  stale?: boolean;
+  fetchedAt?: string | null;
   totalFires: number;
   days: number;
   regions: FireRegionCount[];

@@ -8,7 +8,8 @@ import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/const
 import { useGoBack } from '@/hooks/useGoBack';
 import { useWeather } from '@/hooks/useWeather';
 import { useFarmStore } from '@/store/useFarmStore';
-import { assessFungalRisk, type DayRisk, type RiskLevel } from '@/features/insight/fungalRisk';
+import { type DayRisk, type RiskLevel } from '@/features/insight/fungalRisk';
+import { diseaseState, rootZoneState } from '@/features/insight/cardState';
 
 /** Where the root-zone reading sits, in words a farmer can act on. */
 function band(v: number) {
@@ -41,7 +42,10 @@ function band(v: number) {
   };
 }
 
-const RISK: Record<RiskLevel, { title: string; icon: keyof typeof MaterialIcons.glyphMap; ground: string; ink: string }> = {
+const RISK: Record<RiskLevel | 'unknown', { title: string; icon: keyof typeof MaterialIcons.glyphMap; ground: string; ink: string }> = {
+  // Not the same as "clear". With no forecast nothing has been checked, and a
+  // farmer told their crop is clear will not go and look at the lower leaves.
+  unknown: { title: 'Not checked yet', icon: 'help-outline', ground: Colors.surfaceContainerHigh, ink: Colors.onSurface },
   clear: { title: 'No fungal pressure', icon: 'verified', ground: Colors.secondaryContainer, ink: Colors.onSecondaryContainer },
   watch: { title: 'One night worth watching', icon: 'visibility', ground: Colors.tertiaryContainer, ink: Colors.onTertiaryContainer },
   high: { title: 'Fungal conditions building', icon: 'coronavirus', ground: Colors.errorContainer, ink: Colors.onErrorContainer },
@@ -105,8 +109,18 @@ export default function RootZoneScreen() {
 
   const root = latest?.soilWetnessRoot ?? null;
   const surface = latest?.soilWetnessSurface ?? null;
-  const fungal = assessFungalRisk(forecast);
-  const risk = RISK[fungal.level];
+  // Both decisions come from the tested state module rather than from inline
+  // conditions, so every branch on this page is asserted in
+  // features/insight/__tests__/cardState.test.ts.
+  const zone = rootZoneState({
+    hasField: Boolean(fieldId ?? farmId),
+    isLoading,
+    latest,
+    waterDeficitMm,
+  });
+  const disease = diseaseState({ hasField: Boolean(fieldId ?? farmId), isLoading, forecast });
+  const fungal = disease.assessment;
+  const risk = RISK[disease.kind === 'no-data' ? 'unknown' : fungal.level];
 
   return (
     <View style={styles.root}>
@@ -136,7 +150,7 @@ export default function RootZoneScreen() {
           <View style={styles.hero}>
             <SoilProfile surface={surface} root={root} />
 
-            {root === null ? (
+            {zone.kind !== 'ready' ? (
               <View style={styles.heroText}>
                 <Text style={styles.heroHead}>No reading yet</Text>
                 <Text style={styles.heroBody}>
@@ -148,19 +162,21 @@ export default function RootZoneScreen() {
             ) : (
               <View style={styles.heroText}>
                 <View style={styles.heroNumber}>
-                  <Text style={styles.pct}>{Math.round(root * 100)}</Text>
+                  <Text style={styles.pct}>{zone.pct}</Text>
                   <Text style={styles.pctUnit}>% of saturation</Text>
                 </View>
-                <View style={[styles.chip, { backgroundColor: band(root).ground }]}>
-                  <Text style={[styles.chipText, { color: band(root).ink }]}>{band(root).label}</Text>
+                <View style={[styles.chip, { backgroundColor: band(zone.pct! / 100).ground }]}>
+                  <Text style={[styles.chipText, { color: band(zone.pct! / 100).ink }]}>
+                    {zone.band}
+                  </Text>
                 </View>
-                <Text style={styles.heroBody}>{band(root).meaning}</Text>
+                <Text style={styles.heroBody}>{band(zone.pct! / 100).meaning}</Text>
               </View>
             )}
           </View>
 
           {/* Two measured depths, because they answer different questions. */}
-          {root !== null ? (
+          {zone.kind === 'ready' ? (
             <View style={styles.layers}>
               <View style={styles.layer}>
                 <Text style={styles.layerPct}>
@@ -171,7 +187,7 @@ export default function RootZoneScreen() {
               </View>
               <View style={styles.layerDivide} />
               <View style={styles.layer}>
-                <Text style={styles.layerPct}>{Math.round(root * 100)}%</Text>
+                <Text style={styles.layerPct}>{zone.pct}%</Text>
                 <Text style={styles.layerName}>Root zone</Text>
                 <Text style={styles.layerNote}>What the crop actually drinks from.</Text>
               </View>
@@ -179,16 +195,16 @@ export default function RootZoneScreen() {
           ) : null}
 
           {/* ── Against the water balance ───────────────────────────────── */}
-          {waterDeficitMm !== null && root !== null ? (
+          {waterDeficitMm !== null && zone.kind === 'ready' ? (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Alongside the irrigation advice</Text>
               <Text style={styles.cardBody}>
                 {waterDeficitMm > 0
                   ? `The balance of rain in and evaporation out says this field is ${Math.round(waterDeficitMm)} mm short. `
                   : 'The balance of rain in and evaporation out says this field is not short of water. '}
-                {root >= 0.5 && waterDeficitMm > 20
+                {zone.disagreement === 'wetter-than-balance'
                   ? 'The satellite disagrees — it still measures a wet root zone, which usually means recent rain the balance has not caught up with. Dig before you irrigate.'
-                  : root < 0.2 && waterDeficitMm <= 0
+                  : zone.disagreement === 'drier-than-balance'
                     ? 'The satellite disagrees — it measures dry soil despite the balance looking fine. Trust the spade over both.'
                     : 'The measurement agrees with the calculation.'}
               </Text>
@@ -204,10 +220,10 @@ export default function RootZoneScreen() {
               <Text style={[styles.riskTitle, { color: risk.ink }]}>{risk.title}</Text>
             </View>
             <Text style={[styles.cardBody, { color: risk.ink }]}>
-              {fungal.level === 'clear'
-                ? forecast.length === 0
-                  ? 'No forecast available to check the coming nights against.'
-                  : 'Across the next few nights the air stays far enough from its dew point that the leaves should dry, or the days stay too cool for blast and blight to take hold. Nothing to spray for.'
+              {disease.kind === 'no-data'
+                ? 'No forecast has come back for this field yet, so the coming nights have not been checked. Pull down to try again.'
+                : fungal.level === 'clear'
+                ? 'Across the next few nights the air stays far enough from its dew point that the leaves should dry, or the days stay too cool for blast and blight to take hold. Nothing to spray for.'
                 : fungal.level === 'watch'
                   ? 'One of the coming nights brings dew onto a mild crop. One night rarely starts an infection, but if the next does the same, this becomes worth acting on.'
                   : `On ${fungal.riskyDays.length} of the coming nights the air cools to its dew point and the days stay mild — the conditions blast and blight need. Scout the lower leaves each morning and have a preventive spray ready rather than waiting for lesions.`}

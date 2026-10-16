@@ -8,6 +8,7 @@ import {
   angleBetween,
   bearingDeg,
   distanceKm,
+  MAX_DAY_RANGE,
   firesService,
   regionFor,
 } from './fires.service';
@@ -23,10 +24,27 @@ const UPWIND_ARC_DEG = 60;
  * field can never answer the same question differently.
  */
 async function reportFor(lat: number, lon: number, days: number, radiusKm: number) {
-  const [detections, forecast] = await Promise.all([
-    firesService.near(lat, lon, radiusKm, days),
+  const [live, forecast] = await Promise.all([
+    // FIRMS answers at most five days. Anything longer is served from the
+    // store, which the backfill and the poller keep filled.
+    days <= MAX_DAY_RANGE
+      ? firesService.near(lat, lon, radiusKm, days)
+      : Promise.resolve({ available: false, reason: 'window_too_long', fires: [] }),
     weatherService.getForecast(lat, lon).catch(() => []),
   ]);
+
+  // Always read the store too: it holds the history FIRMS will not serve in
+  // one request, and it is what stands in when FIRMS cannot be reached.
+  const archive = await firesService.stored(lat, lon, radiusKm, days);
+
+  // Real detections from both, de-duplicated on the identity FIRMS gives them.
+  const seen = new Set<string>();
+  const detections = [...live.fires, ...archive.fires].filter((f) => {
+    const id = `${f.latitude}:${f.longitude}:${f.acquiredDate}:${f.acquiredTime}`;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
 
   const windFromDeg = forecast[0]?.windFromDeg ?? null;
 
@@ -56,10 +74,20 @@ async function reportFor(lat: number, lon: number, days: number, radiusKm: numbe
     radiusKm,
     upwindCount: fires.filter((f) => f.upwind).length,
     fires,
+    /**
+     * Whether this is a current answer. False means FIRMS could not be
+     * reached and everything above came from the store — the screen says so
+     * and shows when it was last refreshed, rather than presenting stale data
+     * as live or, worse, an empty list as an all-clear.
+     */
+    live: live.available,
+    unavailableReason: live.available ? null : live.reason,
+    lastUpdated: live.available ? new Date().toISOString() : archive.lastUpdated,
   };
 }
 
-const clampDays = (v: unknown) => Math.min(7, Math.max(1, Number(v) || 2));
+/** Six months. Beyond FIRMS' own window, so it is served from the store. */
+const clampDays = (v: unknown) => Math.min(185, Math.max(1, Number(v) || 2));
 const clampRadius = (v: unknown) => Math.min(200, Math.max(10, Number(v) || 100));
 
 export const firesController = {

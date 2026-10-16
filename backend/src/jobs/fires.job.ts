@@ -45,9 +45,10 @@ export async function runFirePoll(): Promise<{ farms: number; calls: number; det
   for (const group of clusters.values()) {
     const anchor = group[0]!;
     try {
-      const fires = await firesService.near(anchor.latitude, anchor.longitude, RADIUS_KM, 1);
+      const probe = await firesService.near(anchor.latitude, anchor.longitude, RADIUS_KM, 1);
       calls += 1;
-      if (fires.length === 0) continue;
+      const fires = probe.fires;
+      if (!probe.available || fires.length === 0) continue;
 
       // Kept so the app can show what has been burning without going upstream
       // on every open. Ignoring duplicates makes a re-run of the poller free.
@@ -104,8 +105,76 @@ export async function runFirePoll(): Promise<{ farms: number; calls: number; det
     }
   }
 
-  logger.info('Fire poll finished', { farms: farms.length, calls, detections, advisories });
+  // With the current picture handled, top up the history behind it.
+  const filled = await backfillThinClusters([...clusters.values()].map((g) => g[0]!));
+
+  logger.info('Fire poll finished', {
+    farms: farms.length, calls, detections, advisories, backfilled: filled,
+  });
   return { farms: farms.length, calls, detections, advisories };
+}
+
+/** Six months of history, which is what the fires screen offers to show. */
+const HISTORY_DAYS = 180;
+
+/** Matches the radius the fires screen asks about, not the advisory's 60 km. */
+const HISTORY_RADIUS_KM = 150;
+
+/** At most one cluster per run: thirty-six requests each is enough for one. */
+const BACKFILLS_PER_RUN = 1;
+
+/**
+ * Fills in the months of history behind the live picture.
+ *
+ * The screen offers six months of fires around a field, but the poller only
+ * ever asked for the last day, so everything older than the day this feature
+ * shipped was missing. This walks that history in the windows FIRMS will
+ * answer and stores what comes back.
+ *
+ * Deliberately slow: one cluster per run, and only a cluster that does not
+ * already have history. A farm is done once and then skipped forever, so the
+ * cost is paid once rather than on every poll.
+ */
+async function backfillThinClusters(
+  anchors: { farmId: string; latitude: number; longitude: number }[],
+): Promise<number> {
+  let done = 0;
+
+  for (const anchor of anchors) {
+    if (done >= BACKFILLS_PER_RUN) break;
+
+    try {
+      // "Thin" means nothing stored older than a fortnight: the poller alone
+      // would have produced recent rows but nothing behind them.
+      const cutoff = new Date(Date.now() - 14 * 86_400_000).toISOString();
+      const { count } = await db
+        .from('fire_detections')
+        .select('id', { count: 'exact', head: true })
+        .lt('acquired_at', cutoff)
+        .gte('latitude', anchor.latitude - 1)
+        .lte('latitude', anchor.latitude + 1)
+        .gte('longitude', anchor.longitude - 1)
+        .lte('longitude', anchor.longitude + 1);
+
+      if ((count ?? 0) > 0) continue;
+
+      // The screen asks about 150 km, not the 60 the smoke advisory uses.
+      // Backfilling the smaller radius would leave the outer ring of the list
+      // permanently empty.
+      const result = await firesService.backfill(
+        anchor.latitude, anchor.longitude, HISTORY_RADIUS_KM, HISTORY_DAYS,
+      );
+      done += 1;
+      logger.info('Fire history backfilled', { farmId: anchor.farmId, ...result });
+    } catch (error) {
+      logger.warn('Fire backfill failed', {
+        farmId: anchor.farmId,
+        error: (error as Error).message,
+      });
+    }
+  }
+
+  return done;
 }
 
 /** FIRMS reports a UTC date and an HHMM time in separate columns. */

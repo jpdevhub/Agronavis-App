@@ -39,6 +39,8 @@ export function useFarmFires(days = 2, radiusKm = 100) {
     fires: report?.fires ?? [],
     upwindCount: report?.upwindCount ?? 0,
     nearestKm: report?.fires?.[0]?.distanceKm ?? null,
+    live: report?.live ?? true,
+    lastUpdated: report?.lastUpdated ?? null,
     isLoading: query.isLoading,
     error: query.error as Error | null,
     refetch: query.refetch,
@@ -60,6 +62,9 @@ export function useFireSummary(days = 1) {
     regions: summary?.regions ?? [],
     totalFires: summary?.totalFires ?? 0,
     unavailable: summary?.unavailable ?? [],
+    /** True when the service did not answer and this is the last good picture. */
+    stale: summary?.stale ?? false,
+    fetchedAt: summary?.fetchedAt ?? null,
     isLoading: query.isLoading,
     error: query.error as Error | null,
     refetch: query.refetch,
