@@ -113,6 +113,7 @@ const fireInput = (over: Partial<FireWatchInput> = {}): FireWatchInput => ({
   live: true,
   fires: [],
   upwindCount: 0,
+  activeCount: 0,
   ...over,
 });
 
@@ -147,6 +148,7 @@ describe('fire watch card', () => {
     const state = fireWatchState(fireInput({
       fires: [{ distanceKm: 18, upwind: false }, { distanceKm: 42, upwind: false }],
       upwindCount: 0,
+      activeCount: 2,
     }));
     expect(state.tone).toBe('nearby');
     expect(state.fireCount).toBe(2);
@@ -157,6 +159,7 @@ describe('fire watch card', () => {
     const state = fireWatchState(fireInput({
       fires: [{ distanceKm: 55, upwind: true }, { distanceKm: 12, upwind: false }],
       upwindCount: 1,
+      activeCount: 2,
     }));
     expect(state.tone).toBe('upwind');
     expect(state.upwindCount).toBe(1);
@@ -164,10 +167,24 @@ describe('fire watch card', () => {
     expect(state.nearestKm).toBe(12);
   });
 
+  it('does not raise an alarm for fires that are only history', () => {
+    // Twenty detections on record, none in the last two days. Today's wind
+    // says nothing about a fire that went out months ago.
+    const state = fireWatchState(fireInput({
+      fires: Array.from({ length: 20 }, (_, i) => ({ distanceKm: 75 + i, upwind: null })),
+      activeCount: 0,
+      upwindCount: 0,
+    }));
+    expect(state.tone).toBe('clear');
+    expect(state.fireCount).toBe(0);
+    expect(state.historyCount).toBe(20);
+  });
+
   it('shows stored fires and marks them stale rather than hiding them', () => {
     const state = fireWatchState(fireInput({
       live: false,
       fires: [{ distanceKm: 30, upwind: false }],
+      activeCount: 1,
     }));
     expect(state.kind).toBe('ready');
     expect(state.stale).toBe(true);
@@ -175,12 +192,15 @@ describe('fire watch card', () => {
   });
 
   it('is not stale when the answer was live', () => {
-    expect(fireWatchState(fireInput({ fires: [{ distanceKm: 9, upwind: null }] })).stale).toBe(false);
+    expect(fireWatchState(fireInput({
+      fires: [{ distanceKm: 9, upwind: null }], activeCount: 1,
+    })).stale).toBe(false);
   });
 
   it('finds the nearest regardless of the order they arrive in', () => {
     const state = fireWatchState(fireInput({
       fires: [{ distanceKm: 90, upwind: null }, { distanceKm: 4, upwind: null }, { distanceKm: 51, upwind: null }],
+      activeCount: 3,
     }));
     expect(state.nearestKm).toBe(4);
   });

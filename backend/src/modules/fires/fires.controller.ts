@@ -9,6 +9,7 @@ import {
   bearingDeg,
   distanceKm,
   MAX_DAY_RANGE,
+  clusterDetections,
   firesService,
   regionFor,
 } from './fires.service';
@@ -49,7 +50,9 @@ async function reportFor(lat: number, lon: number, days: number, radiusKm: numbe
 
   const windFromDeg = forecast[0]?.windFromDeg ?? null;
 
-  const fires = detections
+  // VIIRS resolves 375 m, so one burning field arrives as several adjacent
+  // pixels. Listed raw they read as the same fire repeated.
+  const fires = clusterDetections(detections)
     .map((f) => {
       const bearing = bearingDeg(lat, lon, f.latitude, f.longitude);
       return {
@@ -62,10 +65,24 @@ async function reportFor(lat: number, lon: number, days: number, radiusKm: numbe
         confidence: f.confidence,
         acquiredDate: f.acquiredDate,
         acquiredTime: f.acquiredTime,
+        pixels: f.pixels,
         region: regionFor(f.latitude, f.longitude),
       };
     })
-    .sort((a, b) => a.distanceKm - b.distanceKm);
+    // Newest first. Over six months, when something burned matters more than
+    // whether it was 75 or 77 km away.
+    .sort((a, b) =>
+      `${b.acquiredDate}${b.acquiredTime}`.localeCompare(`${a.acquiredDate}${a.acquiredTime}`));
+
+  /**
+   * Only fires from the last couple of days count as a warning.
+   *
+   * Upwind is worked out from *today's* wind, so applying it to a detection
+   * from six months ago is meaningless — it produced "9 of 20 fires are
+   * upwind" on a list whose newest entry was four days old.
+   */
+  const recentCutoff = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
+  const active = fires.filter((f) => f.acquiredDate >= recentCutoff);
 
   return {
     mapped: true,
@@ -73,7 +90,8 @@ async function reportFor(lat: number, lon: number, days: number, radiusKm: numbe
     windFromDeg,
     days,
     radiusKm,
-    upwindCount: fires.filter((f) => f.upwind).length,
+    upwindCount: active.filter((f) => f.upwind).length,
+    activeCount: active.length,
     fires,
     /**
      * Whether this is a current answer. False means FIRMS could not be

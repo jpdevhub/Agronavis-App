@@ -85,6 +85,8 @@ export interface FireWatchState {
   nearestKm: number | null;
   /** True when the list came from the store because FIRMS did not answer. */
   stale: boolean;
+  /** Everything on record, however old. `fireCount` is only the active ones. */
+  historyCount: number;
 }
 
 export interface FireWatchInput {
@@ -95,10 +97,17 @@ export interface FireWatchInput {
   live: boolean;
   fires: { distanceKm: number; upwind: boolean | null }[];
   upwindCount: number;
+  /**
+   * Fires recent enough for today's wind to mean anything. The card speaks
+   * about these; the full list behind it may stretch back months.
+   */
+  activeCount: number;
 }
 
 export function fireWatchState(input: FireWatchInput): FireWatchState {
-  const empty = { tone: null, fireCount: 0, upwindCount: 0, nearestKm: null, stale: false } as const;
+  const empty = {
+    tone: null, fireCount: 0, upwindCount: 0, nearestKm: null, stale: false, historyCount: 0,
+  } as const;
 
   if (!input.hasField) return { kind: 'no-field', ...empty };
   if (input.isLoading) return { kind: 'loading', ...empty };
@@ -112,13 +121,17 @@ export function fireWatchState(input: FireWatchInput): FireWatchState {
 
   const nearest = count > 0 ? Math.min(...input.fires.map((f) => f.distanceKm)) : null;
 
+  // The tone describes what is burning *now*. A list of six months of fires
+  // is history, not a warning, and colouring the card red for a fire that
+  // went out in May would train a farmer to ignore it.
   return {
     kind: 'ready',
-    tone: input.upwindCount > 0 ? 'upwind' : count > 0 ? 'nearby' : 'clear',
-    fireCount: count,
+    tone: input.upwindCount > 0 ? 'upwind' : input.activeCount > 0 ? 'nearby' : 'clear',
+    fireCount: input.activeCount,
     upwindCount: input.upwindCount,
     nearestKm: nearest,
     stale: !input.live,
+    historyCount: count,
   };
 }
 

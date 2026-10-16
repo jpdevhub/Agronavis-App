@@ -18,7 +18,7 @@ import { useFarmStore } from '@/store/useFarmStore';
  * publishes about three hours behind, so asking more often returns the same
  * answer and spends a farmer's data to do it.
  */
-export function useFarmFires(days = 2, radiusKm = 100) {
+export function useFarmFires(days = 180, radiusKm = 150) {
   const farmId = useFarmStore((s) => s.activeFarmId);
   const fieldId = useFarmStore((s) => s.activeFieldId);
 
@@ -38,7 +38,11 @@ export function useFarmFires(days = 2, radiusKm = 100) {
     report,
     fires: report?.fires ?? [],
     upwindCount: report?.upwindCount ?? 0,
-    nearestKm: report?.fires?.[0]?.distanceKm ?? null,
+    /** Fires recent enough to warn about, as opposed to the whole history. */
+    activeCount: report?.activeCount ?? 0,
+    nearestKm: report?.fires?.length
+      ? Math.min(...report.fires.map((f) => f.distanceKm))
+      : null,
     live: report?.live ?? true,
     lastUpdated: report?.lastUpdated ?? null,
     isLoading: query.isLoading,

@@ -82,7 +82,7 @@ export default function FiresScreen() {
   const insets = useSafeAreaInsets();
   // Six months of history. FIRMS itself answers five days at a time, so the
   // older part is served from what the poller and the backfill have stored.
-  const near = useFarmFires(180, 150);
+  const near = useFarmFires();
   const [showAll, setShowAll] = useState(false);
   const national = useFireSummary(1);
   const [refreshing, setRefreshing] = useState(false);
@@ -223,13 +223,17 @@ export default function FiresScreen() {
               <View style={[styles.card, near.upwindCount > 0 ? styles.cardAlarm : styles.cardWatch]}>
                 <Text style={[styles.cardTitle, near.upwindCount > 0 && styles.alarmInk]}>
                   {near.upwindCount > 0
-                    ? `${near.upwindCount} of ${near.fires.length} fires are upwind`
-                    : `${near.fires.length} fires nearby, none upwind`}
+                    ? `${near.upwindCount} of ${near.activeCount} recent fires are upwind`
+                    : near.activeCount > 0
+                      ? `${near.activeCount} burning in the last two days, none upwind`
+                      : 'Nothing burning in the last two days'}
                 </Text>
                 <Text style={[styles.cardBody, near.upwindCount > 0 && styles.alarmInk]}>
-                  {near.report.windFromDeg === null
-                    ? 'The wind direction is unknown right now, so every fire is listed.'
-                    : `Wind is coming from the ${compass(near.report.windFromDeg)}. Only fires in that direction send their smoke to you.`}
+                  {near.activeCount === 0
+                    ? `${near.fires.length} on record over the last six months, listed below newest first.`
+                    : near.report.windFromDeg === null
+                      ? 'The wind direction is unknown right now, so every fire is listed.'
+                      : `Wind is coming from the ${compass(near.report.windFromDeg)}. Only fires in that direction send their smoke to you.`}
                 </Text>
               </View>
               {/* Ten to read, forty more on request — every one a real

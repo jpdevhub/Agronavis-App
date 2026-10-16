@@ -230,6 +230,60 @@ async function getWithRetry(url: string, attempts = 2): Promise<{ data: string }
   throw lastError;
 }
 
+/**
+ * How close two detections must be to be treated as one fire. VIIRS resolves
+ * 375 m, so a burning field spans several adjacent pixels and FIRMS reports
+ * each one. Listing them separately showed the same fire four times over,
+ * identical to the row above it down to the minute.
+ */
+const CLUSTER_KM = 1.5;
+
+/**
+ * Collapses adjacent pixels from the same satellite pass into single fires.
+ *
+ * Grouped by acquisition time first — two fires a kilometre apart seen twelve
+ * hours apart are two events, not one — then merged by distance within that
+ * pass. The hottest pixel wins the brightness, since that is what the
+ * intensity wording is read from, and `pixels` records how many were merged,
+ * which is a rough measure of how wide the burn is.
+ */
+export function clusterDetections(fires: FireDetection[]): (FireDetection & { pixels: number })[] {
+  const byPass = new Map<string, FireDetection[]>();
+  for (const f of fires) {
+    const key = `${f.acquiredDate}:${f.acquiredTime}`;
+    const bucket = byPass.get(key);
+    if (bucket) bucket.push(f);
+    else byPass.set(key, [f]);
+  }
+
+  const out: (FireDetection & { pixels: number })[] = [];
+
+  for (const pass of byPass.values()) {
+    const clusters: (FireDetection & { pixels: number })[] = [];
+
+    for (const f of pass) {
+      const near = clusters.find(
+        (c) => distanceKm(c.latitude, c.longitude, f.latitude, f.longitude) <= CLUSTER_KM,
+      );
+      if (!near) {
+        clusters.push({ ...f, pixels: 1 });
+        continue;
+      }
+      near.pixels += 1;
+      // Keep the hottest pixel's reading; a cluster is as alight as its worst.
+      if ((f.brightnessK ?? 0) > (near.brightnessK ?? 0)) {
+        near.brightnessK = f.brightnessK;
+        near.latitude = f.latitude;
+        near.longitude = f.longitude;
+      }
+    }
+
+    out.push(...clusters);
+  }
+
+  return out;
+}
+
 export interface NearResult {
   /** False only when nothing — live, cached or stored — could answer. */
   available: boolean;

@@ -17,7 +17,7 @@ import { fireWatchState } from '@/features/insight/cardState';
  */
 export function FireWatchCard() {
   const router = useRouter();
-  const { report, fires, upwindCount, nearestKm, isLoading, live } = useFarmFires();
+  const { report, fires, upwindCount, activeCount, nearestKm, isLoading, live } = useFarmFires();
   const hasField = Boolean(useFarmStore((s) => s.activeFieldId ?? s.activeFarmId));
 
   // The decision lives in `cardState` so every branch below is assertable
@@ -29,6 +29,7 @@ export function FireWatchCard() {
     live,
     fires,
     upwindCount,
+    activeCount,
   });
 
   // Deliberately not `return null`. A card that disappears when its data is
@@ -93,6 +94,7 @@ export function FireWatchCard() {
 
   const upwind = state.tone === 'upwind';
   const anyNear = state.fireCount > 0;
+  const nearestActiveKm = Math.round(state.nearestKm ?? 0);
 
   const tone = upwind
     ? { ground: Colors.errorContainer, ink: Colors.onErrorContainer, icon: 'local-fire-department' as const }
@@ -103,14 +105,16 @@ export function FireWatchCard() {
   const headline = upwind
     ? `${upwindCount} fire${upwindCount === 1 ? '' : 's'} upwind of you`
     : anyNear
-      ? `${fires.length} fire${fires.length === 1 ? '' : 's'} nearby, none upwind`
+      ? `${state.fireCount} fire${state.fireCount === 1 ? '' : 's'} nearby, none upwind`
       : 'No fires near your field';
 
   const detail = upwind
-    ? `Nearest about ${Math.round(nearestKm ?? 0)} km away. Expect smoke — keep children indoors early morning and hold off spraying.`
+    ? `Nearest about ${nearestActiveKm} km away. Expect smoke — keep children indoors early morning and hold off spraying.`
     : anyNear
-      ? `The nearest is about ${Math.round(nearestKm ?? 0)} km away, but the wind is carrying its smoke elsewhere.`
-      : `Nothing burning within ${report?.radiusKm ?? 150} km in the window checked.`;
+      ? `The nearest is about ${nearestActiveKm} km away, but the wind is carrying its smoke elsewhere.`
+      : `Nothing burning within ${report?.radiusKm ?? 150} km in the last two days${
+          state.historyCount > 0 ? `. ${state.historyCount} on record over six months` : ''
+        }.`;
 
   return (
     <Pressable

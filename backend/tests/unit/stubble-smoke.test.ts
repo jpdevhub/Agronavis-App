@@ -2,6 +2,7 @@ import {
   angleBetween,
   bearingDeg,
   boundingBox,
+  clusterDetections,
   BURN_REGIONS,
   distanceKm,
   parseFirmsCsv,
@@ -177,3 +178,60 @@ describe('naming where a fire is', () => {
   });
 });
 
+
+/**
+ * VIIRS resolves 375 m, so a single burning field arrives as a handful of
+ * adjacent pixels and FIRMS reports every one. Listed raw, the screen showed
+ * the same fire four times over — identical distance, identical minute.
+ */
+describe('clustering adjacent pixels', () => {
+  const pixel = (lat: number, lon: number, over: Partial<Record<string, unknown>> = {}) => ({
+    latitude: lat,
+    longitude: lon,
+    brightnessK: 330,
+    confidence: 'n',
+    acquiredDate: '2026-10-12',
+    acquiredTime: '0644',
+    ...over,
+  }) as never;
+
+  it('merges pixels of one fire seen in one pass', () => {
+    // Three pixels within a few hundred metres of each other.
+    const out = clusterDetections([
+      pixel(22.5, 88.3),
+      pixel(22.503, 88.3),
+      pixel(22.5, 88.303),
+    ]);
+
+    expect(out).toHaveLength(1);
+    expect(out[0]!.pixels).toBe(3);
+  });
+
+  it('keeps fires far enough apart separate', () => {
+    const out = clusterDetections([pixel(22.5, 88.3), pixel(22.6, 88.4)]);
+    expect(out).toHaveLength(2);
+  });
+
+  it('does not merge across satellite passes', () => {
+    // Same place, twelve hours apart: two events, not one.
+    const out = clusterDetections([
+      pixel(22.5, 88.3),
+      pixel(22.5, 88.3, { acquiredTime: '1844' }),
+    ]);
+    expect(out).toHaveLength(2);
+  });
+
+  it('reports the cluster at its hottest pixel', () => {
+    const out = clusterDetections([
+      pixel(22.5, 88.3, { brightnessK: 320 }),
+      pixel(22.502, 88.3, { brightnessK: 367 }),
+    ]);
+
+    expect(out).toHaveLength(1);
+    expect(out[0]!.brightnessK).toBe(367);
+  });
+
+  it('handles an empty list', () => {
+    expect(clusterDetections([])).toEqual([]);
+  });
+});

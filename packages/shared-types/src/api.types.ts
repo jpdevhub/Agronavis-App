@@ -505,6 +505,8 @@ export interface NearbyFire {
   /** HHMM, UTC. */
   acquiredTime: string;
   region: string | null;
+  /** Adjacent 375 m pixels merged into this one fire. */
+  pixels?: number;
 }
 
 export interface FarmFireReport {
@@ -514,6 +516,11 @@ export interface FarmFireReport {
    * an all-clear.
    */
   live?: boolean;
+  /**
+   * Fires recent enough for the wind direction to mean anything. The upwind
+   * count is taken from these, never from the whole history.
+   */
+  activeCount?: number;
   unavailableReason?: string | null;
   /** When this picture was last refreshed from NASA. */
   lastUpdated?: string | null;
