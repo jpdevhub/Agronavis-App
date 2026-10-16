@@ -141,10 +141,93 @@ export function parseFirmsCsv(csv: string): FireDetection[] {
   return out;
 }
 
+/** Everyone asks the country-wide question at once, and it moves slowly. */
+const SUMMARY_TTL_MS = 30 * 60_000;
+const summaryCache = new Map<number, { at: number; value: FireSummary }>();
+
 export const firesService = {
   /** True when a key is configured. Without one the whole feature stays off. */
   get enabled(): boolean {
     return Boolean(env.FIRMS_MAP_KEY);
+  },
+
+  /**
+   * The national picture: how many fires each region is carrying.
+   *
+   * Asked one region at a time rather than as one box over the whole country.
+   * A single request spanning India is roughly 860 square degrees, which is
+   * both slow and far more than FIRMS wants to answer at once — and the one
+   * box would still have to be divided afterwards to say which state a
+   * detection was in. Asking per region attributes it by construction.
+   *
+   * Regions are fetched a few at a time so a slow one cannot hold the rest up,
+   * and a region that fails is reported as unavailable rather than as zero: a
+   * farmer reading "no fires in Punjab" when the request failed is worse than
+   * reading nothing.
+   */
+  async summary(days = 1): Promise<FireSummary> {
+    if (!env.FIRMS_MAP_KEY) {
+      return { totalFires: 0, days, regions: [], unavailable: [], latestAcquired: null };
+    }
+
+    const cached = summaryCache.get(days);
+    if (cached && Date.now() - cached.at < SUMMARY_TTL_MS) return cached.value;
+
+    const regions: RegionCount[] = [];
+    const unavailable: string[] = [];
+    let latest: string | null = null;
+
+    const BATCH = 4;
+    for (let i = 0; i < BURN_REGIONS.length; i += BATCH) {
+      const batch = BURN_REGIONS.slice(i, i + BATCH);
+      const results = await Promise.all(
+        batch.map(async (region) => {
+          const [s0, w, n, e] = region.box;
+          const box = `${w},${s0},${e},${n}`;
+          const url = `${FIRMS_BASE}/${env.FIRMS_MAP_KEY}/${SOURCE}/${box}/${days}`;
+          try {
+            const { data } = await axios.get<string>(url, {
+              timeout: 25_000,
+              responseType: 'text',
+            });
+            if (typeof data !== 'string' || data.toLowerCase().includes('invalid map_key')) {
+              return { region, fires: null as FireDetection[] | null };
+            }
+            return { region, fires: parseFirmsCsv(data) };
+          } catch {
+            return { region, fires: null as FireDetection[] | null };
+          }
+        }),
+      );
+
+      for (const { region, fires } of results) {
+        if (fires === null) {
+          unavailable.push(region.name);
+          continue;
+        }
+        if (fires.length === 0) {
+          regions.push({ region: region.name, fires: 0, peakBrightnessK: 0 });
+          continue;
+        }
+        let peak = 0;
+        for (const f of fires) {
+          peak = Math.max(peak, f.brightnessK);
+          const stamp = `${f.acquiredDate}T${(f.acquiredTime || '0000').padStart(4, '0')}`;
+          if (!latest || stamp > latest) latest = stamp;
+        }
+        regions.push({ region: region.name, fires: fires.length, peakBrightnessK: peak });
+      }
+    }
+
+    const value: FireSummary = {
+      totalFires: regions.reduce((sum, r) => sum + r.fires, 0),
+      days,
+      regions: regions.sort((a, b) => b.fires - a.fires),
+      unavailable,
+      latestAcquired: latest,
+    };
+    summaryCache.set(days, { at: Date.now(), value });
+    return value;
   },
 
   /**
@@ -186,3 +269,77 @@ export const firesService = {
     }
   },
 };
+
+/**
+ * Where a detection is, named.
+ *
+ * FIRMS gives coordinates and nothing else, and reverse-geocoding every one of
+ * several hundred would cost more than the answer is worth. These are
+ * rectangles around the states that actually burn after the kharif harvest,
+ * generous enough to catch a fire near a border and ordered so the smaller,
+ * more specific ones win.
+ *
+ * It is an approximation and is labelled as one everywhere it surfaces. A
+ * detection two kilometres inside Haryana reported as Punjab changes nothing a
+ * farmer would act on; the number burning in the north-west this week is the
+ * fact that matters.
+ */
+export interface FireRegion {
+  name: string;
+  /** south, west, north, east */
+  box: [number, number, number, number];
+}
+
+export const BURN_REGIONS: FireRegion[] = [
+  { name: 'Punjab', box: [29.5, 73.8, 32.6, 76.95] },
+  { name: 'Haryana', box: [27.6, 74.4, 30.95, 77.65] },
+  { name: 'Delhi NCR', box: [28.35, 76.8, 28.9, 77.4] },
+  { name: 'Uttar Pradesh', box: [23.8, 77.0, 30.45, 84.7] },
+  { name: 'Rajasthan', box: [23.0, 69.4, 30.2, 78.3] },
+  { name: 'Madhya Pradesh', box: [21.0, 74.0, 26.9, 82.8] },
+  { name: 'Bihar', box: [24.2, 83.3, 27.55, 88.3] },
+  { name: 'Gujarat', box: [20.0, 68.1, 24.8, 74.5] },
+  { name: 'Maharashtra', box: [15.6, 72.6, 22.1, 80.9] },
+  { name: 'Odisha', box: [17.7, 81.3, 22.6, 87.6] },
+  { name: 'West Bengal', box: [21.4, 85.8, 27.3, 89.9] },
+  { name: 'Telangana', box: [15.8, 77.2, 19.95, 81.8] },
+  { name: 'Andhra Pradesh', box: [12.6, 76.7, 19.95, 84.8] },
+  { name: 'Karnataka', box: [11.5, 74.0, 18.5, 78.6] },
+  { name: 'Tamil Nadu', box: [8.0, 76.2, 13.6, 80.4] },
+  { name: 'Chhattisgarh', box: [17.7, 80.2, 24.2, 84.4] },
+];
+
+/** The state a detection most likely sits in, or null outside the regions. */
+export function regionFor(lat: number, lon: number): string | null {
+  // Smallest box first, so Delhi beats the Uttar Pradesh rectangle it sits in.
+  const ordered = [...BURN_REGIONS].sort(
+    (a, b) =>
+      (a.box[2] - a.box[0]) * (a.box[3] - a.box[1]) -
+      (b.box[2] - b.box[0]) * (b.box[3] - b.box[1]),
+  );
+  for (const r of ordered) {
+    const [s, w, n, e] = r.box;
+    if (lat >= s && lat <= n && lon >= w && lon <= e) return r.name;
+  }
+  return null;
+}
+
+export interface RegionCount {
+  region: string;
+  fires: number;
+  /** The hottest pixel seen there, kelvin — a rough proxy for intensity. */
+  peakBrightnessK: number;
+}
+
+export interface FireSummary {
+  totalFires: number;
+  days: number;
+  regions: RegionCount[];
+  /**
+   * Regions FIRMS could not answer for. Reported rather than counted as zero —
+   * "no fires in Punjab" when the request failed is worse than saying nothing.
+   */
+  unavailable: string[];
+  /** When FIRMS last saw anything in this set. */
+  latestAcquired: string | null;
+}
