@@ -64,6 +64,13 @@ export function createApp(): Application {
       status: 'healthy',
       service: 'agronavis-api',
       version: process.env.npm_package_version ?? '1.2.0',
+      /**
+       * Which build this actually is. The package version barely moves, so a
+       * deploy that had not gone out looked identical to one that had — and a
+       * bug fixed in the repo but not yet on the server is indistinguishable
+       * from one that was never fixed. Render sets this; it is absent locally.
+       */
+      commit: process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? 'local',
       environment: env.NODE_ENV,
       timestamp: new Date().toISOString(),
     });
