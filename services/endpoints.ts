@@ -10,6 +10,8 @@ import type {
   DashboardPrice,
   DiseaseReference,
   Farm,
+  FireSummary,
+  FarmFireReport,
   FarmField,
   FarmTask,
   FarmerProfile,
@@ -149,6 +151,15 @@ export const marketApi = {
       ...(districtId !== undefined ? { districtId } : {}),
     }),
   commodities: () => api.get<MandiCommodityRef[]>('/market/catalogue/commodities'),
+};
+
+export const fireApi = {
+  /** The national picture. Needs no farm, so it works before a field exists. */
+  summary: (days = 1) => api.get<FireSummary>('/fires/summary', { days }),
+  forFarm: (farmId: string, days = 2, radiusKm = 100) =>
+    api.get<FarmFireReport>(`/fires/farm/${farmId}`, { days, radiusKm }),
+  history: (farmId: string) =>
+    api.get<{ days: { date: string; fires: number }[] }>(`/fires/farm/${farmId}/history`),
 };
 
 export const advisoryApi = {

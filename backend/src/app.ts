@@ -11,6 +11,7 @@ import { advisoryRoutes } from './modules/advisory/advisory.routes';
 import { authRoutes } from './modules/auth/auth.routes';
 import { communityRoutes } from './modules/community/community.routes';
 import { cropRoutes } from './modules/crops/crops.routes';
+import { fireRoutes } from './modules/fires/fires.routes';
 import { farmerRoutes } from './modules/farmers/farmers.routes';
 import { farmRoutes } from './modules/farms/farms.routes';
 import { marketRoutes } from './modules/market/market.routes';
@@ -77,6 +78,7 @@ export function createApp(): Application {
   app.use(`${prefix}/tasks`, taskRoutes);
   app.use(`${prefix}/soil`, soilRoutes);
   app.use(`${prefix}/advisory`, advisoryRoutes);
+  app.use(`${prefix}/fires`, fireRoutes);
   app.use(`${prefix}/weather`, weatherRoutes);
   app.use(`${prefix}/market`, marketRoutes);
   app.use(`${prefix}/community`, communityRoutes);

@@ -8,6 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { FarmTask } from '@agronavis/shared-types';
 import { Colors, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
+import { FireWatchCard } from '@/components/insight/FireWatchCard';
+import { RootZoneCard } from '@/components/insight/RootZoneCard';
 import { SAHAYAK_FAB_SPACE } from '@/features/sahayak';
 import { useTabBarHeight } from '@/hooks/useTabBarHeight';
 import { useFarmer } from '@/hooks/useFarmer';
@@ -421,6 +423,11 @@ export default function DashboardScreen() {
             )}
           </>
         )}
+
+        {/* What the satellites say, above the aerial card: both are about
+            this field, and these two are the ones that change daily. */}
+        <RootZoneCard />
+        <FireWatchCard />
 
         <TouchableOpacity
           style={styles.aerialCard}
