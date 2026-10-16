@@ -2,7 +2,7 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, Image, RefreshControl,
 } from 'react-native';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -196,6 +196,22 @@ export default function DashboardScreen() {
     ]);
     setRefreshing(false);
   }, [refetchFarmer, refetchFields, refetchTasks, refetchWeather, refetchAlerts]);
+
+  /**
+   * Pick a field if none is chosen, or if the chosen one has been deleted.
+   *
+   * The farm screen has always done this; the dashboard never did, so anyone
+   * who opened the app and stayed on the dashboard had no field selected — and
+   * every farm-scoped query sat disabled behind it, which is why the weather,
+   * soil and fire cards rendered nothing on a farm that had fields.
+   */
+  useEffect(() => {
+    if (!fields || fields.length === 0) return;
+    const stillThere = fields.some((f) => f.id === activeFieldId);
+    if (stillThere) return;
+    const first = fields[0]!;
+    setActiveField(first.id, first.farmId);
+  }, [fields, activeFieldId, setActiveField]);
 
   const activeField = fields?.find((f) => f.id === activeFieldId);
   const hasFields = fields && fields.length > 0;

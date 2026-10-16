@@ -31,7 +31,7 @@ services:
       - key: NODE_ENV
         value: production
       # Which deployment this is. NODE_ENV is a Node concern; this one says
-      # whose data the process is serving. Staging sets it to `staging`.
+      # whose data the process is serving.
       - key: APP_ENV
         value: production
       - key: LOG_LEVEL

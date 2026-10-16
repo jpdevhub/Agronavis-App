@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
+import { Loader } from '@/components/ui';
 import { useFarmFires } from '@/hooks/useFires';
 
 /**
@@ -16,7 +17,44 @@ export function FireWatchCard() {
   const router = useRouter();
   const { report, fires, upwindCount, nearestKm, isLoading } = useFarmFires();
 
-  if (isLoading || !report?.mapped) return null;
+  // Deliberately not `return null`. A card that disappears when its data is
+  // missing is indistinguishable from a card that was never built — which is
+  // exactly how this one read on a farm whose field had not been selected yet.
+  if (isLoading) {
+    return (
+      <View style={[styles.card, styles.cardQuiet]}>
+        <View style={styles.head}>
+          <View style={[styles.badge, { backgroundColor: Colors.surfaceContainerHigh }]}>
+            <Loader size={28} />
+          </View>
+          <View style={styles.headText}>
+            <Text style={[styles.eyebrow, { color: Colors.onSurfaceVariant }]}>STUBBLE WATCH</Text>
+            <Text style={[styles.headline, { color: Colors.onSurface }]}>Checking the sky</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (!report?.mapped) {
+    return (
+      <View style={[styles.card, styles.cardQuiet]}>
+        <View style={styles.head}>
+          <View style={[styles.badge, { backgroundColor: Colors.surfaceContainerHigh }]}>
+            <MaterialIcons name="local-fire-department" size={22} color={Colors.onSurfaceVariant} />
+          </View>
+          <View style={styles.headText}>
+            <Text style={[styles.eyebrow, { color: Colors.onSurfaceVariant }]}>STUBBLE WATCH</Text>
+            <Text style={[styles.headline, { color: Colors.onSurface }]}>Map a field first</Text>
+          </View>
+        </View>
+        <Text style={[styles.detail, { color: Colors.onSurfaceVariant }]}>
+          Once your field is on the map this will tell you when crop burning upwind is about to
+          send smoke your way.
+        </Text>
+      </View>
+    );
+  }
 
   const upwind = upwindCount > 0;
   const anyNear = fires.length > 0;
@@ -74,6 +112,11 @@ const styles = StyleSheet.create({
     ...Elevation.level1,
   },
   pressed: { opacity: 0.9 },
+  cardQuiet: {
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+  },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   badge: {
     width: 44,

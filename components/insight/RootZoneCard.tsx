@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
+import { Loader } from '@/components/ui';
 import { useWeather } from '@/hooks/useWeather';
 import { useFarmStore } from '@/store/useFarmStore';
 
@@ -32,7 +33,44 @@ export function RootZoneCard() {
     .reverse()
     .find((d) => typeof d.soilWetnessRoot === 'number');
 
-  if (isLoading || !latest || latest.soilWetnessRoot === null) return null;
+  // Same reasoning as the fire card: never vanish. A missing reading is a
+  // thing worth saying, because NASA genuinely does not publish one for every
+  // day and the farmer should know that is why the number is absent.
+  if (isLoading) {
+    return (
+      <View style={[styles.card, styles.quiet]}>
+        <View style={styles.head}>
+          <View style={[styles.badge, { backgroundColor: Colors.surfaceContainerHigh }]}>
+            <Loader size={28} />
+          </View>
+          <View style={styles.headText}>
+            <Text style={styles.eyebrow}>ROOT ZONE WATER</Text>
+            <Text style={styles.headline}>Reading the satellite</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (!latest || latest.soilWetnessRoot === null) {
+    return (
+      <View style={[styles.card, styles.quiet]}>
+        <View style={styles.head}>
+          <View style={[styles.badge, { backgroundColor: Colors.surfaceContainerHigh }]}>
+            <MaterialIcons name="water-drop" size={22} color={Colors.onSurfaceVariant} />
+          </View>
+          <View style={styles.headText}>
+            <Text style={styles.eyebrow}>ROOT ZONE WATER</Text>
+            <Text style={styles.headline}>No reading yet</Text>
+          </View>
+        </View>
+        <Text style={styles.detail}>
+          NASA publishes soil moisture two to three days behind, and not for every day. Your
+          irrigation advice still works from the water balance in the meantime.
+        </Text>
+      </View>
+    );
+  }
 
   const pct = Math.round(latest.soilWetnessRoot * 100);
   const tone = band(latest.soilWetnessRoot);
@@ -91,6 +129,7 @@ const styles = StyleSheet.create({
     ...Elevation.level1,
   },
   pressed: { opacity: 0.9 },
+  quiet: { gap: Spacing.sm },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   badge: {
     width: 44,
