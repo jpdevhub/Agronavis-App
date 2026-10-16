@@ -259,8 +259,7 @@ export default function FiresScreen() {
 
               {!near.live ? (
                 <Text style={styles.unavailable}>
-                  Last updated {sinceText(near.lastUpdated)}. The satellite service did not answer
-                  just now, so this is what was recorded before that.
+                  Last updated {sinceText(near.lastUpdated)}.
                 </Text>
               ) : null}
             </>

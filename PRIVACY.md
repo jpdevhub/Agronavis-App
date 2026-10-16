@@ -66,7 +66,7 @@ Cached public data such as district soil records and mandi prices is not persona
 - Object to a particular use
 - Nominate someone to exercise these rights if you are unable to
 
-Write to [privacy@agronavis.example]. We reply within 30 days. If you are not satisfied you may complain to the Data Protection Board of India.
+Write to contact@agronavis.in. We reply within 30 days. If you are not satisfied you may complain to the Data Protection Board of India.
 
 ## 8. Children
 
@@ -76,8 +76,8 @@ Agronavis is for adults who farm. We do not knowingly collect data from anyone u
 
 Material changes will be announced in the app before they take effect, and the date at the top of this page will change.
 
-Agronavis · [Registered address, India] · [privacy@agronavis.example]
+Agronavis · Barrackpore, Kolkata, West Bengal, India · contact@agronavis.in
 
 ---
 
-Agronavis · [Registered address, India]
+Agronavis · Barrackpore, Kolkata, West Bengal, India

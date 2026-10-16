@@ -124,6 +124,17 @@ const HISTORY_RADIUS_KM = 150;
 const BACKFILLS_PER_RUN = 1;
 
 /**
+ * And at most one a day overall.
+ *
+ * Backfilling is the only part of this that is genuinely expensive — six
+ * months in five-day windows is thirty-six requests for a single field — and
+ * nothing about months-old history is urgent. The live picture is unaffected;
+ * it keeps its own three-hour cache.
+ */
+const BACKFILL_INTERVAL_MS = 24 * 60 * 60_000;
+let lastBackfillAt = 0;
+
+/**
  * Fills in the months of history behind the live picture.
  *
  * The screen offers six months of fires around a field, but the poller only
@@ -138,6 +149,8 @@ const BACKFILLS_PER_RUN = 1;
 async function backfillThinClusters(
   anchors: { farmId: string; latitude: number; longitude: number }[],
 ): Promise<number> {
+  if (Date.now() - lastBackfillAt < BACKFILL_INTERVAL_MS) return 0;
+
   let done = 0;
 
   for (const anchor of anchors) {
@@ -165,6 +178,7 @@ async function backfillThinClusters(
         anchor.latitude, anchor.longitude, HISTORY_RADIUS_KM, HISTORY_DAYS,
       );
       done += 1;
+      lastBackfillAt = Date.now();
       logger.info('Fire history backfilled', { farmId: anchor.farmId, ...result });
     } catch (error) {
       logger.warn('Fire backfill failed', {

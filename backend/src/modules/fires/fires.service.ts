@@ -169,6 +169,90 @@ const summaryCache = new Map<number, { at: number; value: FireSummary }>();
  */
 const lastGoodSummary = new Map<number, { at: number; value: FireSummary }>();
 
+/**
+ * Answers already paid for.
+ *
+ * Every farmer opening the fires screen asks the same question of the same few
+ * boxes, so a district spends one request between them rather than one each.
+ *
+ * Held for three hours, which is how often the answer can actually change:
+ * VIIRS passes roughly twice a day and FIRMS publishes about three hours
+ * behind, so a shorter window re-fetches identical rows and a longer one would
+ * sit on a smoke warning after the satellite had already seen the fire. The
+ * quota is not what sets this — the key allows 5,000 transactions per ten
+ * minutes and the whole system was using 26 — the publication lag is.
+ *
+ * It also stands in when NASA is unreachable, which happens: production has
+ * seen `ETIMEDOUT` to their host with the IPv6 route down beside it. A cached
+ * answer shown with its age beats a blank screen, and beats inventing an
+ * all-clear.
+ */
+const NEAR_TTL_MS = 3 * 60 * 60_000;
+const NEAR_CACHE_MAX = 200;
+const nearCache = new Map<string, { at: number; fires: FireDetection[] }>();
+
+function rememberNear(key: string, fires: FireDetection[]): void {
+  // Oldest out first; this is a convenience cache, not a store.
+  if (nearCache.size >= NEAR_CACHE_MAX) {
+    const oldest = nearCache.keys().next().value;
+    if (oldest !== undefined) nearCache.delete(oldest);
+  }
+  nearCache.set(key, { at: Date.now(), fires });
+}
+
+/**
+ * One FIRMS request, retried once.
+ *
+ * NASA's host goes unreachable from time to time — seen in production as
+ * `ETIMEDOUT 198.118.194.34` with the IPv6 route unreachable alongside it. A
+ * single timeout used to blank the feature until the next poll, which on a
+ * free tier can be a long time. One retry after a short pause covers the
+ * common case without turning an outage into a pile of queued requests.
+ */
+async function getWithRetry(url: string, attempts = 2): Promise<{ data: string }> {
+  let lastError: unknown;
+
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      return await axios.get<string>(url, { timeout: 20_000, responseType: 'text' });
+    } catch (error) {
+      lastError = error;
+      // Only a connection-level failure is worth repeating. A rejected key or
+      // a bad day range will be rejected again just as fast.
+      const code = (error as { code?: string }).code ?? '';
+      const retryable = ['ETIMEDOUT', 'ENETUNREACH', 'ECONNRESET', 'ECONNABORTED', 'EAI_AGAIN']
+        .includes(code);
+      if (!retryable || i === attempts - 1) break;
+      await new Promise((resolve) => setTimeout(resolve, 1_500));
+    }
+  }
+
+  throw lastError;
+}
+
+export interface NearResult {
+  /** False only when nothing — live, cached or stored — could answer. */
+  available: boolean;
+  reason: string | null;
+  fires: FireDetection[];
+  /** Set when these came from the cache rather than from NASA just now. */
+  cachedAt: string | null;
+}
+
+/**
+ * Empties the in-memory caches.
+ *
+ * Only for tests: each one needs a cold service, or a request answered from
+ * the previous test's cache never reaches the code under test. Production
+ * never calls this — the caches are supposed to survive between requests,
+ * which is the whole point of them.
+ */
+export function __resetFireCaches(): void {
+  nearCache.clear();
+  summaryCache.clear();
+  lastGoodSummary.clear();
+}
+
 export const firesService = {
   /** True when a key is configured. Without one the whole feature stays off. */
   get enabled(): boolean {
@@ -290,33 +374,58 @@ export const firesService = {
     lon: number,
     radiusKm = 60,
     days = 1,
-  ): Promise<{ available: boolean; reason: string | null; fires: FireDetection[] }> {
+  ): Promise<NearResult> {
     if (!env.FIRMS_MAP_KEY) {
-      return { available: false, reason: 'not_configured', fires: [] };
+      return { available: false, reason: 'not_configured', fires: [], cachedAt: null };
     }
 
-    const url = `${FIRMS_BASE}/${env.FIRMS_MAP_KEY}/${SOURCE}/${boundingBox(lat, lon, radiusKm)}/${Math.min(MAX_DAY_RANGE, days)}`;
+    const box = boundingBox(lat, lon, radiusKm);
+    const window = Math.min(MAX_DAY_RANGE, days);
+    const key = `${box}:${window}`;
+
+    // Still fresh: answer without spending a transaction.
+    const hit = nearCache.get(key);
+    if (hit && Date.now() - hit.at < NEAR_TTL_MS) {
+      return {
+        available: true,
+        reason: null,
+        fires: hit.fires.filter((f) => distanceKm(lat, lon, f.latitude, f.longitude) <= radiusKm),
+        cachedAt: new Date(hit.at).toISOString(),
+      };
+    }
+
+    const url = `${FIRMS_BASE}/${env.FIRMS_MAP_KEY}/${SOURCE}/${box}/${window}`;
     try {
-      const { data } = await axios.get<string>(url, {
-        timeout: 20_000,
-        responseType: 'text',
-      });
+      const { data } = await getWithRetry(url);
 
       if (typeof data !== 'string' || data.toLowerCase().includes('invalid map_key')) {
         logger.warn('FIRMS rejected the key');
-        return { available: false, reason: 'rejected', fires: [] };
+        return { available: false, reason: 'rejected', fires: [], cachedAt: null };
       }
 
+      const parsed = parseFirmsCsv(data);
+      rememberNear(key, parsed);
+
       // The box is a rectangle; the farmer's question is a circle.
-      const fires = parseFirmsCsv(data).filter(
+      const fires = parsed.filter(
         (f) => distanceKm(lat, lon, f.latitude, f.longitude) <= radiusKm,
       );
-      return { available: true, reason: null, fires };
+      return { available: true, reason: null, fires, cachedAt: null };
     } catch (error) {
-      logger.warn('FIRMS request failed; falling back to stored detections', {
-        error: (error as Error).message,
-      });
-      return { available: false, reason: 'unreachable', fires: [] };
+      logger.warn('FIRMS request failed', { error: (error as Error).message });
+
+      // Past its TTL, but a real answer from NASA all the same. Shown with its
+      // age rather than discarded in favour of an empty screen.
+      if (hit) {
+        return {
+          available: true,
+          reason: 'cached',
+          fires: hit.fires.filter((f) => distanceKm(lat, lon, f.latitude, f.longitude) <= radiusKm),
+          cachedAt: new Date(hit.at).toISOString(),
+        };
+      }
+
+      return { available: false, reason: 'unreachable', fires: [], cachedAt: null };
     }
   },
 

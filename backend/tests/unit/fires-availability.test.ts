@@ -31,7 +31,11 @@ jest.mock('../../src/config/supabase', () => ({
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { env } = require('../../src/config/env') as { env: { FIRMS_MAP_KEY: string | undefined } };
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { firesService, MAX_DAY_RANGE } = require('../../src/modules/fires/fires.service');
+const {
+  firesService,
+  MAX_DAY_RANGE,
+  __resetFireCaches,
+} = require('../../src/modules/fires/fires.service');
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
@@ -44,6 +48,9 @@ const CSV = [
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // A cold service each time: otherwise a test is answered from the cache the
+  // previous one filled, and never exercises the path it is testing.
+  __resetFireCaches();
   env.FIRMS_MAP_KEY = 'test-key';
   chain.select.mockReturnThis();
   chain.gte.mockReturnThis();
@@ -80,6 +87,28 @@ describe('near() never reports an all-clear it has not earned', () => {
     expect(result.available).toBe(false);
     expect(result.reason).toBe('unreachable');
     expect(result.fires).toEqual([]);
+  });
+
+  it('retries a connection failure and succeeds on the second try', async () => {
+    // Exactly what production threw: NASA's host unreachable for a moment.
+    const timeout = Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' });
+    mockedAxios.get.mockRejectedValueOnce(timeout).mockResolvedValueOnce({ data: CSV });
+
+    const result = await firesService.near(30.9, 75.85, 60, 1);
+
+    expect(mockedAxios.get).toHaveBeenCalledTimes(2);
+    expect(result.available).toBe(true);
+    expect(result.fires).toHaveLength(2);
+  });
+
+  it('does not retry a rejection that will fail the same way again', async () => {
+    const refused = Object.assign(new Error('bad request'), { code: 'ERR_BAD_REQUEST' });
+    mockedAxios.get.mockRejectedValue(refused);
+
+    await firesService.near(30.9, 75.85, 60, 1);
+
+    // A bad key or an invalid day range is not worth asking twice.
+    expect(mockedAxios.get).toHaveBeenCalledTimes(1);
   });
 
   it('reports unavailable when the body is not text', async () => {
@@ -151,6 +180,9 @@ describe('a long history still shows the fires happening now', () => {
     // Expects [1..5]" — which parsed to zero fires and read as an all-clear.
     for (const requested of [1, 2, 3, 5, 7, 30, 180]) {
       mockedAxios.get.mockClear();
+      // Cold each time: 7, 30 and 180 all cap to the same five-day window, so
+      // the cache would answer them and no request would be made to inspect.
+      __resetFireCaches();
       await firesService.near(30.9, 75.85, 150, requested);
       const range = Number((mockedAxios.get.mock.calls[0]![0] as string).split('/').pop());
       expect(range).toBeGreaterThanOrEqual(1);

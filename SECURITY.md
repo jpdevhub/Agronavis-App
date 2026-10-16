@@ -4,7 +4,7 @@
 
 **Please do not open a public issue for a security problem.**
 
-Email **[security@agronavis.example]** with:
+Email **contact@agronavis.in** with:
 
 - what the problem is, and which part of the system it affects
 - the steps to reproduce it

@@ -81,9 +81,9 @@ async function reportFor(lat: number, lon: number, days: number, radiusKm: numbe
      * and shows when it was last refreshed, rather than presenting stale data
      * as live or, worse, an empty list as an all-clear.
      */
-    live: live.available,
+    live: live.available && !live.cachedAt,
     unavailableReason: live.available ? null : live.reason,
-    lastUpdated: live.available ? new Date().toISOString() : archive.lastUpdated,
+    lastUpdated: live.cachedAt ?? (live.available ? new Date().toISOString() : archive.lastUpdated),
   };
 }
 
