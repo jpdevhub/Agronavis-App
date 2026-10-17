@@ -181,3 +181,32 @@ task list from sowing through to harvest.
 English and Hindi across the whole app, not only the assistant. Speak your
 question and hear the answer, so reading comfortably is never a requirement for
 using any part of it.
+
+---
+
+## See your crop from orbit
+
+**How much is actually growing on your field, measured every few days from
+space.**
+
+A satellite passes over your land about every five days and photographs it in
+light your eye cannot see. Healthy leaves reflect a great deal of infrared and
+swallow red light to feed themselves, so the gap between those two tells you
+how much living crop is standing there — before thinning is obvious from the
+gate.
+
+Agronavis reads that for your field and shows it three ways:
+
+- **A number.** Bare soil sits near 0.15, a full healthy canopy past 0.6.
+- **The direction.** More useful than the number: a drop of a tenth since the
+  last pass means something has changed in the last few days, and the app says
+  so plainly — *worth walking the field*.
+- **A picture.** Your field coloured brown to green, one block per ten metres
+  of ground, laid over the satellite view.
+
+When cloud hides the ground the app tells you that too, and when the next
+clear pass is due. It will never tell you the crop looks fine on a day nothing
+could see it.
+
+> Sentinel-2, European Space Agency · 10 m · free and open · no account needed
+> **#20** — technical detail in [docs/architecture/SATELLITE.md](architecture/SATELLITE.md)

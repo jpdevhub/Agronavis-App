@@ -637,4 +637,14 @@ export interface NdviReport {
   available: boolean;
   /** Recent passes, newest first. */
   history: NdviReading[];
+  /**
+   * The latest reading drawn as a PNG data URI, for laying over the field.
+   * Inline because a map's image loader carries none of our auth headers.
+   */
+  heatmap: string | null;
+  /**
+   * Ground the heatmap covers: top-left, top-right, bottom-right, bottom-left
+   * as [lon, lat], which is the order an image overlay expects.
+   */
+  bounds: [number, number][] | null;
 }

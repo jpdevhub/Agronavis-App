@@ -707,31 +707,40 @@ yet look at the field from orbit. See the next section.
 4. **Verified treatment text**, written against CIB&RC-approved actives, so the
    library can advise and not only identify.
 
-### Medium term — satellite crop monitoring
+### Delivered — satellite crop monitoring
 
-This is the biggest missing capability, and it deserves its own section.
+**Built in #20.** The European Space Agency's **Sentinel-2** satellites
+photograph every point on Earth about every five days in colours the eye
+cannot see, including near-infrared. Healthy plants reflect near-infrared
+strongly and absorb red; stressed plants do not. The ratio is **NDVI**, and it
+shows crop stress days before it is visible from the path.
 
-**What it is:** the European Space Agency's **Sentinel-2** satellites photograph
-every point on Earth every five days, in colours the human eye cannot see —
-including near-infrared. Healthy plants reflect near-infrared strongly;
-stressed plants do not. The ratio is called **NDVI**, and it reveals crop stress
-days before it is visible on the ground.
+It fits because we already had the field's exact boundary — that is the hard
+part, and it was solved on day one. The data costs nothing and needs no
+account.
 
-**Why it fits us perfectly:** we already have the field's exact boundary. That
-is the hard part, and we solved it on day one. Sentinel-2 data is free.
+What a farmer gets today:
 
-**What it would give the farmer:**
+|                            |                                                                     |
+| -------------------------- | ------------------------------------------------------------------- |
+| **A vigour reading**       | Bare soil near 0.15, a closed canopy past 0.6                        |
+| **The direction**          | A fall of a tenth between passes says walk the field                 |
+| **Change over the season** | Every measured pass, so a crop can be seen running ahead or behind   |
+| **A heatmap**              | The field coloured brown to green, one block per 10 m of ground      |
+| **Honest gaps**            | When cloud hid the ground, and when the next clear pass is due       |
 
-|                                     |                                                                   |
-| ----------------------------------- | ----------------------------------------------------------------- |
-| **A stress map of the whole field** | Not one leaf — every square metre                                 |
-| **Early warning**                   | Problems visible from orbit before they are visible from the path |
-| **Which corner is struggling**      | So fertiliser goes where it is needed                             |
-| **Change over the season**          | Is the crop ahead or behind where it should be?                   |
+**What it does not do, and why.** At 10 m, a one-acre field is roughly forty
+pixels. That is plenty for a reliable field mean and a trend between passes,
+and *not* enough to tell a farmer which corner is struggling — the earlier
+plan for a per-square-metre stress map assumed a resolution this instrument
+does not have. Sub-metre imagery exists and is not free; the honest version of
+this feature is a field-level trend, which is what shipped.
 
-> Today our scanner answers "what is wrong with **this leaf**". Sentinel-2 would
-> answer "which **part of my field** is in trouble". Those are different
-> questions and farmers need both.
+> The scanner answers "what is wrong with **this leaf**". Sentinel-2 answers
+> "is **this field** thinning". Those are different questions and farmers need
+> both.
+
+Full detail in [SATELLITE.md](SATELLITE.md).
 
 5. **Task timelines for every crop**, with real agronomic stages rather than
    four fixed milestones.
@@ -787,4 +796,6 @@ is the hard part, and we solved it on day one. Sentinel-2 data is free.
 | Sunlight and rainfall          | NASA POWER, NASA Langley Research Center                                                           |
 | Soil nutrients                 | Soil Health Card scheme, Department of Agriculture & Farmers Welfare, Government of India          |
 | Market prices                  | Agmarknet, Directorate of Marketing & Inspection, Government of India                              |
-| Satellite monitoring (planned) | Sentinel-2, Copernicus Programme, European Space Agency                                            |
+| Satellite monitoring            | Sentinel-2, Copernicus Programme (via Element 84 Earth Search on AWS)                                            |
+
+- [SATELLITE.md](SATELLITE.md) — how a field is watched from orbit: Sentinel-2, NDVI, and why the slow part is a job

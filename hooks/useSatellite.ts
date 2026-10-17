@@ -65,6 +65,10 @@ export function useNdvi() {
     previous: report?.previous ?? null,
     change: report?.change ?? null,
     history: report?.history ?? [],
+    /** The latest reading drawn as a PNG data URI, for the map overlay. */
+    heatmap: report?.heatmap ?? null,
+    /** Ground the heatmap covers, as four [lon, lat] corners. */
+    bounds: report?.bounds ?? null,
     available: report?.available ?? true,
     isLoading: query.isLoading,
     refetch: query.refetch,

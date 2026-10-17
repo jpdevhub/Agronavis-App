@@ -416,7 +416,11 @@ export default function DashboardScreen() {
                 </View>
                 <TouchableOpacity
                   style={styles.fieldInfoBtn}
-                  onPress={() => router.push('/(tabs)/farm' as any)}
+                  // Straight to what the satellite saw once there is a reading; the
+          // farm list is the right place only before there is one.
+          onPress={() =>
+            router.push((vigour.kind === 'ready' ? '/crop-health' : '/(tabs)/farm') as never)
+          }
                   activeOpacity={0.8}
                 >
                   <MaterialIcons name="arrow-forward" size={18} color={Colors.primary} />
@@ -470,7 +474,11 @@ export default function DashboardScreen() {
 
         <TouchableOpacity
           style={styles.aerialCard}
-          onPress={() => router.push('/(tabs)/farm' as any)}
+          // Straight to what the satellite saw once there is a reading; the
+          // farm list is the right place only before there is one.
+          onPress={() =>
+            router.push((vigour.kind === 'ready' ? '/crop-health' : '/(tabs)/farm') as never)
+          }
           activeOpacity={0.9}
         >
           <View style={styles.aerialLiveBadge}>

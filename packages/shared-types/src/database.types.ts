@@ -281,6 +281,8 @@ export type NdviReadingRow = {
   /** Scene cloud cover. A reading from a cloudy scene is a reading of cloud. */
   cloud_percent: number | null;
   scene_id: string | null;
+  /** Row-major NDVI for the sample box, for drawing it. */
+  grid: { side: number; values: number[] } | null;
   created_at: string;
 };
 
@@ -557,7 +559,7 @@ export interface Database {
       >;
       ndvi_readings: Table<
         NdviReadingRow,
-        'id' | 'created_at' | 'pixels' | 'cloud_percent' | 'scene_id'
+        'id' | 'created_at' | 'pixels' | 'cloud_percent' | 'scene_id' | 'grid'
       >;
       notifications: Table<
         NotificationRow,

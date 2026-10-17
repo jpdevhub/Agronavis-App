@@ -36,6 +36,13 @@ const agent = new https.Agent({ family: 4, keepAlive: true });
  */
 const cache = new Map<string, NdviReading>();
 
+export interface NdviGrid {
+  /** The grid is square; this is its side in pixels. */
+  side: number;
+  /** Row-major NDVI, with NaN where the scene had no data. */
+  values: number[];
+}
+
 export interface NdviReading {
   date: string;
   /** Mean NDVI across the sampled pixels, −1 to 1. */
@@ -43,6 +50,11 @@ export interface NdviReading {
   /** How many pixels carried usable data. */
   pixels: number;
   cloudPercent: number;
+  /**
+   * The values behind the mean, kept so the field can be drawn rather than
+   * only summarised. Null on readings taken before the heatmap existed.
+   */
+  grid?: NdviGrid | null;
 }
 
 export interface NdviReport {
@@ -139,12 +151,19 @@ async function readScene(scene: Scene, lat: number, lon: number): Promise<NdviRe
 
   let sum = 0;
   let pixels = 0;
+  const values: number[] = new Array(red.length);
+
   for (let i = 0; i < red.length; i += 1) {
     const r = red[i]!;
     const n = nir[i]!;
     // Zero in both bands is nodata, not a reading of nothing growing.
-    if (r + n === 0) continue;
-    sum += (n - r) / (n + r);
+    if (r + n === 0) {
+      values[i] = Number.NaN;
+      continue;
+    }
+    const v = (n - r) / (n + r);
+    values[i] = Math.round(v * 1000) / 1000;
+    sum += v;
     pixels += 1;
   }
   if (pixels === 0) return null;
@@ -154,6 +173,7 @@ async function readScene(scene: Scene, lat: number, lon: number): Promise<NdviRe
     ndvi: Math.round((sum / pixels) * 1000) / 1000,
     pixels,
     cloudPercent: Math.round(scene.cloudPercent * 10) / 10,
+    grid: { side: Math.round(Math.sqrt(red.length)), values },
   };
 
   cache.set(key, reading);
@@ -212,7 +232,7 @@ export async function storedFor(fieldId: string, limit = 12): Promise<NdviReport
 }> {
   const { data, error } = await db
     .from('ndvi_readings')
-    .select('captured_on, ndvi, pixels, cloud_percent')
+    .select('captured_on, ndvi, pixels, cloud_percent, grid')
     .eq('field_id', fieldId)
     .order('captured_on', { ascending: false })
     .limit(limit);
@@ -223,12 +243,16 @@ export async function storedFor(fieldId: string, limit = 12): Promise<NdviReport
   }
 
   const history: NdviReading[] = (data ?? []).map((r) => {
-    const row = r as { captured_on: string; ndvi: number; pixels: number; cloud_percent: number | null };
+    const row = r as {
+      captured_on: string; ndvi: number; pixels: number;
+      cloud_percent: number | null; grid: NdviGrid | null;
+    };
     return {
       date: row.captured_on,
       ndvi: Number(row.ndvi),
       pixels: row.pixels,
       cloudPercent: row.cloud_percent == null ? 0 : Number(row.cloud_percent),
+      grid: row.grid ?? null,
     };
   });
 
@@ -248,4 +272,22 @@ export async function storedFor(fieldId: string, limit = 12): Promise<NdviReport
   };
 }
 
-export const ndviService = { ndviFor, storedFor, clearScenes, readScene };
+/**
+ * The ground the sample box covers, as the four corners Mapbox wants.
+ *
+ * A degree of latitude is about 111 km everywhere; longitude narrows with the
+ * cosine of latitude, which matters by the time you reach the Himalayan
+ * fields. Order is top-left, top-right, bottom-right, bottom-left.
+ */
+export function sampleBounds(lat: number, lon: number): [number, number][] {
+  const dLat = HALF_M / 111_000;
+  const dLon = HALF_M / (111_000 * Math.max(0.2, Math.cos((lat * Math.PI) / 180)));
+  return [
+    [lon - dLon, lat + dLat],
+    [lon + dLon, lat + dLat],
+    [lon + dLon, lat - dLat],
+    [lon - dLon, lat - dLat],
+  ];
+}
+
+export const ndviService = { ndviFor, storedFor, clearScenes, readScene, sampleBounds };

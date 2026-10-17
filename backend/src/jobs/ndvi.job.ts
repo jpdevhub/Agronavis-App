@@ -78,6 +78,7 @@ export async function runNdviSync(): Promise<{
             pixels: reading.pixels,
             cloud_percent: reading.cloudPercent,
             scene_id: scene.id,
+            grid: reading.grid ?? null,
           },
           { onConflict: 'field_id,captured_on', ignoreDuplicates: true },
         );
