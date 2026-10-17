@@ -52,14 +52,24 @@ export async function runNdviSync(): Promise<{
       const scenes = (await ndviService.clearScenes(lat, lon, LOOKBACK_DAYS)).slice(0, 2);
       if (scenes.length === 0) continue;
 
-      // Which of these passes is already on record for this field.
+      // Which of these passes is already measured *properly*.
+      //
+      // A row with no grid predates per-pixel cloud masking, and those
+      // readings are not merely coarser — one Himalayan field averaged snow
+      // into its mean and came back at −0.025, when the vegetated ground under
+      // it reads 0.769. They are re-measured rather than kept, which lets a
+      // re-run repair the record without anyone deleting anything.
       const { data: existing } = await db
         .from('ndvi_readings')
-        .select('captured_on')
+        .select('captured_on, grid')
         .eq('field_id', field.id)
         .in('captured_on', scenes.map((s) => s.date));
 
-      const done = new Set((existing ?? []).map((r) => String((r as { captured_on: string }).captured_on)));
+      const done = new Set(
+        (existing ?? [])
+          .filter((r) => (r as { grid: unknown }).grid != null)
+          .map((r) => String((r as { captured_on: string }).captured_on)),
+      );
 
       for (const scene of scenes) {
         if (done.has(scene.date)) {
@@ -80,7 +90,9 @@ export async function runNdviSync(): Promise<{
             scene_id: scene.id,
             grid: reading.grid ?? null,
           },
-          { onConflict: 'field_id,captured_on', ignoreDuplicates: true },
+          // Overwrite rather than ignore: a re-run is how a reading taken by
+          // an earlier, worse version of this gets corrected.
+          { onConflict: 'field_id,captured_on', ignoreDuplicates: false },
         );
 
         if (writeError) logger.warn('NDVI reading not stored', { error: writeError.message });

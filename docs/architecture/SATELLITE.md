@@ -140,13 +140,46 @@ NDVI = (NIR − red) / (NIR + red)
 
 | NDVI | Ground |
 |---|---|
-| < 0.2 | Bare soil |
+| < 0 | Not crop — water, snow or cloud |
+| 0 – 0.2 | Bare soil |
 | 0.2 – 0.4 | Sparse |
 | 0.4 – 0.6 | Growing |
 | > 0.6 | Dense canopy |
 
 A 200 m box around the field centre gives a 20×20 grid at 10 m. Pixels reading
 zero in both bands are nodata and skipped — not counted as nothing growing.
+
+### Cloud masking, and why it is not optional
+
+Filtering whole scenes on cloud cover says nothing about whether cloud sat
+over *this* field. The first run without per-pixel masking produced swings of
+**+60% and −38% across ten days** on neighbouring fields, which no crop does,
+and a Himalayan field that read **−0.025** — below zero, which no plant and no
+soil can be.
+
+Sentinel-2 L2A ships a per-pixel scene classification (`SCL`, 20 m) beside the
+bands. Only vegetation (4), bare ground (5) and unclassified (7) describe
+ground worth measuring. Cloud at either probability (8, 9), thin cirrus (10),
+cloud shadow (3), topographic shadow (2), water (6), snow (11), saturated (1)
+and nodata (0) are masked out.
+
+That Himalayan field, re-measured:
+
+```
+before   −0.025   400/400 pixels averaged, snow included
+after     0.769   240/400 usable — a dense canopy
+```
+
+The reading was not slightly off. It was the wrong surface entirely.
+
+If fewer than 40% of pixels survive the mask, the pass is **discarded rather
+than stored**: its average would describe the weather, not the field. The
+classification layer is 20 m against the bands' 10 m, so its index is scaled
+rather than assumed to line up.
+
+A reading stored without a grid predates this masking, and the job re-measures
+those instead of skipping them — a re-run repairs the record with no manual
+deletion.
 
 Scenes are projected in UTM, and **each Sentinel-2 tile carries its own EPSG**,
 reported per scene by the catalogue. Latitude and longitude are converted into
@@ -234,9 +267,6 @@ has not yet had a clear look, the other means we could not find out.
 **Within-field stress maps.** At 10 m a one-acre field is ~40 pixels. Enough
 for a reliable mean and a trend; not enough to tell a farmer which corner is
 struggling. Claiming otherwise would be a resolution the sensor cannot support.
-
-**Cloud masking per pixel.** Scenes are filtered on the scene-level figure.
-Per-pixel masking needs the SCL band — a third read, another 40 s.
 
 **NDMI (water stress).** `(NIR − SWIR) / (NIR + SWIR)` from B08 and B11, both
 public in the same scenes. One more band read; not yet built.

@@ -370,8 +370,27 @@ describe('crop vigour card', () => {
     [0.2, 'Sparse'],
     [0.199, 'Bare'],
     [0, 'Bare'],
+    // Below zero the surface reflects more red than infrared. No plant and no
+    // soil does that — it is water, snow or cloud.
+    [-0.025, 'Not crop'],
+    [-0.4, 'Not crop'],
   ])('reads %s as %s, including at the boundary', (v, expected) => {
     expect(vigourBand(v as number)).toBe(expected);
+  });
+
+  it('does not call water or snow bare ground', () => {
+    // A real reading from a field at 31.96N came back at -0.025.
+    const state = vigourState(input({ latest: { date: '2026-10-10', ndvi: -0.025 } }));
+    expect(state.band).toBe('Not crop');
+    expect(state.kind).toBe('ready');
+  });
+
+  it('never raises a growth alarm about a surface that is not a crop', () => {
+    const state = vigourState(input({
+      latest: { date: '2026-10-10', ndvi: -0.05 },
+      change: -0.9,
+    }));
+    expect(state.falling).toBe(false);
   });
 
   it('reports the reading and its date', () => {

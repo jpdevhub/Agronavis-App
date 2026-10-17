@@ -238,7 +238,7 @@ export interface VigourState {
   /** Mean NDVI, 0-1, when there is a reading. */
   ndvi: number | null;
   /** Plain words for what that number means for a canopy. */
-  band: 'Bare' | 'Sparse' | 'Growing' | 'Dense' | null;
+  band: 'Not crop' | 'Bare' | 'Sparse' | 'Growing' | 'Dense' | null;
   /** Percentage change since the previous pass, rounded. */
   changePercent: number | null;
   /** A fall worth a farmer's attention rather than ordinary variation. */
@@ -259,7 +259,12 @@ export function vigourBand(v: number): VigourState['band'] {
   if (v >= 0.6) return 'Dense';
   if (v >= 0.4) return 'Growing';
   if (v >= 0.2) return 'Sparse';
-  return 'Bare';
+  // Below zero the surface reflects more red than infrared, which no plant and
+  // no soil does — it is water, snow or cloud. One field came back at −0.025
+  // and would have been labelled bare ground, which is a different thing and
+  // a different decision for whoever farms it.
+  if (v >= 0) return 'Bare';
+  return 'Not crop';
 }
 
 /** A drop this large between passes is not ordinary variation. */
@@ -284,12 +289,17 @@ export function vigourState(input: {
   // field after its next clear pass, which can be days away.
   if (!input.latest) return { kind: 'no-data', ...empty };
 
+  const band = vigourBand(input.latest.ndvi);
+
   return {
     kind: 'ready',
     ndvi: input.latest.ndvi,
-    band: vigourBand(input.latest.ndvi),
+    band,
     changePercent: input.change === null ? null : Math.round(input.change * 100),
-    falling: input.change !== null && input.change <= -VIGOUR_ALARM_DROP,
+    // Never alarm about a surface that is not a crop: a flooded or snow-
+    // covered field will swing wildly and none of it is about growth.
+    falling:
+      band !== 'Not crop' && input.change !== null && input.change <= -VIGOUR_ALARM_DROP,
     measuredOn: input.latest.date,
   };
 }

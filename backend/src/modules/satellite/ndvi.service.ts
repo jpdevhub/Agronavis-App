@@ -26,6 +26,28 @@ const MAX_CLOUD = 20;
 /** Half-width of the sample box, metres. 100 m gives 20x20 ten-metre pixels. */
 const HALF_M = 100;
 
+/**
+ * Scene classification values worth measuring.
+ *
+ * Sentinel-2 L2A ships a per-pixel classification beside the bands. Only
+ * vegetation (4), bare ground (5) and unclassified (7) describe a field we can
+ * read. The rest — cloud at either probability (8, 9), thin cirrus (10), cloud
+ * shadow (3), dark/topographic shadow (2), water (6), snow (11), saturated (1)
+ * and nodata (0) — are not the crop, and averaging them in is how a passing
+ * cloud becomes a crop-failure alert.
+ *
+ * The first run without this produced swings of +60% and −38% across ten days
+ * on neighbouring fields, which no crop does.
+ */
+const USABLE_SCL = new Set([4, 5, 7]);
+
+/**
+ * Below this share of usable pixels the box was mostly cloud, and its average
+ * would describe the weather rather than the field. Better to record nothing
+ * and wait for the next pass.
+ */
+const MIN_USABLE_SHARE = 0.4;
+
 /** Render has no IPv6 route out; see the same fix in fires.service.ts. */
 const agent = new https.Agent({ family: 4, keepAlive: true });
 
@@ -77,6 +99,8 @@ interface Scene {
   epsg: number;
   red: string;
   nir: string;
+  /** Scene classification, 20 m: which pixels are cloud, shadow, water. */
+  scl: string;
 }
 
 /** The recent clear scenes over a point, newest first. */
@@ -104,6 +128,7 @@ async function clearScenes(lat: number, lon: number, days: number): Promise<Scen
       epsg: Number(f.properties?.['proj:epsg'] ?? 0),
       red: f.assets?.red?.href ?? '',
       nir: f.assets?.nir?.href ?? '',
+      scl: f.assets?.scl?.href ?? '',
     }))
     .filter((s) => s.date && s.epsg && s.red && s.nir)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
@@ -129,10 +154,16 @@ async function readScene(scene: Scene, lat: number, lon: number): Promise<NdviRe
 
   const [x, y] = proj4('EPSG:4326', `EPSG:${scene.epsg}`, [lon, lat]) as [number, number];
 
-  const bands: Record<'red' | 'nir', ArrayLike<number> | null> = { red: null, nir: null };
-
-  for (const band of ['red', 'nir'] as const) {
-    const tiff = await fromUrl(scene[band]);
+  /**
+   * One band's window over the sample box.
+   *
+   * Each band carries its own origin and resolution — the classification layer
+   * is 20 m where red and near-infrared are 10 m — so the pixel offsets are
+   * computed per band rather than shared. Returns the values and the grid side,
+   * since those sides differ.
+   */
+  async function window(href: string) {
+    const tiff = await fromUrl(href);
     const image = await tiff.getImage();
     const [ox, oy] = image.getOrigin();
     const [rx, ry] = image.getResolution();
@@ -142,12 +173,34 @@ async function readScene(scene: Scene, lat: number, lon: number): Promise<NdviRe
     const side = Math.max(1, Math.round((HALF_M * 2) / Math.abs(rx)));
 
     const raster = await image.readRasters({ window: [left, top, left + side, top + side] });
-    bands[band] = raster[0] as ArrayLike<number>;
+    return { values: raster[0] as ArrayLike<number>, side };
   }
 
-  const red = bands.red;
-  const nir = bands.nir;
-  if (!red || !nir || red.length === 0 || red.length !== nir.length) return null;
+  const redBand = await window(scene.red);
+  const nirBand = await window(scene.nir);
+  const sclBand = scene.scl ? await window(scene.scl) : null;
+
+  const red = redBand.values;
+  const nir = nirBand.values;
+  if (red.length === 0 || red.length !== nir.length) return null;
+
+  const side = redBand.side;
+
+  /**
+   * Is this 10 m pixel worth reading?
+   *
+   * The classification is 20 m, so each of its pixels covers four of these;
+   * the index is scaled rather than assumed to line up. Without the layer at
+   * all we measure everything, which is what the first version did.
+   */
+  const usable = (i: number): boolean => {
+    if (!sclBand) return true;
+    const scale = sclBand.side / side;
+    const row = Math.floor(Math.floor(i / side) * scale);
+    const col = Math.floor((i % side) * scale);
+    const v = sclBand.values[row * sclBand.side + col];
+    return typeof v === 'number' && USABLE_SCL.has(v);
+  };
 
   let sum = 0;
   let pixels = 0;
@@ -156,8 +209,9 @@ async function readScene(scene: Scene, lat: number, lon: number): Promise<NdviRe
   for (let i = 0; i < red.length; i += 1) {
     const r = red[i]!;
     const n = nir[i]!;
-    // Zero in both bands is nodata, not a reading of nothing growing.
-    if (r + n === 0) {
+    // Zero in both bands is nodata, not a reading of nothing growing. Cloud,
+    // shadow, water and snow are not the crop either.
+    if (r + n === 0 || !usable(i)) {
       values[i] = Number.NaN;
       continue;
     }
@@ -166,14 +220,23 @@ async function readScene(scene: Scene, lat: number, lon: number): Promise<NdviRe
     sum += v;
     pixels += 1;
   }
-  if (pixels === 0) return null;
+
+  // Mostly cloud: its average would describe the weather, not the field.
+  if (pixels / red.length < MIN_USABLE_SHARE) {
+    logger.info('NDVI pass skipped — too little clear ground', {
+      date: scene.date,
+      usable: pixels,
+      of: red.length,
+    });
+    return null;
+  }
 
   const reading: NdviReading = {
     date: scene.date,
     ndvi: Math.round((sum / pixels) * 1000) / 1000,
     pixels,
     cloudPercent: Math.round(scene.cloudPercent * 10) / 10,
-    grid: { side: Math.round(Math.sqrt(red.length)), values },
+    grid: { side, values },
   };
 
   cache.set(key, reading);
