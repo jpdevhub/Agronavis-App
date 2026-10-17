@@ -83,6 +83,9 @@ const envSchema = z
     // is enough to catch a burning front moving and cheap enough to leave on
     // outside the season, when it simply finds nothing.
     FIRE_POLL_CRON: z.string().default('0 */6 * * *'),
+    // Sentinel-2 revisits every five days; daily catches every pass with room
+    // to spare, and each field costs about forty seconds.
+    NDVI_SYNC_CRON: z.string().default('0 5 * * *'),
   })
   .transform((raw) => ({
     ...raw,

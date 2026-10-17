@@ -231,3 +231,65 @@ export function monitoringState(input: {
 
   return { kind: 'no-data', caption: 'No recent pass on record', fresh: false };
 }
+
+
+export interface VigourState {
+  kind: CardKind;
+  /** Mean NDVI, 0-1, when there is a reading. */
+  ndvi: number | null;
+  /** Plain words for what that number means for a canopy. */
+  band: 'Bare' | 'Sparse' | 'Growing' | 'Dense' | null;
+  /** Percentage change since the previous pass, rounded. */
+  changePercent: number | null;
+  /** A fall worth a farmer's attention rather than ordinary variation. */
+  falling: boolean;
+  measuredOn: string | null;
+}
+
+/**
+ * How much living canopy the satellite saw.
+ *
+ * Bare soil reflects near-infrared and red almost equally, so NDVI sits near
+ * 0.1-0.2; a closed healthy canopy reaches 0.6-0.9. The bands below follow
+ * that, but the number alone says little — 0.4 is excellent for a seedling and
+ * alarming for a crop about to be harvested. The change between two passes is
+ * the part that carries a warning, which is why `falling` exists separately.
+ */
+export function vigourBand(v: number): VigourState['band'] {
+  if (v >= 0.6) return 'Dense';
+  if (v >= 0.4) return 'Growing';
+  if (v >= 0.2) return 'Sparse';
+  return 'Bare';
+}
+
+/** A drop this large between passes is not ordinary variation. */
+export const VIGOUR_ALARM_DROP = 0.1;
+
+export function vigourState(input: {
+  hasField: boolean;
+  isLoading: boolean;
+  available: boolean;
+  latest: { date: string; ndvi: number } | null;
+  change: number | null;
+}): VigourState {
+  const empty = {
+    ndvi: null, band: null, changePercent: null, falling: false, measuredOn: null,
+  } as const;
+
+  if (!input.hasField) return { kind: 'no-field', ...empty };
+  if (input.isLoading) return { kind: 'loading', ...empty };
+  if (!input.available) return { kind: 'unavailable', ...empty };
+
+  // No reading yet is not the same as nothing growing: the job measures a
+  // field after its next clear pass, which can be days away.
+  if (!input.latest) return { kind: 'no-data', ...empty };
+
+  return {
+    kind: 'ready',
+    ndvi: input.latest.ndvi,
+    band: vigourBand(input.latest.ndvi),
+    changePercent: input.change === null ? null : Math.round(input.change * 100),
+    falling: input.change !== null && input.change <= -VIGOUR_ALARM_DROP,
+    measuredOn: input.latest.date,
+  };
+}

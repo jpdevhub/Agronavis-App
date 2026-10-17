@@ -9,8 +9,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import type { FarmTask } from '@agronavis/shared-types';
 import { Colors, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { FireWatchCard } from '@/components/insight/FireWatchCard';
-import { useSatellitePasses } from '@/hooks/useSatellite';
-import { monitoringState } from '@/features/insight/cardState';
+import { useNdvi, useSatellitePasses } from '@/hooks/useSatellite';
+import { monitoringState, vigourState } from '@/features/insight/cardState';
 import { RootZoneCard } from '@/components/insight/RootZoneCard';
 import { SAHAYAK_FAB_SPACE } from '@/features/sahayak';
 import { useTabBarHeight } from '@/hooks/useTabBarHeight';
@@ -153,6 +153,14 @@ export default function DashboardScreen() {
 
   // What Sentinel-2 last saw of this field, for the monitoring card below.
   const satellite = useSatellitePasses();
+  const ndvi = useNdvi();
+  const vigour = vigourState({
+    hasField: Boolean(activeFieldId ?? activeFarmId),
+    isLoading: ndvi.isLoading,
+    available: ndvi.available,
+    latest: ndvi.latest,
+    change: ndvi.change,
+  });
   const monitoring = monitoringState({
     hasField: Boolean(activeFieldId ?? activeFarmId),
     isLoading: satellite.isLoading,
@@ -473,7 +481,25 @@ export default function DashboardScreen() {
           </View>
           <View style={styles.aerialBottom}>
             <Text style={styles.aerialTitle}>Farm Monitoring</Text>
-            <Text style={styles.aerialSub}>{monitoring.caption}</Text>
+            {/* Vigour when it has been measured; otherwise the pass record,
+                which at least says when a satellite last looked. */}
+            {vigour.kind === 'ready' ? (
+              <>
+                <Text style={styles.aerialSub}>
+                  Crop vigour {vigour.ndvi!.toFixed(2)} · {vigour.band}
+                  {vigour.changePercent !== null
+                    ? ` · ${vigour.changePercent > 0 ? 'up' : 'down'} ${Math.abs(vigour.changePercent)}%`
+                    : ''}
+                </Text>
+                {vigour.falling ? (
+                  <Text style={styles.aerialWarn}>
+                    Falling since the last pass — worth walking the field
+                  </Text>
+                ) : null}
+              </>
+            ) : (
+              <Text style={styles.aerialSub}>{monitoring.caption}</Text>
+            )}
           </View>
           <MaterialIcons name="map" size={72} color="rgba(255,255,255,0.16)" style={styles.aerialGlyph} />
         </TouchableOpacity>
@@ -625,6 +651,7 @@ const styles = StyleSheet.create({
   aerialBottom:     { },
   aerialTitle:      { ...TypeEmphasized.titleLarge, color: '#fff' },
   aerialSub:        { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  aerialWarn:       { fontSize: 12, fontWeight: '700', color: '#ffd9d6', marginTop: 4 },
 
   // Empty state
   emptyWrap: {

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { SatellitePassReport } from '@agronavis/shared-types';
+import type { NdviReport, SatellitePassReport } from '@agronavis/shared-types';
 import { satelliteApi } from '@/services/endpoints';
 import { useFarmStore } from '@/store/useFarmStore';
 
@@ -34,6 +34,38 @@ export function useSatellitePasses(days = 30) {
     /** False when the catalogue did not answer; not the same as "no passes". */
     available: report?.available ?? true,
     mapped: report?.mapped ?? false,
+    isLoading: query.isLoading,
+    refetch: query.refetch,
+  };
+}
+
+
+/**
+ * Crop vigour for the selected field.
+ *
+ * Reads what the nightly job measured rather than measuring on demand — one
+ * reading costs about forty seconds against AWS, which no screen can wait for.
+ * Half a day stale is fine: Sentinel-2 revisits every five days.
+ */
+export function useNdvi() {
+  const fieldId = useFarmStore((s) => s.activeFieldId);
+
+  const query = useQuery({
+    queryKey: ['ndvi', fieldId],
+    queryFn: () => satelliteApi.ndvi(fieldId!),
+    enabled: Boolean(fieldId),
+    staleTime: 12 * 60 * 60_000,
+  });
+
+  const report: NdviReport | undefined = query.data;
+
+  return {
+    report,
+    latest: report?.latest ?? null,
+    previous: report?.previous ?? null,
+    change: report?.change ?? null,
+    history: report?.history ?? [],
+    available: report?.available ?? true,
     isLoading: query.isLoading,
     refetch: query.refetch,
   };

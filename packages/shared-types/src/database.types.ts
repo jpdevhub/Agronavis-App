@@ -269,6 +269,21 @@ export type FireDetectionRow = {
   created_at: string;
 };
 
+export type NdviReadingRow = {
+  id: string;
+  field_id: string;
+  /** Date of the satellite pass, not of the calculation. */
+  captured_on: string;
+  /** Mean NDVI across the sampled pixels, -1 to 1. */
+  ndvi: number;
+  /** Pixels that carried usable data; low means a small or edge field. */
+  pixels: number;
+  /** Scene cloud cover. A reading from a cloudy scene is a reading of cloud. */
+  cloud_percent: number | null;
+  scene_id: string | null;
+  created_at: string;
+};
+
 export type NotificationRow = {
   id: string;
   farmer_id: string;
@@ -539,6 +554,10 @@ export interface Database {
       fire_detections: Table<
         FireDetectionRow,
         'id' | 'created_at' | 'confidence' | 'source' | 'brightness_k'
+      >;
+      ndvi_readings: Table<
+        NdviReadingRow,
+        'id' | 'created_at' | 'pixels' | 'cloud_percent' | 'scene_id'
       >;
       notifications: Table<
         NotificationRow,

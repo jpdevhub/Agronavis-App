@@ -1,4 +1,5 @@
 import type {
+  NdviReport,
   SatellitePassReport,
   Advisory,
   AppNotification,
@@ -175,6 +176,8 @@ export const satelliteApi = {
     api.get<SatellitePassReport>(`/satellite/field/${fieldId}`, { days }),
   forFarm: (farmId: string, days = 30) =>
     api.get<SatellitePassReport>(`/satellite/farm/${farmId}`, { days }),
+  /** Crop vigour, from what the nightly job measured. */
+  ndvi: (fieldId: string) => api.get<NdviReport>(`/satellite/ndvi/field/${fieldId}`),
 };
 
 export const advisoryApi = {

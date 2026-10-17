@@ -616,3 +616,25 @@ export interface SatellitePassReport {
   available: boolean;
   mapped: boolean;
 }
+
+
+/** One NDVI measurement of a field, from one satellite pass. */
+export interface NdviReading {
+  date: string;
+  /** Mean NDVI across the sampled pixels, -1 to 1. */
+  ndvi: number;
+  /** Pixels that carried usable data. */
+  pixels: number;
+  cloudPercent: number;
+}
+
+export interface NdviReport {
+  latest: NdviReading | null;
+  previous: NdviReading | null;
+  /** Change since the previous clear pass, as a fraction. */
+  change: number | null;
+  /** False when the readings could not be fetched; not "nothing is growing". */
+  available: boolean;
+  /** Recent passes, newest first. */
+  history: NdviReading[];
+}

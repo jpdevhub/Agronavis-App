@@ -1,6 +1,9 @@
 import {
   bandFor,
   monitoringState,
+  vigourBand,
+  vigourState,
+  VIGOUR_ALARM_DROP,
   diseaseState,
   fireWatchState,
   rootZoneState,
@@ -336,5 +339,88 @@ describe('farm monitoring card', () => {
     const state = monitoringState(input({ lastClear: null, latestPass: null }));
     expect(state.kind).toBe('no-data');
     expect(state.fresh).toBe(false);
+  });
+});
+
+
+describe('crop vigour card', () => {
+  const input = (over: Record<string, unknown> = {}) => ({
+    hasField: true,
+    isLoading: false,
+    available: true,
+    latest: { date: '2026-10-15', ndvi: 0.62 },
+    change: 0.04,
+    ...over,
+  }) as never;
+
+  it('asks for a field first', () => {
+    expect(vigourState(input({ hasField: false })).kind).toBe('no-field');
+  });
+
+  it('shows a loader while the reading is on its way', () => {
+    expect(vigourState(input({ isLoading: true })).kind).toBe('loading');
+  });
+
+  it.each([
+    [0.9, 'Dense'],
+    [0.6, 'Dense'],
+    [0.599, 'Growing'],
+    [0.4, 'Growing'],
+    [0.399, 'Sparse'],
+    [0.2, 'Sparse'],
+    [0.199, 'Bare'],
+    [0, 'Bare'],
+  ])('reads %s as %s, including at the boundary', (v, expected) => {
+    expect(vigourBand(v as number)).toBe(expected);
+  });
+
+  it('reports the reading and its date', () => {
+    const state = vigourState(input());
+    expect(state.kind).toBe('ready');
+    expect(state.ndvi).toBe(0.62);
+    expect(state.band).toBe('Dense');
+    expect(state.measuredOn).toBe('2026-10-15');
+  });
+
+  it('turns the change into whole percent', () => {
+    expect(vigourState(input({ change: 0.088 })).changePercent).toBe(9);
+    expect(vigourState(input({ change: -0.152 })).changePercent).toBe(-15);
+  });
+
+  // ── The part that is actually a warning ───────────────────────────────
+  it('flags a fall big enough to walk the field for', () => {
+    const state = vigourState(input({ change: -VIGOUR_ALARM_DROP }));
+    expect(state.falling).toBe(true);
+  });
+
+  it('does not flag ordinary variation between passes', () => {
+    expect(vigourState(input({ change: -0.05 })).falling).toBe(false);
+    expect(vigourState(input({ change: 0.3 })).falling).toBe(false);
+  });
+
+  it('does not flag anything when there is nothing to compare against', () => {
+    const state = vigourState(input({ change: null }));
+    expect(state.falling).toBe(false);
+    expect(state.changePercent).toBeNull();
+  });
+
+  // ── The rule every card here follows ──────────────────────────────────
+  it('says no-data rather than bare when no pass has been measured', () => {
+    const state = vigourState(input({ latest: null }));
+    expect(state.kind).toBe('no-data');
+    expect(state.ndvi).toBeNull();
+    expect(state.band).not.toBe('Bare');
+  });
+
+  it('never reports vigour it could not fetch', () => {
+    const state = vigourState(input({ available: false }));
+    expect(state.kind).toBe('unavailable');
+    expect(state.ndvi).toBeNull();
+  });
+
+  it('treats a genuinely bare field as a reading, not as missing', () => {
+    const state = vigourState(input({ latest: { date: '2026-10-15', ndvi: 0.08 } }));
+    expect(state.kind).toBe('ready');
+    expect(state.band).toBe('Bare');
   });
 });

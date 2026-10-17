@@ -5,6 +5,7 @@ import { runCatalogueSync } from './catalogue.job';
 import { runFertiliserCropSync } from './fertiliser.job';
 import { runMandiMirrorSync } from './mandi.job';
 import { runFirePoll } from './fires.job';
+import { runNdviSync } from './ndvi.job';
 import { runMarketPoll } from './market.job';
 import { runSoilSync } from './soil.job';
 import { runWeatherPoll } from './weather.job';
@@ -46,6 +47,7 @@ export function startJobs(): void {
   tasks.push(cron.schedule(env.FERTILISER_SYNC_CRON, guarded('Fertiliser crops', runFertiliserCropSync)));
   tasks.push(cron.schedule(env.MANDI_MIRROR_CRON, guarded('Mandi mirror', runMandiMirrorSync)));
   tasks.push(cron.schedule(env.FIRE_POLL_CRON, guarded('Fire poll', runFirePoll)));
+  tasks.push(cron.schedule(env.NDVI_SYNC_CRON, guarded('NDVI sync', runNdviSync)));
 
   logger.info('Background jobs scheduled', {
     weather: env.WEATHER_POLL_CRON,

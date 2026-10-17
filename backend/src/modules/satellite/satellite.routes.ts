@@ -10,4 +10,5 @@ satelliteRoutes.use(requireAuth);
 // Field first: a farm's single point can be a thousand kilometres from the
 // field being looked at. Same reasoning as weather and fires.
 satelliteRoutes.get('/field/:fieldId', handler(satelliteController.forField));
+satelliteRoutes.get('/ndvi/field/:fieldId', handler(satelliteController.ndvi));
 satelliteRoutes.get('/farm/:farmId', handler(satelliteController.forFarm));
