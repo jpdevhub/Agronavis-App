@@ -9,6 +9,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import type { FarmTask } from '@agronavis/shared-types';
 import { Colors, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { FireWatchCard } from '@/components/insight/FireWatchCard';
+import { useSatellitePasses } from '@/hooks/useSatellite';
+import { monitoringState } from '@/features/insight/cardState';
 import { RootZoneCard } from '@/components/insight/RootZoneCard';
 import { SAHAYAK_FAB_SPACE } from '@/features/sahayak';
 import { useTabBarHeight } from '@/hooks/useTabBarHeight';
@@ -146,7 +148,20 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useTabBarHeight();
   const activeFieldId = useFarmStore((s) => s.activeFieldId);
+
   const activeFarmId  = useFarmStore((s) => s.activeFarmId);
+
+  // What Sentinel-2 last saw of this field, for the monitoring card below.
+  const satellite = useSatellitePasses();
+  const monitoring = monitoringState({
+    hasField: Boolean(activeFieldId ?? activeFarmId),
+    isLoading: satellite.isLoading,
+    available: satellite.available,
+    mapped: satellite.mapped,
+    lastClear: satellite.lastClear,
+    latestPass: satellite.passes[0] ?? null,
+    nextExpected: satellite.nextExpected,
+  });
   const setActiveField = useFarmStore((s) => s.setActiveField);
 
   const { data: farmer, isLoading: farmerLoading, refetch: refetchFarmer } = useFarmer();
@@ -451,12 +466,14 @@ export default function DashboardScreen() {
           activeOpacity={0.9}
         >
           <View style={styles.aerialLiveBadge}>
-            <View style={styles.liveDot} />
+            {/* The dot only goes green when a satellite has genuinely had a
+                clear look recently. The map itself is an undated mosaic. */}
+            <View style={[styles.liveDot, !monitoring.fresh && styles.liveDotIdle]} />
             <Text style={styles.liveBadgeText}>SATELLITE VIEW</Text>
           </View>
           <View style={styles.aerialBottom}>
             <Text style={styles.aerialTitle}>Farm Monitoring</Text>
-            <Text style={styles.aerialSub}>Open farm map</Text>
+            <Text style={styles.aerialSub}>{monitoring.caption}</Text>
           </View>
           <MaterialIcons name="map" size={72} color="rgba(255,255,255,0.16)" style={styles.aerialGlyph} />
         </TouchableOpacity>
@@ -602,6 +619,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
   },
+  liveDotIdle:   { backgroundColor: 'rgba(255,255,255,0.45)' },
   liveDot:          { width: 7, height: 7, borderRadius: 4, backgroundColor: '#22c55e' },
   liveBadgeText:    { fontSize: 10, fontWeight: '900', letterSpacing: 1.5, color: '#fff' },
   aerialBottom:     { },

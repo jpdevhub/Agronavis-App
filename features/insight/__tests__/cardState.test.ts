@@ -1,5 +1,6 @@
 import {
   bandFor,
+  monitoringState,
   diseaseState,
   fireWatchState,
   rootZoneState,
@@ -266,5 +267,74 @@ describe('disease watch', () => {
     const hot = forecastDay({ tempMin: 28, tempMax: 40, humidity: 95 });
     const state = diseaseState({ hasField: true, isLoading: false, forecast: [hot, hot] });
     expect(state.level).toBe('clear');
+  });
+});
+
+
+describe('farm monitoring card', () => {
+  const input = (over: Record<string, unknown> = {}) => ({
+    hasField: true,
+    isLoading: false,
+    available: true,
+    mapped: true,
+    lastClear: { date: '2026-10-15', cloudPercent: 3 },
+    latestPass: { date: '2026-10-15', cloudPercent: 3 },
+    nextExpected: '2026-10-20',
+    ...over,
+  }) as never;
+
+  beforeAll(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-17T09:00:00Z'));
+  });
+  afterAll(() => jest.useRealTimers());
+
+  it('asks for a field first', () => {
+    expect(monitoringState(input({ hasField: false })).kind).toBe('no-field');
+  });
+
+  it('asks for a boundary when the farm has no mapped field', () => {
+    expect(monitoringState(input({ mapped: false })).kind).toBe('no-field');
+  });
+
+  it('reports the date and cloud of the last clear look', () => {
+    const state = monitoringState(input());
+    expect(state.kind).toBe('ready');
+    // Day and month, in whichever order the device's locale puts them.
+    expect(state.caption).toMatch(/15/);
+    expect(state.caption).toMatch(/Oct/);
+    expect(state.caption).toContain('3% cloud');
+  });
+
+  // ── The claim the card used to make without evidence ──────────────────
+  it('only calls itself fresh when a pass was genuinely recent', () => {
+    expect(monitoringState(input()).fresh).toBe(true);
+    // Two revisits ago: real, but not current.
+    expect(monitoringState(input({
+      lastClear: { date: '2026-09-20', cloudPercent: 4 },
+    })).fresh).toBe(false);
+  });
+
+  it('says it was clouded out rather than claiming nothing happened', () => {
+    const state = monitoringState(input({
+      lastClear: null,
+      latestPass: { date: '2026-10-15', cloudPercent: 88 },
+    }));
+    expect(state.kind).toBe('no-data');
+    expect(state.caption).toContain('Clouded out');
+    expect(state.caption).toContain('next pass');
+    expect(state.fresh).toBe(false);
+  });
+
+  it('never claims a clear view when the catalogue did not answer', () => {
+    const state = monitoringState(input({ available: false }));
+    expect(state.kind).toBe('unavailable');
+    expect(state.caption).not.toContain('Clear view');
+    expect(state.fresh).toBe(false);
+  });
+
+  it('handles a field no satellite has passed over on record', () => {
+    const state = monitoringState(input({ lastClear: null, latestPass: null }));
+    expect(state.kind).toBe('no-data');
+    expect(state.fresh).toBe(false);
   });
 });

@@ -592,3 +592,27 @@ export interface UploadResult {
   path: string;
   publicUrl: string;
 }
+
+
+/** One Sentinel-2 overpass of a field. */
+export interface SatellitePass {
+  date: string;
+  /** Percentage of the scene under cloud, 0-100. */
+  cloudPercent: number;
+  /** Whether the ground was actually visible through it. */
+  clear: boolean;
+  previewUrl: string | null;
+}
+
+export interface SatellitePassReport {
+  passes: SatellitePass[];
+  /** Newest pass that saw the ground, which is not always the newest pass. */
+  lastClear: SatellitePass | null;
+  nextExpected: string | null;
+  /**
+   * False when the catalogue could not be reached. Never rendered as "the
+   * satellite has never been over" — the one claim that would be false.
+   */
+  available: boolean;
+  mapped: boolean;
+}

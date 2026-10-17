@@ -160,3 +160,74 @@ export function diseaseState(input: {
   if (input.forecast.length === 0) return { kind: 'no-data', ...base };
   return { kind: 'ready', ...base };
 }
+
+
+export interface MonitoringState {
+  kind: CardKind;
+  /** What the card says under the title. */
+  caption: string;
+  /** Whether the "live" dot has earned its colour. */
+  fresh: boolean;
+}
+
+/** A date as a farmer reads it: "15 Oct", not an ISO string. */
+function shortDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+/**
+ * What the farm monitoring card should say.
+ *
+ * The map underneath is a Mapbox mosaic with no date on it — stitched years
+ * ago in places, and identical from one week to the next. Labelling that
+ * "live" was a claim the screen could not support. The caption now comes from
+ * the Sentinel-2 catalogue, which does know when a satellite actually looked
+ * and whether it saw anything through the cloud.
+ */
+export function monitoringState(input: {
+  hasField: boolean;
+  isLoading: boolean;
+  available: boolean;
+  mapped: boolean;
+  lastClear: { date: string; cloudPercent: number } | null;
+  latestPass: { date: string; cloudPercent: number } | null;
+  nextExpected: string | null;
+}): MonitoringState {
+  if (!input.hasField) return { kind: 'no-field', caption: 'Map a field to begin', fresh: false };
+  if (input.isLoading) return { kind: 'loading', caption: 'Checking the last pass', fresh: false };
+  if (!input.mapped) return { kind: 'no-field', caption: 'Map a field to begin', fresh: false };
+
+  // Reached nothing: say so rather than implying no satellite has been over.
+  if (!input.available) {
+    return { kind: 'unavailable', caption: 'Open farm map', fresh: false };
+  }
+
+  if (input.lastClear) {
+    const days = Math.round(
+      (Date.now() - new Date(`${input.lastClear.date}T00:00:00`).getTime()) / 86_400_000,
+    );
+    return {
+      kind: 'ready',
+      caption: `Clear view ${shortDate(input.lastClear.date)} · ${Math.round(input.lastClear.cloudPercent)}% cloud`,
+      // Sentinel-2 revisits about every five days; older than two of those
+      // and calling it current would be a stretch.
+      fresh: days <= 10,
+    };
+  }
+
+  // Passes happened, every one of them clouded out. That is worth saying —
+  // it is why there is nothing new to look at.
+  if (input.latestPass) {
+    return {
+      kind: 'no-data',
+      caption: `Clouded out since ${shortDate(input.latestPass.date)}${
+        input.nextExpected ? ` · next pass ${shortDate(input.nextExpected)}` : ''
+      }`,
+      fresh: false,
+    };
+  }
+
+  return { kind: 'no-data', caption: 'No recent pass on record', fresh: false };
+}

@@ -1,4 +1,5 @@
 import type {
+  SatellitePassReport,
   Advisory,
   AppNotification,
   CommunityPost,
@@ -166,6 +167,14 @@ export const fireApi = {
     api.get<FarmFireReport>(`/fires/farm/${farmId}`, { days, radiusKm }),
   history: (farmId: string) =>
     api.get<{ days: { date: string; fires: number }[] }>(`/fires/farm/${farmId}/history`),
+};
+
+export const satelliteApi = {
+  /** Prefer the field: a farm's single point can be in another state. */
+  forField: (fieldId: string, days = 30) =>
+    api.get<SatellitePassReport>(`/satellite/field/${fieldId}`, { days }),
+  forFarm: (farmId: string, days = 30) =>
+    api.get<SatellitePassReport>(`/satellite/farm/${farmId}`, { days }),
 };
 
 export const advisoryApi = {
