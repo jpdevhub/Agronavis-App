@@ -5,7 +5,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Platform, KeyboardAvoidingView,
+  Platform, KeyboardAvoidingView, Animated, PanResponder,
 } from 'react-native';
 import Mapbox, { Camera, MapView, MarkerView, ShapeSource, FillLayer, LineLayer } from '@rnmapbox/maps';
 import * as Location from 'expo-location';
@@ -74,6 +74,52 @@ export default function FarmFieldDrawer({
   // The sheet's height changes when it switches from "tap 4 corners" to the
   // naming form, so measure it and stack the map controls on top.
   const [sheetHeight, setSheetHeight] = useState(0);
+  // The pan handlers are created once and would close over a stale height.
+  const sheetHeightRef = useRef(0);
+
+  /**
+   * How far the sheet can be dragged out of the way.
+   *
+   * Tracing a boundary means tapping corners that the sheet may be sitting on
+   * top of — the handle looked draggable and was not, so the only way to
+   * reach a corner underneath was to give up. It now slides, leaving a strip
+   * tall enough to grab it back by.
+   */
+  const PEEK = 64;
+  const slide = useRef(new Animated.Value(0)).current;
+  const slideTo = useRef(0);
+  const [collapsed, setCollapsed] = useState(false);
+
+  const settle = (toValue: number) => {
+    slideTo.current = toValue;
+    setCollapsed(toValue > 0);
+    Animated.spring(slide, {
+      toValue,
+      useNativeDriver: Platform.OS !== 'web',
+      bounciness: 0,
+      speed: 14,
+    }).start();
+  };
+
+  const pan = useRef(
+    PanResponder.create({
+      // A tap belongs to whatever is underneath; only a real drag is ours.
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 6,
+      onPanResponderMove: (_e, g) => {
+        const limit = Math.max(0, sheetHeightRef.current - PEEK);
+        const next = Math.min(limit, Math.max(0, slideTo.current + g.dy));
+        slide.setValue(next);
+      },
+      onPanResponderRelease: (_e, g) => {
+        const limit = Math.max(0, sheetHeightRef.current - PEEK);
+        const landed = Math.min(limit, Math.max(0, slideTo.current + g.dy));
+        // A flick decides on its own; otherwise go wherever it is nearer to.
+        const open = g.vy < -0.5 ? true : g.vy > 0.5 ? false : landed < limit / 2;
+        settle(open ? 0 : limit);
+      },
+    }),
+  ).current;
+
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const [region, setRegion]   = useState({ latitude: 20.5937, longitude: 78.9629, latitudeDelta: 15, longitudeDelta: 15 });
@@ -394,7 +440,11 @@ export default function FarmFieldDrawer({
       )}
 
       {/* ── Pin dots + controls ── */}
-      <View style={[styles.controls, { bottom: aboveSheet }]}>
+      {/* Anchored to the sheet, so sliding it away gives these the room too
+          instead of leaving them hovering over an empty strip. */}
+      <Animated.View
+        style={[styles.controls, { bottom: aboveSheet, transform: [{ translateY: slide }] }]}
+      >
         <View style={styles.pinRow}>
           {[0, 1, 2, 3].map(i => (
             <View key={i} style={[styles.pinDot, i < pins.length && styles.pinDotFilled]}>
@@ -410,22 +460,41 @@ export default function FarmFieldDrawer({
             <MaterialIcons name="delete-outline" size={20} color={pins.length === 0 ? Colors.outline : '#ef4444'} />
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
 
       {/* ── My Location FAB ── */}
-      <TouchableOpacity style={[styles.locFab, { bottom: aboveSheet + 52 }]} onPress={flyToLocation}>
-        {locating
-          ? <Loader size={28} />
-          : <MaterialIcons name="my-location" size={22} color={Colors.primary} />
-        }
-      </TouchableOpacity>
+      <Animated.View
+        style={[styles.locFab, { bottom: aboveSheet + 52, transform: [{ translateY: slide }] }]}
+      >
+        <TouchableOpacity onPress={flyToLocation} style={styles.locFabTap}>
+          {locating
+            ? <Loader size={28} />
+            : <MaterialIcons name="my-location" size={22} color={Colors.primary} />
+          }
+        </TouchableOpacity>
+      </Animated.View>
 
       {/* ── Bottom sheet ── */}
-      <View
-        style={[styles.sheet, { paddingBottom: sheetPadBottom }]}
-        onLayout={(e) => setSheetHeight(e.nativeEvent.layout.height)}
+      <Animated.View
+        style={[styles.sheet, { paddingBottom: sheetPadBottom, transform: [{ translateY: slide }] }]}
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          setSheetHeight(h);
+          sheetHeightRef.current = h;
+        }}
       >
-        <View style={styles.sheetHandle} />
+        {/* The whole strip is the grab area, not just the bar: a 4 pt line is
+            far below the 44 pt a thumb can reliably hit. */}
+        <View {...pan.panHandlers} style={styles.grip}>
+          <TouchableOpacity
+            onPress={() => settle(collapsed ? 0 : Math.max(0, sheetHeightRef.current - PEEK))}
+            accessibilityRole="button"
+            accessibilityLabel={collapsed ? 'Expand the panel' : 'Collapse the panel to see the map'}
+            style={styles.gripTap}
+          >
+            <View style={styles.sheetHandle} />
+          </TouchableOpacity>
+        </View>
 
         {!polygonReady ? (
           <>
@@ -472,7 +541,7 @@ export default function FarmFieldDrawer({
             </TouchableOpacity>
           </>
         )}
-      </View>
+      </Animated.View>
     </KeyboardAvoidingView>
   );
 }
@@ -547,6 +616,10 @@ const styles = StyleSheet.create({
   },
 
   // Location FAB
+  locFabTap: {
+    width: '100%', height: '100%',
+    alignItems: 'center', justifyContent: 'center',
+  },
   locFab: {
     position: 'absolute', right: 16, zIndex: 20,
     width: 48, height: 48, borderRadius: 24, backgroundColor: '#fff',
@@ -563,7 +636,9 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: -6 },
     shadowOpacity: 0.1, shadowRadius: 20, elevation: 20,
   },
-  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.outlineVariant, alignSelf: 'center', marginBottom: 4 },
+  grip:        { marginTop: -10, marginHorizontal: -22 },
+  gripTap:     { paddingVertical: 12, alignItems: 'center' },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.outlineVariant, alignSelf: 'center' },
   sheetTitle:  { fontSize: 20, fontWeight: '800', color: Colors.onSurface, letterSpacing: -0.3 },
   locRow:      { flexDirection: 'row', alignItems: 'center', gap: 4 },
   locText:     { fontSize: 13, fontWeight: '600', color: Colors.primary },
