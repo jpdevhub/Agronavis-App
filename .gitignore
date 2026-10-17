@@ -97,7 +97,7 @@ expo-env.d.ts
 .agents/
 skills-lock.json
 
-# Rendered promo and launch videos. Generated artefacts, tens of megabytes
-# each; the compositions that produce them are what would be worth keeping.
-brag-output/
-promo-output/
+# Rendered promo and launch videos, one folder per piece under video/.
+# Generated artefacts, tens of megabytes each; the compositions that produce
+# them are what would be worth keeping, not the output.
+video/
