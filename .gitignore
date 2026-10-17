@@ -101,3 +101,7 @@ skills-lock.json
 # Generated artefacts, tens of megabytes each; the compositions that produce
 # them are what would be worth keeping, not the output.
 video/
+
+# Research notebooks. Earth Engine / Sentinel extraction work for a later
+# phase, not part of what builds or runs the app.
+notebooks/
