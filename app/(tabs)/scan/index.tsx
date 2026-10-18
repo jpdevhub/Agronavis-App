@@ -10,7 +10,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii, Spacing } from '@/constants/theme';
 import { useTabBarHeight } from '@/hooks/useTabBarHeight';
-import { SAHAYAK_FAB_SPACE } from '@/features/sahayak';
 import { holdCapture } from '@/features/scan';
 import { Loader } from '@/components/ui';
 
@@ -159,7 +158,8 @@ export default function ScanScreen() {
         // screen's near-black background showed through underneath.
         contentContainerStyle={[
           styles.scrollBody,
-          { paddingBottom: tabBarHeight + SAHAYAK_FAB_SPACE },
+          // No Sahayak pill on this screen, so only the bar to clear.
+          { paddingBottom: tabBarHeight + Spacing.md },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -227,7 +227,7 @@ export default function ScanScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             gap: 10,
-            paddingBottom: tabBarHeight + SAHAYAK_FAB_SPACE + Spacing.md,
+            paddingBottom: Spacing.md,
           }}
         >
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>

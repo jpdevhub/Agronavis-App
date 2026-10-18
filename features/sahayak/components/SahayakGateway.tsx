@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Elevation, Shape, Spacing, TypeEmphasized } from '@/constants/theme';
@@ -23,11 +23,23 @@ const SAHAYAK_HEIGHT = 56;
 export const SAHAYAK_FAB_SPACE = SAHAYAK_LIFT + SAHAYAK_HEIGHT + Spacing.md;
 
 /** Floating entry point to Sahayak, above the tab bar on every tab. */
+/**
+ * Screens the pill stays off.
+ *
+ * The scanner is a viewfinder and a short strip of advice beneath it, with no
+ * room to give away — the pill landed squarely on the tips however the strip
+ * was sized. It is also a single-purpose screen: someone holding a phone over
+ * a leaf is not looking for a chat button.
+ */
+const WITHOUT_SAHAYAK = ['/scan'];
+
 export function SahayakGateway() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
 
   if (!Env.features.sahayak) return null;
+  if (WITHOUT_SAHAYAK.some((p) => pathname.startsWith(p))) return null;
 
   /**
    * Clear of the tab bar rather than resting on it.
