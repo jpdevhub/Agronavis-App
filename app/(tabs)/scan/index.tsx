@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, StatusBar,
-  AppState, Dimensions, Platform, ScrollView,
+  AppState, Platform, ScrollView, useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
@@ -20,6 +20,7 @@ const CORNER_COLOR = Colors.primaryContainer;
 
 export default function ScanScreen() {
   const tabBarHeight = useTabBarHeight();
+  const { height: windowHeight } = useWindowDimensions();
   const router  = useRouter();
   const cameraRef = useRef<CameraView>(null);
 
@@ -153,12 +154,18 @@ export default function ScanScreen() {
       */}
       <ScrollView
         style={styles.fill}
-        contentContainerStyle={{ paddingBottom: tabBarHeight + SAHAYAK_FAB_SPACE + Spacing.xl }}
+        // Grows to the full height so the tips panel can fill whatever the
+        // camera leaves. Without it the panel ended at its content and the
+        // screen's near-black background showed through underneath.
+        contentContainerStyle={[
+          styles.scrollBody,
+          { paddingBottom: tabBarHeight + SAHAYAK_FAB_SPACE },
+        ]}
         showsVerticalScrollIndicator={false}
       >
 
       {/* ── Live camera (only mounted while tab is active) ── */}
-      <View style={styles.cameraWrap}>
+      <View style={[styles.cameraWrap, { height: windowHeight * 0.62 }]}>
         {cameraLive && (
           <CameraView
             ref={cameraRef}
@@ -258,12 +265,10 @@ const styles = StyleSheet.create({
   galleryFallback: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
   galleryFallbackText: { fontSize: 14, fontWeight: '600', color: Colors.primary },
 
-  // A fixed share rather than flex: inside a scroll view there is no fixed
-  // height to take a fraction of, so the preview would collapse.
-  cameraWrap:  {
-    height: Dimensions.get('window').height * 0.58,
-    position: 'relative', overflow: 'hidden',
-  },
+  // Height comes from the component, not from here: reading the window at
+  // module scope is evaluated once before anything renders and never again,
+  // so it misses a rotation entirely.
+  cameraWrap:  { position: 'relative', overflow: 'hidden' },
   fill:        { flex: 1 },
 
   camTopBar: {
@@ -302,7 +307,9 @@ const styles = StyleSheet.create({
 
   // Back to the height it was before the clearance went on the container.
   // The camera gets everything above it, which is the point of the screen.
+  scrollBody:  { flexGrow: 1 },
   bottomSection:  {
+    flexGrow: 1,
     backgroundColor: Colors.surface, paddingHorizontal: 20, paddingTop: 16,
     paddingBottom: 16, gap: 12,
   },
