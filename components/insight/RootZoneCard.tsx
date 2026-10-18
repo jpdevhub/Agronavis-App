@@ -40,7 +40,11 @@ export function RootZoneCard() {
   // Decided in `cardState`, so each branch is asserted without rendering.
   // See features/insight/__tests__/cardState.test.ts.
   const state = rootZoneState({
-    hasField: Boolean(fieldId ?? farmId),
+    // A mapped field, not merely a farm. A farm carries one pair of
+    // coordinates picked at sign-up, and reading the soil under that point
+    // tells a farmer about whatever happens to be there — which is not their
+    // crop until they have drawn where it grows.
+    hasField: Boolean(fieldId),
     isLoading,
     latest,
     waterDeficitMm,
@@ -55,9 +59,13 @@ export function RootZoneCard() {
           </View>
           <View style={styles.headText}>
             <Text style={styles.eyebrow}>ROOT ZONE WATER</Text>
-            <Text style={styles.headline}>Map a field first</Text>
+            <Text style={styles.headline}>Add your first plot</Text>
           </View>
         </View>
+        <Text style={styles.detail}>
+          Draw where your crop grows and this measures the water in its soil from
+          orbit — and warns you when the nights turn fungal.
+        </Text>
       </View>
     );
   }

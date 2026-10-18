@@ -155,14 +155,14 @@ export default function DashboardScreen() {
   const satellite = useSatellitePasses();
   const ndvi = useNdvi();
   const vigour = vigourState({
-    hasField: Boolean(activeFieldId ?? activeFarmId),
+    hasField: Boolean(activeFieldId),
     isLoading: ndvi.isLoading,
     available: ndvi.available,
     latest: ndvi.latest,
     change: ndvi.change,
   });
   const monitoring = monitoringState({
-    hasField: Boolean(activeFieldId ?? activeFarmId),
+    hasField: Boolean(activeFieldId),
     isLoading: satellite.isLoading,
     available: satellite.available,
     mapped: satellite.mapped,

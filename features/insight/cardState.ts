@@ -195,9 +195,13 @@ export function monitoringState(input: {
   latestPass: { date: string; cloudPercent: number } | null;
   nextExpected: string | null;
 }): MonitoringState {
-  if (!input.hasField) return { kind: 'no-field', caption: 'Map a field to begin', fresh: false };
+  if (!input.hasField) {
+    return { kind: 'no-field', caption: 'Add your first plot to begin', fresh: false };
+  }
   if (input.isLoading) return { kind: 'loading', caption: 'Checking the last pass', fresh: false };
-  if (!input.mapped) return { kind: 'no-field', caption: 'Map a field to begin', fresh: false };
+  if (!input.mapped) {
+    return { kind: 'no-field', caption: 'Add your first plot to begin', fresh: false };
+  }
 
   // Reached nothing: say so rather than implying no satellite has been over.
   if (!input.available) {

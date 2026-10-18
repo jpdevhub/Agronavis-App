@@ -18,7 +18,9 @@ import { fireWatchState } from '@/features/insight/cardState';
 export function FireWatchCard() {
   const router = useRouter();
   const { report, fires, upwindCount, activeCount, nearestKm, isLoading, live } = useFarmFires();
-  const hasField = Boolean(useFarmStore((s) => s.activeFieldId ?? s.activeFarmId));
+  // A mapped field, not a farm: smoke blowing over a sign-up pin is not a
+  // warning about anyone's crop.
+  const hasField = Boolean(useFarmStore((s) => s.activeFieldId));
 
   // The decision lives in `cardState` so every branch below is assertable
   // without rendering. See features/insight/__tests__/cardState.test.ts.
@@ -60,12 +62,12 @@ export function FireWatchCard() {
           </View>
           <View style={styles.headText}>
             <Text style={[styles.eyebrow, { color: Colors.onSurfaceVariant }]}>STUBBLE WATCH</Text>
-            <Text style={[styles.headline, { color: Colors.onSurface }]}>Map a field first</Text>
+            <Text style={[styles.headline, { color: Colors.onSurface }]}>Add your first plot</Text>
           </View>
         </View>
         <Text style={[styles.detail, { color: Colors.onSurfaceVariant }]}>
-          Once your field is on the map this will tell you when crop burning upwind is about to
-          send smoke your way.
+          Draw where your crop grows and this watches for stubble fires upwind of it, so you know
+          before the smoke arrives.
         </Text>
       </View>
     );

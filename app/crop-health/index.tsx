@@ -61,7 +61,7 @@ export default function CropHealthScreen() {
 
   const field = fields?.find((f: { id: string }) => f.id === fieldId);
   const state = vigourState({
-    hasField: Boolean(fieldId ?? farmId),
+    hasField: Boolean(fieldId),
     isLoading: ndvi.isLoading,
     available: ndvi.available,
     latest: ndvi.latest,
@@ -183,7 +183,7 @@ export default function CropHealthScreen() {
                 {state.kind === 'unavailable'
                   ? 'Could not fetch the readings just now. Pull down to try again.'
                   : state.kind === 'no-field'
-                    ? 'Map a field and this will show what is growing on it.'
+                    ? 'Draw where your crop grows and this will show how much of it is actually standing there, measured from orbit every few days.'
                     : 'No pass has been measured for this field yet. Sentinel-2 comes round about every five days, and a cloudy pass is skipped.'}
               </Text>
             </View>

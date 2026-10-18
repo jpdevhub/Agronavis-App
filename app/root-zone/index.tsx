@@ -113,12 +113,12 @@ export default function RootZoneScreen() {
   // conditions, so every branch on this page is asserted in
   // features/insight/__tests__/cardState.test.ts.
   const zone = rootZoneState({
-    hasField: Boolean(fieldId ?? farmId),
+    hasField: Boolean(fieldId),
     isLoading,
     latest,
     waterDeficitMm,
   });
-  const disease = diseaseState({ hasField: Boolean(fieldId ?? farmId), isLoading, forecast });
+  const disease = diseaseState({ hasField: Boolean(fieldId), isLoading, forecast });
   const fungal = disease.assessment;
   const risk = RISK[disease.kind === 'no-data' ? 'unknown' : fungal.level];
 
