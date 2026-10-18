@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, StatusBar,
-  AppState, Platform, ScrollView,
+  AppState, Dimensions, Platform, ScrollView,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
@@ -144,6 +144,19 @@ export default function ScanScreen() {
     <View style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor="#000" translucent />
 
+      {/*
+        The whole screen scrolls, not only the tips beneath it.
+        Constraining the tips alone squashed them against the bar while the
+        camera kept the rest, so neither part had room. The preview takes a
+        fixed share of the height and everything below it scrolls past the
+        tab bar and the Sahayak pill.
+      */}
+      <ScrollView
+        style={styles.fill}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + SAHAYAK_FAB_SPACE + Spacing.xl }}
+        showsVerticalScrollIndicator={false}
+      >
+
       {/* ── Live camera (only mounted while tab is active) ── */}
       <View style={styles.cameraWrap}>
         {cameraLive && (
@@ -220,6 +233,7 @@ export default function ScanScreen() {
           </ScrollView>
         </ScrollView>
       </View>
+      </ScrollView>
     </View>
   );
 }
@@ -244,7 +258,13 @@ const styles = StyleSheet.create({
   galleryFallback: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
   galleryFallbackText: { fontSize: 14, fontWeight: '600', color: Colors.primary },
 
-  cameraWrap:  { flex: 1.3, position: 'relative', overflow: 'hidden' },
+  // A fixed share rather than flex: inside a scroll view there is no fixed
+  // height to take a fraction of, so the preview would collapse.
+  cameraWrap:  {
+    height: Dimensions.get('window').height * 0.58,
+    position: 'relative', overflow: 'hidden',
+  },
+  fill:        { flex: 1 },
 
   camTopBar: {
     position: 'absolute', top: Platform.OS === 'ios' ? 56 : 44, left: 20, right: 20, zIndex: 10,
@@ -284,7 +304,7 @@ const styles = StyleSheet.create({
   // The camera gets everything above it, which is the point of the screen.
   bottomSection:  {
     backgroundColor: Colors.surface, paddingHorizontal: 20, paddingTop: 16,
-    gap: 12, maxHeight: 190,
+    paddingBottom: 16, gap: 12,
   },
   tipsHeader:     { fontSize: 15, fontWeight: '800', color: Colors.onSurface },
   tipCard: {

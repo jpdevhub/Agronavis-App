@@ -6,8 +6,21 @@ import { Colors, Elevation, Shape, Spacing, TypeEmphasized } from '@/constants/t
 import { Env } from '@/constants/env';
 import { FLOATING_BAR_HEIGHT } from '@/components/navigation/FloatingTabBar';
 
-/** Height of the Sahayak pill plus its gap, for screens with their own FAB. */
-export const SAHAYAK_FAB_SPACE = 56 + Spacing.md;
+/** How far the pill sits above the tab bar. */
+const SAHAYAK_LIFT = Spacing.xl;
+
+/** The pill's own height. */
+const SAHAYAK_HEIGHT = 56;
+
+/**
+ * Everything the Sahayak pill occupies above the tab bar — its lift, its
+ * height and a gap over it.
+ *
+ * Screens with a floating button of their own stack on top of this, and
+ * scrolling lists pad by it. It omitted the lift, so raising the pill clear of
+ * the tab bar pushed it straight into My Farms' "Map New Field" button.
+ */
+export const SAHAYAK_FAB_SPACE = SAHAYAK_LIFT + SAHAYAK_HEIGHT + Spacing.md;
 
 /** Floating entry point to Sahayak, above the tab bar on every tab. */
 export function SahayakGateway() {
@@ -23,7 +36,7 @@ export function SahayakGateway() {
    * itself sits above, so adding only one gap left the pill overlapping the
    * bar's top edge — visible as Sahayak sitting across the nav row.
    */
-  const bottom = FLOATING_BAR_HEIGHT + insets.bottom + Spacing.xl;
+  const bottom = FLOATING_BAR_HEIGHT + insets.bottom + SAHAYAK_LIFT;
 
   return (
     <>
@@ -47,7 +60,7 @@ const styles = StyleSheet.create({
   wrap: { position: 'absolute', right: Spacing.xl, alignItems: 'flex-end' },
   fab: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    height: 56, paddingHorizontal: Spacing.xl,
+    height: SAHAYAK_HEIGHT, paddingHorizontal: Spacing.xl,
     borderRadius: Shape.full, backgroundColor: Colors.primaryFixed,
     ...Elevation.level3,
   },
