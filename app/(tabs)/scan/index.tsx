@@ -194,23 +194,30 @@ export default function ScanScreen() {
       </View>
 
       {/* ── Bottom tips ── */}
-      {/* Padded by the real bar height rather than a guess: 90 was close on
-          one device and short on any phone with a taller navigation bar,
-          leaving the tips tucked behind the tab bar and the Sahayak pill. */}
-      <View
-        style={[
-          styles.bottomSection,
-          { paddingBottom: tabBarHeight + SAHAYAK_FAB_SPACE + Spacing.md },
-        ]}
-      >
+      {/*
+        The tips sit in a strip of their own, and the camera keeps the rest.
+        Padding this section to clear the tab bar made it tall enough to eat
+        the preview, which is the part of this screen that matters — so the
+        clearance moved inside, onto a scroll view. The strip stays the height
+        it always was and its content scrolls out from under the bar.
+      */}
+      <View style={styles.bottomSection}>
         <Text style={styles.tipsHeader}>Scanning Tips</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-          {TIPS.map(tip => (
-            <View key={tip.label} style={styles.tipCard}>
-              <MaterialIcons name={tip.icon as any} size={22} color={Colors.primary} />
-              <Text style={styles.tipText}>{tip.label}</Text>
-            </View>
-          ))}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            gap: 10,
+            paddingBottom: tabBarHeight + SAHAYAK_FAB_SPACE + Spacing.md,
+          }}
+        >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+            {TIPS.map(tip => (
+              <View key={tip.label} style={styles.tipCard}>
+                <MaterialIcons name={tip.icon as any} size={22} color={Colors.primary} />
+                <Text style={styles.tipText}>{tip.label}</Text>
+              </View>
+            ))}
+          </ScrollView>
         </ScrollView>
       </View>
     </View>
@@ -273,7 +280,12 @@ const styles = StyleSheet.create({
   },
   captureBtnInner: { flex: 1, borderRadius: 35, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
 
-  bottomSection:  { backgroundColor: Colors.surface, paddingHorizontal: 20, paddingTop: 16, gap: 12 },
+  // Back to the height it was before the clearance went on the container.
+  // The camera gets everything above it, which is the point of the screen.
+  bottomSection:  {
+    backgroundColor: Colors.surface, paddingHorizontal: 20, paddingTop: 16,
+    gap: 12, maxHeight: 190,
+  },
   tipsHeader:     { fontSize: 15, fontWeight: '800', color: Colors.onSurface },
   tipCard: {
     backgroundColor: Colors.surfaceContainerLow, borderRadius: Radii.xl,

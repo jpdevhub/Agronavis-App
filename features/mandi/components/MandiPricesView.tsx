@@ -3,6 +3,8 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { MaterialIcons } from '@expo/vector-icons';
 import type { MandiPrice } from '@agronavis/shared-types';
 import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
+import { useTabBarHeight } from '@/hooks/useTabBarHeight';
+import { SAHAYAK_FAB_SPACE } from '@/features/sahayak';
 import { useMandiSearch } from '../useMandiSearch';
 import { MandiFilterModal } from './MandiFilterModal';
 
@@ -53,6 +55,7 @@ function PriceRow({ row }: { row: MandiPrice }) {
 }
 
 export function MandiPricesView() {
+  const tabBarHeight = useTabBarHeight();
   const {
     rows, filter, setFilter, source, sourceLabel,
     isLoading, isRefetching, error, refetch, needsLocation,
@@ -77,7 +80,14 @@ export function MandiPricesView() {
       </Pressable>
 
       <ScrollView
-        contentContainerStyle={styles.list}
+        // Padded past the tab bar and the Sahayak pill that floats above it.
+        // This list sits inside the community screen but scrolls on its own,
+        // so the spacer added there never reached it — the last price card
+        // stayed stuck behind the bar.
+        contentContainerStyle={[
+          styles.list,
+          { paddingBottom: tabBarHeight + SAHAYAK_FAB_SPACE + Spacing.xl },
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} colors={[Colors.primary]} />
@@ -170,7 +180,10 @@ const styles = StyleSheet.create({
   locationPlace: { ...TypeEmphasized.titleSmall, color: Colors.onSurface },
   locationSource: { ...Type.labelMedium, color: Colors.onSurfaceVariant, marginTop: 1 },
 
-  list: { paddingHorizontal: Spacing.xl, gap: Spacing.sm, paddingBottom: Spacing.xl },
+  // The same step as the margins above it. At Spacing.sm the cards sat
+  // closer to each other than the location bar sat to the first of them,
+  // which read as one crowded block rather than a list.
+  list: { paddingHorizontal: Spacing.xl, gap: Spacing.md },
   row: {
     gap: Spacing.sm,
     padding: Spacing.lg, borderRadius: Shape.extraLarge,

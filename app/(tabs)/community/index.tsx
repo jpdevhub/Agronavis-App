@@ -473,7 +473,10 @@ const styles = StyleSheet.create({
   // Mandi ticker — now BELOW topbar
   segments: {
     flexDirection: 'row', gap: Spacing.xs, padding: Spacing.xs,
-    marginHorizontal: Spacing.xl, marginBottom: Spacing.md,
+    // Was flush against the top bar. Everything down this screen now steps by
+    // the same amount, so the header, the segments and the content below read
+    // as separated rather than stacked.
+    marginHorizontal: Spacing.xl, marginTop: Spacing.md, marginBottom: Spacing.md,
     borderRadius: Shape.full, backgroundColor: Colors.surfaceContainerHigh,
   },
   segment: {
