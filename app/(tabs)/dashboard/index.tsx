@@ -7,10 +7,11 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { FarmTask } from '@agronavis/shared-types';
-import { Colors, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
+import { Colors, Elevation, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { FireWatchCard } from '@/components/insight/FireWatchCard';
 import { useNdvi, useSatellitePasses } from '@/hooks/useSatellite';
 import { monitoringState, vigourState } from '@/features/insight/cardState';
+import { FieldCarousel } from '@/components/farm/FieldCarousel';
 import { RootZoneCard } from '@/components/insight/RootZoneCard';
 import { SAHAYAK_FAB_SPACE } from '@/features/sahayak';
 import { useTabBarHeight } from '@/hooks/useTabBarHeight';
@@ -366,28 +367,12 @@ export default function DashboardScreen() {
         ) : (
           <>
             {fields.length > 1 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.fieldScroll}
-                contentContainerStyle={styles.fieldScrollContent}
-              >
-                {fields.map((f) => (
-                  <TouchableOpacity
-                    key={f.id}
-                    style={[styles.fieldChip, f.id === activeFieldId && styles.fieldChipActive]}
-                    onPress={() => setActiveField(f.id, f.farmId)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.fieldChipText, f.id === activeFieldId && styles.fieldChipTextActive]}>
-                      {f.name}
-                    </Text>
-                    <Text style={[styles.fieldChipArea, f.id === activeFieldId && styles.fieldChipAreaActive]}>
-                      {f.areaAcres.toFixed(2)} acres
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              <FieldCarousel
+                fields={fields}
+                activeFieldId={activeFieldId}
+                onSelect={setActiveField}
+                state={farmer?.state}
+              />
             )}
 
             <View style={{ gap: 6 }}>
@@ -533,24 +518,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.xl, paddingBottom: Spacing.md,
     backgroundColor: 'rgba(248,249,255,0.92)',
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06, shadowRadius: 16, elevation: 8,
+    ...Elevation.level3,
   },
-  avatar:        { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: Colors.primaryFixed },
+  avatar:        { width: 40, height: 40, borderRadius: Shape.full, borderWidth: 2, borderColor: Colors.primaryFixed },
   avatarFallback:{ backgroundColor: Colors.primaryFixed, alignItems: 'center', justifyContent: 'center' },
-  avatarInitials:{ fontSize: 15, fontWeight: '800', color: Colors.onPrimaryContainer },
+  avatarInitials:{ ...TypeEmphasized.labelLarge, color: Colors.onPrimaryContainer },
   logo:          { ...TypeEmphasized.headlineSmall, color: Colors.primary },
   notifBtn:      { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   // Sits on the bell's top-right corner. Minimum 18px so a two-character
   // count still reads at arm's length in sunlight.
   notifBadge: {
     position: 'absolute', top: 4, right: 2,
-    minWidth: 18, height: 18, borderRadius: 9,
+    minWidth: 18, height: 18, borderRadius: Shape.full,
     paddingHorizontal: 4,
     backgroundColor: Colors.error,
     alignItems: 'center', justifyContent: 'center',
   },
-  notifBadgeText: { fontSize: 11, fontWeight: '800', color: '#fff' },
+  notifBadgeText: { ...TypeEmphasized.labelSmall, color: Colors.onPrimary },
   scroll:        { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl, gap: Spacing.lg },
   skeleton:      { backgroundColor: Colors.surfaceContainerHigh },
 
@@ -568,20 +552,9 @@ const styles = StyleSheet.create({
   },
   weatherTitle:  { ...Type.labelSmall, letterSpacing: 1.2, color: Colors.onSurfaceVariant },
   weatherTemp:   { ...TypeEmphasized.headlineSmall, color: Colors.onSurface },
-  weatherCond:   { fontSize: 12, fontWeight: '600', color: Colors.onSurfaceVariant, maxWidth: 80 },
+  weatherCond:   { ...Type.labelMedium, color: Colors.onSurfaceVariant, maxWidth: 80 },
 
   // Field selector
-  fieldScroll:   { flexGrow: 0 },
-  fieldScrollContent: { gap: Spacing.sm, paddingVertical: 2 },
-  fieldChip: {
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderRadius: Shape.full,
-    backgroundColor: Colors.surfaceContainerHigh, alignItems: 'center',
-  },
-  fieldChipActive:    { backgroundColor: Colors.primary },
-  fieldChipText:      { ...TypeEmphasized.titleSmall, color: Colors.onSurface },
-  fieldChipTextActive:{ color: Colors.onPrimary },
-  fieldChipArea:      { ...Type.labelMedium, color: Colors.onSurfaceVariant, marginTop: 2 },
-  fieldChipAreaActive:{ color: Colors.primaryFixed },
 
   // NPK stats
   statRow:       { flexDirection: 'row', gap: 8 },
@@ -599,14 +572,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: Colors.surfaceContainerLowest, borderRadius: Shape.extraLarge,
     padding: Spacing.lg,
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04, shadowRadius: 12, elevation: 2,
+    ...Elevation.level1,
   },
   fieldInfoLeft:  { gap: 2 },
-  fieldInfoName:  { fontSize: 16, fontWeight: '700', color: Colors.onSurface },
-  fieldInfoArea:  { fontSize: 13, color: Colors.onSurfaceVariant },
+  fieldInfoName:  { ...TypeEmphasized.titleMedium, color: Colors.onSurface },
+  fieldInfoArea:  { ...Type.bodySmall, color: Colors.onSurfaceVariant },
   fieldInfoBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 36, height: 36, borderRadius: Shape.full,
     backgroundColor: Colors.primaryFixed, alignItems: 'center', justifyContent: 'center',
   },
   regionalBadge: {
@@ -614,26 +586,25 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryFixed, borderRadius: Radii.lg,
     paddingHorizontal: 10, paddingVertical: 6,
   },
-  regionalText: { fontSize: 12, color: Colors.onSurface, flex: 1, lineHeight: 16 },
+  regionalText: { ...Type.bodySmall, color: Colors.onSurface, flex: 1 },
 
   // Tasks
   sectionTitle:  { ...TypeEmphasized.titleSmall, color: Colors.onSurface, marginTop: Spacing.xs },
   taskCard: {
     backgroundColor: Colors.surfaceContainerLowest, borderRadius: Shape.extraLarge,
     padding: Spacing.lg, flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.05, shadowRadius: 16, elevation: 3,
+    ...Elevation.level2,
   },
   taskIconWrap: {
     width: 48, height: 48, borderRadius: Shape.large,
     alignItems: 'center', justifyContent: 'center',
   },
   taskCardLeft:  { flex: 1, gap: 4 },
-  taskTag:       { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  taskTagText:   { fontSize: 10, fontWeight: '900', color: Colors.onErrorContainer, letterSpacing: 0.5 },
+  taskTag:       { alignSelf: 'flex-start', borderRadius: Shape.extraSmall, paddingHorizontal: 8, paddingVertical: 3 },
+  taskTagText:   { ...TypeEmphasized.labelSmall, color: Colors.onErrorContainer },
   taskTitle:     { ...TypeEmphasized.titleMedium, color: Colors.onSurface },
   taskDesc:      { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
-  taskDue:       { fontSize: 12, color: Colors.outline, fontStyle: 'italic' },
+  taskDue:       { ...Type.bodySmall, color: Colors.outline, fontStyle: 'italic' },
   taskDoneBtn: {
     width: 44, height: 44, borderRadius: Shape.full,
     backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center',
@@ -645,20 +616,19 @@ const styles = StyleSheet.create({
     height: 48, paddingHorizontal: 22, marginTop: 6,
     borderRadius: Radii.full, backgroundColor: Colors.primary,
   },
-  addCropText: { fontSize: 15, fontWeight: '800', color: Colors.onPrimary },
+  addCropText: { ...TypeEmphasized.labelLarge, color: Colors.onPrimary },
   noTasksBox: {
     alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.xxl,
     backgroundColor: Colors.surfaceContainerLowest, borderRadius: Shape.extraLarge,
   },
   noTasksText:  { ...TypeEmphasized.titleLarge, color: Colors.onSurface },
-  noTasksSub:   { fontSize: 13, color: Colors.onSurfaceVariant },
+  noTasksSub:   { ...Type.bodySmall, color: Colors.onSurfaceVariant },
 
   // Farm monitoring
   aerialCard: {
     height: 160, borderRadius: Shape.extraLarge, overflow: 'hidden',
     backgroundColor: Colors.primary, justifyContent: 'flex-end', padding: 16,
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12, shadowRadius: 24, elevation: 8,
+    ...Elevation.level4,
   },
   aerialGlyph:      { position: 'absolute', right: 12, bottom: 8 },
   aerialLiveBadge: {
@@ -669,12 +639,12 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
   },
   liveDotIdle:   { backgroundColor: 'rgba(255,255,255,0.45)' },
-  liveDot:          { width: 7, height: 7, borderRadius: 4, backgroundColor: '#22c55e' },
-  liveBadgeText:    { fontSize: 10, fontWeight: '900', letterSpacing: 1.5, color: '#fff' },
+  liveDot:          { width: 7, height: 7, borderRadius: Shape.full, backgroundColor: Colors.secondaryFixed },
+  liveBadgeText:    { ...TypeEmphasized.labelSmall, letterSpacing: 1.5, color: Colors.onPrimary },
   aerialBottom:     { },
-  aerialTitle:      { ...TypeEmphasized.titleLarge, color: '#fff' },
-  aerialSub:        { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
-  aerialWarn:       { fontSize: 12, fontWeight: '700', color: '#ffd9d6', marginTop: 4 },
+  aerialTitle:      { ...TypeEmphasized.titleLarge, color: Colors.onPrimary },
+  aerialSub:        { ...Type.bodySmall, color: 'rgba(255,255,255,0.78)', marginTop: 2 },
+  aerialWarn:       { ...TypeEmphasized.labelMedium, color: Colors.errorContainer, marginTop: 4 },
 
   // Empty state
   emptyWrap: {
@@ -687,7 +657,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle:    { ...TypeEmphasized.headlineSmall, color: Colors.onSurface },
   emptyDesc: {
-    fontSize: 14, color: Colors.onSurfaceVariant, textAlign: 'center',
+    ...Type.bodyMedium, color: Colors.onSurfaceVariant, textAlign: 'center',
     lineHeight: 20, maxWidth: 280,
   },
   emptyBtn: {
