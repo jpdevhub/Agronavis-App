@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -44,8 +44,18 @@ export function FieldCarousel({
   state?: string | null;
 }) {
   const listRef = useRef<FlatList<FarmField>>(null);
-  const width = Dimensions.get('window').width;
-  const cardWidth = width - Spacing.xl * 2 - PEEK * 2;
+
+  /**
+   * The width this carousel actually has, not the screen's.
+   *
+   * Sizing from `Dimensions` assumed it sat flush against the screen edges.
+   * It does not — the dashboard pads its scroll content — so the card came out
+   * wider than its container and the row sat visibly off centre, with a gap on
+   * the left and almost none on the right. Measuring makes it correct wherever
+   * it is placed.
+   */
+  const [width, setWidth] = useState(Dimensions.get('window').width - Spacing.xl * 2);
+  const cardWidth = Math.max(1, width - PEEK * 2);
   const stride = cardWidth + GAP;
 
   const index = Math.max(0, fields.findIndex((f) => f.id === activeFieldId));
@@ -60,11 +70,27 @@ export function FieldCarousel({
    */
   const shownIndex = useRef(index);
 
+  /**
+   * The stride the list is currently laid out against.
+   *
+   * The first render sizes from an estimate and `onLayout` corrects it a frame
+   * later. When that changes the stride, every stored offset is stale — the
+   * list would sit between two cards — so it is put back on the current one,
+   * without animation because nothing moved from the farmer's point of view.
+   */
+  const laidOutStride = useRef(stride);
+
   useEffect(() => {
-    if (fields.length === 0 || shownIndex.current === index) return;
+    if (fields.length === 0) return;
+
+    const resized = Math.abs(laidOutStride.current - stride) > 1;
+    if (!resized && shownIndex.current === index) return;
+
+    laidOutStride.current = stride;
     shownIndex.current = index;
+
     const id = setTimeout(() => {
-      listRef.current?.scrollToOffset({ offset: index * stride, animated: true });
+      listRef.current?.scrollToOffset({ offset: index * stride, animated: !resized });
     }, 0);
     return () => clearTimeout(id);
   }, [index, stride, fields.length]);
@@ -105,7 +131,13 @@ export function FieldCarousel({
   const hasNext = index < fields.length - 1;
 
   return (
-    <View style={styles.wrap}>
+    <View
+      style={styles.wrap}
+      onLayout={(e) => {
+        const w = e.nativeEvent.layout.width;
+        if (w > 0 && Math.abs(w - width) > 1) setWidth(w);
+      }}
+    >
       <View>
       <FlatList
         ref={listRef}
@@ -118,7 +150,9 @@ export function FieldCarousel({
         snapToInterval={stride}
         decelerationRate="fast"
         disableIntervalMomentum
-        contentContainerStyle={{ paddingHorizontal: Spacing.xl + PEEK, gap: GAP }}
+        // Exactly the peek on each side, so the active card is centred in
+        // whatever width this component was given.
+        contentContainerStyle={{ paddingHorizontal: PEEK, gap: GAP }}
         onMomentumScrollEnd={onSettled}
         getItemLayout={(_d, i) => ({ length: stride, offset: stride * i, index: i })}
         initialScrollIndex={index}
@@ -230,7 +264,7 @@ const styles = StyleSheet.create({
   areaActive: { color: Colors.primaryFixed },
 
   chev: {
-    position: 'absolute', top: 0, bottom: 0, width: Spacing.xl + PEEK,
+    position: 'absolute', top: 0, bottom: 0, width: PEEK + Spacing.sm,
     alignItems: 'center', justifyContent: 'center',
   },
   chevLeft: { left: 0 },
