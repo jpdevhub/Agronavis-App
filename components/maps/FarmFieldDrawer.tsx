@@ -5,9 +5,11 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Platform, KeyboardAvoidingView, Animated, PanResponder,
+  Platform, KeyboardAvoidingView, Animated, PanResponder, ScrollView,
 } from 'react-native';
-import Mapbox, { Camera, MapView, MarkerView, ShapeSource, FillLayer, LineLayer } from '@rnmapbox/maps';
+import { Camera, MapView, MarkerView, ShapeSource, FillLayer, LineLayer } from '@rnmapbox/maps';
+// Side-effect import: the access token must be set before any MapView mounts.
+import '@/features/maps/init';
 import * as Location from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,8 +28,6 @@ import { Loader } from '@/components/ui';
  * this is not Google Maps: that one watermarks every tile "for development
  * purposes only" until a billing account is attached to the Cloud project.
  */
-Mapbox.setAccessToken(Env.mapboxToken || null);
-
 /** Satellite with place labels is what you want for finding your own field. */
 const SATELLITE_STYLE = 'mapbox://styles/mapbox/satellite-streets-v12';
 const STREET_STYLE = 'mapbox://styles/mapbox/streets-v12';
@@ -496,6 +496,12 @@ export default function FarmFieldDrawer({
           </TouchableOpacity>
         </View>
 
+        <ScrollView
+          contentContainerStyle={styles.sheetBody}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
         {!polygonReady ? (
           <>
             <Text style={styles.sheetTitle}>Where is your field?</Text>
@@ -541,6 +547,7 @@ export default function FarmFieldDrawer({
             </TouchableOpacity>
           </>
         )}
+        </ScrollView>
       </Animated.View>
     </KeyboardAvoidingView>
   );
@@ -556,7 +563,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 14,
     paddingBottom: 12,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    // Was half transparent, which let the sheet's text read through it.
+    backgroundColor: 'rgba(0,0,0,0.72)',
   },
   headerIconBtn: {
     width: 36, height: 36, borderRadius: 18,
@@ -631,11 +639,16 @@ const styles = StyleSheet.create({
   // Bottom sheet
   sheet: {
     position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
+    // Never taller than the screen leaves room for. The header is only half
+    // opaque, so a sheet that grows past it does not hide behind it — it
+    // shows through, and "Name This Field" renders on top of "Map Your Farm".
+    maxHeight: '72%',
     backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28,
     padding: 22, gap: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: -6 },
     shadowOpacity: 0.1, shadowRadius: 20, elevation: 20,
   },
+  sheetBody:   { gap: 10 },
   grip:        { marginTop: -10, marginHorizontal: -22 },
   gripTap:     { paddingVertical: 12, alignItems: 'center' },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.outlineVariant, alignSelf: 'center' },

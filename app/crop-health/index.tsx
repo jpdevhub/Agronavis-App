@@ -2,7 +2,8 @@ import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import Mapbox, { Camera, ImageSource, MapView, RasterLayer, ShapeSource, LineLayer } from '@rnmapbox/maps';
+import { Camera, ImageSource, MapView, RasterLayer, ShapeSource, LineLayer } from '@rnmapbox/maps';
+import { mapsReady } from '@/features/maps/init';
 import { Loader } from '@/components/ui';
 import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { Env } from '@/constants/env';
@@ -11,6 +12,7 @@ import { useNdvi } from '@/hooks/useSatellite';
 import { useFarmFields } from '@/hooks/useFarmFields';
 import { useFarmStore } from '@/store/useFarmStore';
 import { vigourState } from '@/features/insight/cardState';
+import { useHeatmapFile } from '@/features/insight/heatmapFile';
 
 const SATELLITE_STYLE = 'mapbox://styles/mapbox/satellite-streets-v12';
 
@@ -52,6 +54,10 @@ export default function CropHealthScreen() {
     await ndvi.refetch();
     setRefreshing(false);
   }, [ndvi]);
+
+  // Mapbox's native ImageSource cannot load a data URI, so the PNG the API
+  // sent is written to a file first. Null until that is done.
+  const heatmapUri = useHeatmapFile(ndvi.heatmap, ndvi.latest?.date ?? null);
 
   const field = fields?.find((f: { id: string }) => f.id === fieldId);
   const state = vigourState({
@@ -102,15 +108,15 @@ export default function CropHealthScreen() {
         >
           {/* ── The field, with the reading laid over it ───────────────── */}
           <View style={styles.mapCard}>
-            {centre && Env.mapboxToken ? (
+            {centre && mapsReady ? (
               <MapView style={styles.map} styleURL={SATELLITE_STYLE} scaleBarEnabled={false}>
                 <Camera centerCoordinate={centre} zoomLevel={15.5} animationDuration={0} />
 
-                {ndvi.heatmap && ndvi.bounds ? (
+                {heatmapUri && ndvi.bounds ? (
                   <ImageSource
                     id="ndvi"
                     coordinates={ndvi.bounds as never}
-                    url={ndvi.heatmap}
+                    url={heatmapUri}
                   >
                     <RasterLayer
                       id="ndvi-layer"

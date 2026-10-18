@@ -16,6 +16,10 @@ import { useSyncOnReconnect } from '@/shared/offline';
 import { authApi } from '@/services/endpoints';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFarmStore } from '@/store/useFarmStore';
+// Side-effect import: gives Mapbox its token before any screen can mount a
+// map. Doing this inside a component meant whichever map screen was opened
+// first decided whether the others crashed.
+import '@/features/maps/init';
 import { supabase } from '@/utils/supabase';
 
 const queryClient = new QueryClient({
