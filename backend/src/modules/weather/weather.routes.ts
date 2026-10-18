@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { standardLimiter, upstreamLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
 import { weatherController } from './weather.controller';
@@ -10,6 +11,10 @@ export const weatherRoutes = Router();
 // Every route is authenticated: these proxy a metered upstream key that must
 // never be callable anonymously.
 weatherRoutes.use(requireAuth);
+weatherRoutes.use(standardLimiter);
+// Reaches NASA, OpenWeatherMap or Agmarknet. Their quotas and their patience
+// are finite, and a retry storm here gets our key throttled for everyone.
+weatherRoutes.use(upstreamLimiter);
 
 weatherRoutes.get('/', validate(coordsSchema, 'query'), handler(weatherController.getBundle));
 weatherRoutes.get('/current', validate(coordsSchema, 'query'), handler(weatherController.getCurrent));

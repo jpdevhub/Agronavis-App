@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 import { farmerId, requireAuth } from '../../middleware/auth.middleware';
+import { standardLimiter, uploadLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { badRequest } from '../../shared/errors';
 import { created, handler, noContent, ok } from '../../shared/http';
@@ -18,10 +19,11 @@ const bucketParamSchema = z.object({
 export const storageRoutes = Router();
 
 storageRoutes.use(requireAuth);
+storageRoutes.use(standardLimiter);
 
 storageRoutes.post(
   '/:bucket',
-  validate(bucketParamSchema, 'params'),
+  uploadLimiter, validate(bucketParamSchema, 'params'),
   upload.single('file'),
   handler(async (req, res) => {
     if (!req.file) throw badRequest('No file uploaded — send it as multipart field "file"');

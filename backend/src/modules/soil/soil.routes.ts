@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { standardLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
 import { soilController } from './soil.controller';
@@ -8,6 +9,7 @@ import { soilReportSchema, fieldParamSchema, recordReadingSchema } from './soil.
 export const soilRoutes = Router();
 
 soilRoutes.use(requireAuth);
+soilRoutes.use(standardLimiter);
 
 soilRoutes.get('/field/:fieldId', validate(fieldParamSchema, 'params'), handler(soilController.getForField));
 soilRoutes.get(

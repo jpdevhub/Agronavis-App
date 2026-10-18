@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { standardLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
 import { farmsController } from './farms.controller';
@@ -8,6 +9,7 @@ import { createFieldSchema, idParamSchema, renameFieldSchema, updateFarmSchema }
 export const farmRoutes = Router();
 
 farmRoutes.use(requireAuth);
+farmRoutes.use(standardLimiter);
 
 farmRoutes.get('/fields', handler(farmsController.listFields));
 farmRoutes.post('/fields', validate(createFieldSchema), handler(farmsController.createField));

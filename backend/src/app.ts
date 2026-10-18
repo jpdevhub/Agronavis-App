@@ -1,9 +1,9 @@
 import compression from 'compression';
 import cors from 'cors';
 import express, { type Application, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { env } from './config/env';
+import { globalLimiter } from './middleware/rate-limit.middleware';
 import { firmsStatus } from './modules/fires/fires.service';
 import { errorMiddleware, notFoundMiddleware } from './middleware/error.middleware';
 import { requestContext } from './middleware/request-context.middleware';
@@ -49,17 +49,10 @@ export function createApp(): Application {
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
   app.use(requestContext);
 
-  app.use(
-    rateLimit({
-      windowMs: env.RATE_LIMIT_WINDOW_MS,
-      max: env.RATE_LIMIT_MAX,
-      standardHeaders: true,
-      legacyHeaders: false,
-      // Health checks must never be throttled — a load balancer polls them.
-      skip: (req) => req.path === '/health',
-      message: { success: false, error: 'Too many requests. Please slow down.' },
-    }),
-  );
+  // The outer ceiling. Per-route tiers live beside each router; this one only
+  // stops a single client flooding the process. See rate-limit.middleware.ts
+  // for why the key is the farmer rather than the address.
+  app.use(globalLimiter);
 
   app.get('/health', (_req: Request, res: Response) => {
     res.json({
@@ -115,6 +108,8 @@ export function createApp(): Application {
         'tasks',
         'soil',
         'advisory',
+        'fires',
+        'satellite',
         'weather',
         'market',
         'community',

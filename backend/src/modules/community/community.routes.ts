@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { standardLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
 import { communityController } from './community.controller';
@@ -15,6 +16,7 @@ import {
 export const communityRoutes = Router();
 
 communityRoutes.use(requireAuth);
+communityRoutes.use(standardLimiter);
 
 communityRoutes.get('/posts', validate(listPostsSchema, 'query'), handler(communityController.listPosts));
 communityRoutes.post('/posts', validate(createPostSchema), handler(communityController.createPost));

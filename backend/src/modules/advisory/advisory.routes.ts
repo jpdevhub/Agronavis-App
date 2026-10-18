@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { standardLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
 import { advisoryController } from './advisory.controller';
@@ -13,6 +14,7 @@ import {
 export const advisoryRoutes = Router();
 
 advisoryRoutes.use(requireAuth);
+advisoryRoutes.use(standardLimiter);
 
 advisoryRoutes.get('/', validate(listAdvisorySchema, 'query'), handler(advisoryController.list));
 advisoryRoutes.patch('/read-all', handler(advisoryController.markAllRead));

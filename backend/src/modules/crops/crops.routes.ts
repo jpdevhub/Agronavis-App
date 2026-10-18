@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { inferenceLimiter, standardLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
 import { cropsController } from './crops.controller';
@@ -20,12 +21,20 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 
 export const cropRoutes = Router();
 
 cropRoutes.use(requireAuth);
+cropRoutes.use(standardLimiter);
 
 cropRoutes.get('/scans', handler(cropsController.listScans));
 cropRoutes.post('/scans', validate(recordScanSchema), handler(cropsController.recordScan));
 // Crops the scheme will advise on where this field is.
 // Classifies a leaf photograph. Runs in this process; see diagnose.service.ts.
-cropRoutes.post('/diagnose', upload.single('image'), handler(cropsController.diagnoseScan));
+// MobileNet then ResNet-18 on CPU, holding real memory for seconds. This is
+// the endpoint that would take the instance down, not the database reads.
+cropRoutes.post(
+  '/diagnose',
+  inferenceLimiter,
+  upload.single('image'),
+  handler(cropsController.diagnoseScan),
+);
 cropRoutes.get('/eligible', validate(eligibleCropsSchema, 'query'), handler(cropsController.listEligible));
 cropRoutes.get('/diseases', validate(listDiseasesSchema, 'query'), handler(cropsController.listDiseases));
 cropRoutes.get(

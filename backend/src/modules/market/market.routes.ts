@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { standardLimiter, upstreamLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
 import { catalogueController, marketController } from './market.controller';
@@ -15,6 +16,10 @@ import {
 export const marketRoutes = Router();
 
 marketRoutes.use(requireAuth);
+marketRoutes.use(standardLimiter);
+// Reaches NASA, OpenWeatherMap or Agmarknet. Their quotas and their patience
+// are finite, and a retry storm here gets our key throttled for everyone.
+marketRoutes.use(upstreamLimiter);
 
 marketRoutes.get('/mandi', validate(mandiSearchSchema, 'query'), handler(marketController.searchMandi));
 marketRoutes.get('/prices', validate(livePricesSchema, 'query'), handler(marketController.getLivePrices));

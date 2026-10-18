@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { authLimiter, standardLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
 import { authController } from './auth.controller';
@@ -14,15 +14,14 @@ import { backupCodeSchema, totpTokenSchema } from './auth.schema';
 export const authRoutes = Router();
 
 // A 6-digit code is 10⁶ possibilities; without a limit it is brute-forceable.
-const totpLimiter = rateLimit({
-  windowMs: 15 * 60_000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, error: 'Too many attempts. Try again in 15 minutes.' },
-});
+// `authLimiter` keys on address *and* account, which the previous address-only
+// limit did not: one machine working through many accounts is the case a
+// per-account limit misses, and a per-address limit alone locks out every
+// farmer sharing a carrier NAT exit with the attacker.
+const totpLimiter = authLimiter;
 
 authRoutes.use(requireAuth);
+authRoutes.use(standardLimiter);
 
 authRoutes.get('/me', handler(authController.me));
 
