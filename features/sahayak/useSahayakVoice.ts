@@ -41,8 +41,19 @@ export function useSahayakVoice(language: string) {
   });
 
   useEffect(() => () => {
-    Speech.stop();
-    ExpoSpeechRecognitionModule.abort();
+    // Both are native. On a build where either is missing or the device has no
+    // speech service, these throw — and on unmount that takes the screen down
+    // with no message, which is how Sahayak came back as a blank page.
+    try {
+      Speech.stop();
+    } catch {
+      /* nothing was speaking */
+    }
+    try {
+      ExpoSpeechRecognitionModule.abort();
+    } catch {
+      /* nothing was listening */
+    }
   }, []);
 
   const listen = useCallback(async () => {

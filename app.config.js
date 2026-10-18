@@ -90,6 +90,18 @@ module.exports = () => ({
     '@rnmapbox/maps',
     'expo-location',
     ['expo-camera', { cameraPermission: 'Allow Agronavis to access your camera for crop scanning.' }],
+    // Sahayak listens as well as answers. Without this plugin the package
+    // autolinks but its Android manifest entries do not — no RECORD_AUDIO
+    // permission and no <queries> for the system speech service, so the
+    // module is present and every call to it fails.
+    [
+      'expo-speech-recognition',
+      {
+        microphonePermission: 'Allow Agronavis to use the microphone so you can ask Sahayak out loud.',
+        speechRecognitionPermission: 'Allow Agronavis to understand what you say to Sahayak.',
+        androidSpeechServicePackages: ['com.google.android.googlequicksearchbox'],
+      },
+    ],
     ['expo-notifications', { icon: './assets/images/notification-icon.png', color: '#0E3D1F' }],
     [
       'expo-build-properties',

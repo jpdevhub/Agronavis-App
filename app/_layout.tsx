@@ -20,6 +20,7 @@ import { useFarmStore } from '@/store/useFarmStore';
 // map. Doing this inside a component meant whichever map screen was opened
 // first decided whether the others crashed.
 import '@/features/maps/init';
+import { ScreenError } from '@/components/ui';
 import { supabase } from '@/utils/supabase';
 
 const queryClient = new QueryClient({
@@ -235,3 +236,16 @@ const styles = StyleSheet.create({
   },
   offlineText: { ...Type.labelMedium, color: Colors.onTertiaryContainer },
 });
+
+/**
+ * Expo Router renders this instead of a crashed screen.
+ *
+ * Without it a render error produced a blank page — the Sahayak screen came
+ * back as nothing but its background colour, which is indistinguishable from
+ * a screen that is merely slow. There was no message, no way back, and
+ * nothing a farmer could report. Exported from the root layout so it covers
+ * every route rather than the handful anyone thought to wrap.
+ */
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  return <ScreenError error={error} retry={() => void retry()} />;
+}

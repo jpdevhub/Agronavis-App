@@ -7,11 +7,7 @@ import {
   isNativeGemmaModuleLinked,
   loadModel,
 } from '@/modules/gemma-llm/src';
-import { useAdvisories } from '@/hooks/useAdvisories';
-import { useFarmFields } from '@/hooks/useFarmFields';
-import { useFarmer } from '@/hooks/useFarmer';
-import { useSoilHealth } from '@/hooks/useSoilHealth';
-import { useWeather } from '@/hooks/useWeather';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFarmStore } from '@/store/useFarmStore';
 import { useScreenContext } from './useScreenContext';
@@ -50,14 +46,48 @@ export function useSahayak() {
 
   const activeFarmId = useFarmStore((s) => s.activeFarmId);
   const activeFieldId = useFarmStore((s) => s.activeFieldId);
-  const { data: farmer } = useFarmer();
-  const { data: fields } = useFarmFields();
-  const { current: weather } = useWeather(activeFarmId, activeFieldId);
-  const { data: soil } = useSoilHealth();
-  const { advisories } = useAdvisories();
+  const userId = useAuthStore((s) => s.user?.id) ?? null;
+  const userIdForCache = userId ?? undefined;
+  /**
+   * The farm details, read from what the app already has — never fetched.
+   *
+   * These used to come from the five data hooks, which meant opening Sahayak
+   * fired five requests before the screen could settle. On a cold free-tier
+   * instance that is half a minute of nothing, and the screen a farmer was
+   * waiting on is the one that needs no network at all: the model runs on
+   * their phone.
+   *
+   * So the cache is read directly. Whatever the dashboard loaded is here
+   * already; whatever it did not, the stored snapshot below usually covers;
+   * and failing both, Sahayak opens and answers without the farm details
+   * rather than making someone wait for them.
+   */
+  const queryClient = useQueryClient();
+  const cached = useMemo(() => {
+    const read = <T,>(key: unknown[]): T | undefined => queryClient.getQueryData<T>(key);
+
+    const weatherBundle = activeFieldId
+      ? read<{ data?: { current?: unknown } }>(['weather', 'field', activeFieldId])
+      : read<{ data?: { current?: unknown } }>(['weather', 'farm', activeFarmId]);
+
+    return {
+      farmer: read<CachedContext['farmer']>(['farmer', userIdForCache]),
+      fields: read<CachedContext['fields']>(['fields', userIdForCache]),
+      weather: (weatherBundle?.data?.current ?? undefined) as CachedContext['weather'],
+      soil: read<CachedContext['soil']>(['soil', activeFieldId]),
+      advisories: read<CachedContext['advisories']>(['advisories', activeFarmId]),
+    };
+    // Re-read when the farmer switches field or farm; the cache itself is not
+    // reactive here, which is the point — this must never trigger a fetch.
+  }, [queryClient, activeFieldId, activeFarmId, userIdForCache]);
+
+  const farmer = cached.farmer;
+  const fields = cached.fields;
+  const weather = cached.weather;
+  const soil = cached.soil;
+  const advisories = cached.advisories ?? [];
 
   const { pathname } = useScreenContext();
-  const userId = useAuthStore((s) => s.user?.id) ?? null;
   const [snapshot, setSnapshot] = useState<{ context: CachedContext; savedAt: string } | null>(null);
 
   // Restore the last synced farm details once, for a cold start with no signal.
@@ -105,7 +135,18 @@ export function useSahayak() {
 
   useEffect(() => {
     if (!SUPPORTED) return;
-    if (!isNativeGemmaModuleLinked()) {
+
+    // Both of these reach native code. A throw here escapes the effect and
+    // becomes a blank screen with no message — the screen is meant to open
+    // instantly and say what it found, including "nothing".
+    let linked: boolean;
+    try {
+      linked = isNativeGemmaModuleLinked();
+    } catch {
+      linked = false;
+    }
+
+    if (!linked) {
       setStatus('unsupported');
       setError(
         'The on-device model is not part of this build. Expo Go cannot load it at all, '
@@ -113,12 +154,20 @@ export function useSahayak() {
       );
       return;
     }
+
     let cancelled = false;
-    probeModel(variant).then((probe) => {
-      if (cancelled) return;
-      setModelPath(probe.complete ? probe.path : null);
-      setStatus(probe.complete ? 'ready' : 'missing');
-    });
+    probeModel(variant)
+      .then((probe) => {
+        if (cancelled) return;
+        setModelPath(probe.complete ? probe.path : null);
+        setStatus(probe.complete ? 'ready' : 'missing');
+      })
+      .catch(() => {
+        // Unreadable storage is not a reason to spin forever. Treat it as a
+        // model that is not there, which offers the download.
+        if (!cancelled) setStatus('missing');
+      });
+
     return () => {
       cancelled = true;
     };

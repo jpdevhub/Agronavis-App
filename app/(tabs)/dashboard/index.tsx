@@ -40,7 +40,17 @@ function StatChip({ label, value, onPress }: { label: string; value: string; onP
   const body = (
     <>
       <Text style={[styles.statChipValue, { color: colors.text }]}>{value}</Text>
-      <Text style={styles.statChipLabel}>{label}</Text>
+      {/* PHOSPHORUS is three characters longer than the others and wrapped to
+          a second line, which made its chip taller than the two beside it.
+          Shrink to fit rather than hyphenate a nutrient name. */}
+      <Text
+        style={styles.statChipLabel}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+      >
+        {label}
+      </Text>
     </>
   );
 
@@ -577,7 +587,12 @@ const styles = StyleSheet.create({
   statRow:       { flexDirection: 'row', gap: 8 },
   statChip:      { flex: 1, borderRadius: Shape.largeIncreased, paddingVertical: Spacing.md, paddingHorizontal: Spacing.md, alignItems: 'center', gap: 2 },
   statChipValue: { ...TypeEmphasized.titleSmall },
-  statChipLabel: { ...Type.labelSmall, color: Colors.onSurfaceVariant, textTransform: 'uppercase' },
+  statChipLabel: {
+    ...Type.labelSmall, color: Colors.onSurfaceVariant, textTransform: 'uppercase',
+    // Tighter than the default: the longest of the three has to fit on one
+    // line at the same size as the others for the row to read as a set.
+    letterSpacing: 0.2, textAlign: 'center',
+  },
 
   // Field info card
   fieldInfoCard: {
