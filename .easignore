@@ -21,6 +21,17 @@ KrishiSaathi-AI/
 # phone that never loads them would be pure APK weight.
 /backend/model/
 
+# Local tooling and its downloads. None of it builds anything, and because
+# .easignore REPLACES .gitignore these have to be repeated here even though
+# git already ignores them — 59 MB of installed skills was riding along.
+/.claude/
+/.agents/
+/skills-lock.json
+
+# Rendered promo and launch videos: 103 MB of MP4 uploaded on every build,
+# for an archive that was 153 MB in total.
+/video/
+
 # Secrets. .easignore REPLACES .gitignore for EAS uploads, so .env has to be
 # named here or the service-role key rides along to the build server. The
 # EXPO_PUBLIC_* values the app needs are set as EAS environment variables.
