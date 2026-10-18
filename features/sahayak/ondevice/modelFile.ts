@@ -17,8 +17,20 @@ export const MODEL_URL: Record<ModelVariant, string> = {
   e2b: 'https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm',
 };
 
-/** Measured from the published artefacts, not estimated. */
-export const APPROX_SIZE_GB: Record<ModelVariant, number> = { e4b: 3.4, e2b: 2.4 };
+/**
+ * Exact published sizes, read from the Hugging Face `x-linked-size` header
+ * rather than rounded off a download progress bar.
+ */
+export const EXACT_BYTES: Record<ModelVariant, number> = {
+  e4b: 3_659_530_240,
+  e2b: 2_588_147_712,
+};
+
+/** For the download card, which talks in gigabytes. */
+export const APPROX_SIZE_GB: Record<ModelVariant, number> = {
+  e4b: Math.round((EXACT_BYTES.e4b / 1e9) * 10) / 10,
+  e2b: Math.round((EXACT_BYTES.e2b / 1e9) * 10) / 10,
+};
 
 /**
  * Retail "8 GB" phones report 9–11 GB through PlatformConstants because the
@@ -28,9 +40,24 @@ export const APPROX_SIZE_GB: Record<ModelVariant, number> = { e4b: 3.4, e2b: 2.4
 const E2B_RAM_CEILING = 12 * 1024 * 1024 * 1024;
 
 /** A partial download must not be mistaken for a usable model. */
+/**
+ * What counts as a finished download.
+ *
+ * This was 1.5 GB for a file of 3.66 GB — less than half. A download cut
+ * short by a dropped signal, a backgrounded app or a full disk was therefore
+ * recorded as complete, and the runtime then failed on it with
+ * "TF_LITE_PREFILL_DECODE not found in the model": the signature it wanted was
+ * in the part that never arrived. The error named the model, so it read like
+ * an incompatible build rather than half a file.
+ *
+ * A whole model is its published size. The small tolerance covers a server
+ * re-encoding the same weights, not a missing gigabyte.
+ */
+const COMPLETE_FRACTION = 0.995;
+
 const MINIMUM_BYTES: Record<ModelVariant, number> = {
-  e4b: 1.5 * 1024 * 1024 * 1024,
-  e2b: 0.8 * 1024 * 1024 * 1024,
+  e4b: Math.floor(EXACT_BYTES.e4b * COMPLETE_FRACTION),
+  e2b: Math.floor(EXACT_BYTES.e2b * COMPLETE_FRACTION),
 };
 
 export function modelFilePath(variant: ModelVariant): string {

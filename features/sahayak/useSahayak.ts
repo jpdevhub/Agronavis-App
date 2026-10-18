@@ -17,7 +17,7 @@ import {
   saveContextSnapshot,
   type CachedContext,
 } from './contextCache';
-import { detectModelVariant, probeModel, type ModelVariant } from './ondevice/modelFile';
+import { deleteModel, detectModelVariant, probeModel, type ModelVariant } from './ondevice/modelFile';
 
 export type SahayakMessage = { id: string; role: 'user' | 'assistant'; text: string };
 
@@ -181,8 +181,33 @@ export function useSahayak() {
       await loadModel(modelPath);
       setStatus('loaded');
     } catch (e) {
+      const message = (e as Error).message ?? '';
+
+      /**
+       * A file the runtime cannot read is a file worth discarding.
+       *
+       * The usual cause is a download that stopped early and was recorded as
+       * finished — the engine then reports a missing signature, which reads
+       * like an incompatible model rather than half of one. Keeping the file
+       * means every "try again" fails the same way forever, so it goes, and
+       * the screen offers the download instead of a dead end.
+       */
+      const unreadable = /NOT_FOUND|not found in the model|INVALID_ARGUMENT|corrupt/i.test(message);
+      if (unreadable) {
+        await deleteModel(variant).catch(() => {
+          // If it cannot be removed the download will overwrite it anyway.
+        });
+        setModelPath(null);
+        setStatus('missing');
+        setError(
+          'That download did not finish properly, so the model could not start. '
+          + 'Downloading it again should fix it.',
+        );
+        return;
+      }
+
       setStatus('error');
-      setError((e as Error).message);
+      setError(message);
     }
   }, [modelPath]);
 
