@@ -77,7 +77,14 @@ export async function runNdviSync(): Promise<{
           continue;
         }
 
-        const reading = await ndviService.readScene(scene, lat, lon);
+        // One retry: the run before this lost a field to a bare "fetch
+        // failed" against AWS, and a whole pass is worth more than the two
+        // minutes a second attempt costs.
+        let reading = await ndviService.readScene(scene, lat, lon).catch(() => null);
+        if (!reading) {
+          await new Promise((resolve) => setTimeout(resolve, 2_000));
+          reading = await ndviService.readScene(scene, lat, lon).catch(() => null);
+        }
         if (!reading) continue;
 
         const { error: writeError } = await db.from('ndvi_readings').upsert(
@@ -97,6 +104,22 @@ export async function runNdviSync(): Promise<{
 
         if (writeError) logger.warn('NDVI reading not stored', { error: writeError.message });
         else measured += 1;
+      }
+      // A pass that could not be re-measured leaves its old, unmasked row
+      // behind — the reading is skipped, not replaced. Those rows are known
+      // to be unreliable and nothing should serve them, so once this field
+      // has been looked at they go.
+      const { error: cleanupError } = await db
+        .from('ndvi_readings')
+        .delete()
+        .eq('field_id', field.id)
+        .is('grid', null);
+
+      if (cleanupError) {
+        logger.warn('Could not clear unmasked NDVI readings', {
+          fieldId: field.id,
+          error: cleanupError.message,
+        });
       }
     } catch (failure) {
       // One unreadable field must not stop the rest.

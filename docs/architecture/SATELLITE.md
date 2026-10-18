@@ -3,6 +3,11 @@
 How Agronavis sees a farmer's land without owning a satellite, a licence, or a
 credential — and what each of the three phases actually does.
 
+> To build this rather than understand it, read
+> [guides/BUILDING-FIELD-MONITORING.md](../guides/BUILDING-FIELD-MONITORING.md)
+> — the same three phases as runnable steps, with the five traps that cost
+> time here.
+
 ---
 
 ## Why this exists

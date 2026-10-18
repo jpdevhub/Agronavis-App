@@ -10,6 +10,7 @@ jest.mock('../../src/config/env', () => ({ env: {} }));
 const chain = {
   select: jest.fn().mockReturnThis(),
   eq: jest.fn().mockReturnThis(),
+  not: jest.fn().mockReturnThis(),
   order: jest.fn().mockReturnThis(),
   limit: jest.fn(),
 };
@@ -26,10 +27,20 @@ beforeEach(() => {
   jest.clearAllMocks();
   chain.select.mockReturnThis();
   chain.eq.mockReturnThis();
+  chain.not.mockReturnThis();
   chain.order.mockReturnThis();
 });
 
 describe('stored readings', () => {
+  it('asks only for readings taken with cloud masking', async () => {
+    chain.limit.mockResolvedValue({ data: [], error: null });
+    await ndviService.storedFor('field-1');
+
+    // A row without a grid predates masking. One such reading averaged snow
+    // and reported -0.025 for ground that reads 0.769, so none are served.
+    expect(chain.not).toHaveBeenCalledWith('grid', 'is', null);
+  });
+
   it('returns the newest reading and the change from the one before', async () => {
     chain.limit.mockResolvedValue({
       data: [row('2026-10-15', 0.273), row('2026-10-05', 0.251)],

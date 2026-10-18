@@ -297,6 +297,12 @@ export async function storedFor(fieldId: string, limit = 12): Promise<NdviReport
     .from('ndvi_readings')
     .select('captured_on, ndvi, pixels, cloud_percent, grid')
     .eq('field_id', fieldId)
+    // Only readings taken with per-pixel cloud masking. A row without a grid
+    // predates it, and those are not merely coarser: one averaged snow and
+    // reported −0.025 for ground that reads 0.769. The job re-measures them
+    // when a clear pass allows, but until then showing nothing is honest and
+    // showing the old number is not.
+    .not('grid', 'is', null)
     .order('captured_on', { ascending: false })
     .limit(limit);
 
