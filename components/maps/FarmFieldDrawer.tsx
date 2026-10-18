@@ -15,6 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Env } from '@/constants/env';
 import { MAX_FIELD_ACRES } from '@/constants/field';
+import { describeArea } from '@/features/maps/area';
 import { Colors, Radii, Type } from '@/constants/theme';
 import { useTabBarHeight } from '@/hooks/useTabBarHeight';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
@@ -33,7 +34,23 @@ const SATELLITE_STYLE = 'mapbox://styles/mapbox/satellite-streets-v12';
 const STREET_STYLE = 'mapbox://styles/mapbox/streets-v12';
 
 /** Mapbox speaks zoom levels; the old map spoke degree spans. */
-const ZOOM_FIELD = 17;
+/**
+ * Close enough to see a smallholding.
+ *
+ * Was 17, which is roughly 1.2 m per pixel at these latitudes. A Bengal katha
+ * is 720 square feet — about 8 m on a side — so it arrived on screen as a
+ * seven-pixel square and no amount of care would let a farmer tap its corners.
+ * At 19 the same plot is about thirty pixels across. Most Indian holdings are
+ * under a hectare, so this is the normal case rather than the awkward one.
+ */
+const ZOOM_FIELD = 19;
+
+/**
+ * Mapbox serves satellite tiles to 22 and will overzoom past the imagery's own
+ * resolution. Blurry, but a farmer can place a corner far more precisely on an
+ * upscaled tile than on a sharp one they cannot see.
+ */
+const ZOOM_MAX = 22;
 const ZOOM_COUNTRY = 4;
 
 type LatLng = { latitude: number; longitude: number };
@@ -101,21 +118,51 @@ export default function FarmFieldDrawer({
     }).start();
   };
 
+  /**
+   * The grab strip owns its gestures outright, tap included.
+   *
+   * It used to wrap a TouchableOpacity for the tap and rely on
+   * `onMoveShouldSetPanResponder` for the drag, which never fired: once a
+   * child takes the responder on press-down, a parent can only take it back
+   * through the capture phase. The handle could be tapped and not dragged,
+   * which is the one thing a handle is for. Both gestures are decided here
+   * instead — a short press is a tap, anything further is a drag.
+   */
+  const settleRef = useRef(settle);
+  settleRef.current = settle;
+
   const pan = useRef(
     PanResponder.create({
-      // A tap belongs to whatever is underneath; only a real drag is ours.
-      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 6,
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      // Once the drag is ours the map and the scroll view underneath may not
+      // take it back mid-gesture.
+      onPanResponderTerminationRequest: () => false,
+
       onPanResponderMove: (_e, g) => {
         const limit = Math.max(0, sheetHeightRef.current - PEEK);
-        const next = Math.min(limit, Math.max(0, slideTo.current + g.dy));
-        slide.setValue(next);
+        slide.setValue(Math.min(limit, Math.max(0, slideTo.current + g.dy)));
       },
+
       onPanResponderRelease: (_e, g) => {
         const limit = Math.max(0, sheetHeightRef.current - PEEK);
+
+        // Barely moved: treat it as a tap and toggle, so the handle works for
+        // anyone who does not think to drag it.
+        if (Math.abs(g.dy) < 6 && Math.abs(g.dx) < 6) {
+          settleRef.current(slideTo.current > 0 ? 0 : limit);
+          return;
+        }
+
         const landed = Math.min(limit, Math.max(0, slideTo.current + g.dy));
         // A flick decides on its own; otherwise go wherever it is nearer to.
         const open = g.vy < -0.5 ? true : g.vy > 0.5 ? false : landed < limit / 2;
-        settle(open ? 0 : limit);
+        settleRef.current(open ? 0 : limit);
+      },
+
+      // A gesture cut short by a phone call should not leave it mid-slide.
+      onPanResponderTerminate: () => {
+        settleRef.current(slideTo.current);
       },
     }),
   ).current;
@@ -130,6 +177,9 @@ export default function FarmFieldDrawer({
   const [mapReady, setMapReady] = useState(false);
   const [saving, setSaving]   = useState(false);
   const [locName, setLocName] = useState('');
+  // The state alone, so the area can be shown in the unit used there — katha
+  // in Bengal, guntha across the Deccan. "0.02 acres" means nothing to anyone.
+  const [locState, setLocState] = useState('');
   const [fieldName, setFieldName] = useState('');
   const [locationError, setLocationError] = useState<string | null>(null);
   // Map type toggle — satellite+labels (hybrid) is best for farm drawing
@@ -230,6 +280,7 @@ export default function FarmFieldDrawer({
         const s = geo[0].region ?? '';
         const d = geo[0].subregion ?? geo[0].city ?? '';
         setLocName([d, s].filter(Boolean).join(', '));
+        setLocState(s);
         if (mode === 'onboarding') setLocation(s, d);
       }
     } catch (err: any) {
@@ -374,12 +425,18 @@ export default function FarmFieldDrawer({
         style={styles.map}
         styleURL={mapViewType === 'hybrid' ? SATELLITE_STYLE : STREET_STYLE}
         onPress={handleMapPress}
-        scaleBarEnabled={false}
+        // A scale bar is how someone judges whether the shape they have drawn
+        // is the size of their plot. Essential when the plot is metres across.
+        scaleBarEnabled
         logoEnabled
         attributionEnabled
       >
         <Camera
           ref={cameraRef}
+          // Let a farmer zoom past the imagery's own resolution. Blurry, but a
+          // corner can be placed far more precisely on an upscaled tile than
+          // on a sharp one too small to see.
+          maxZoomLevel={ZOOM_MAX}
           defaultSettings={{
             centerCoordinate: [region.longitude, region.latitude],
             zoomLevel: region.latitudeDelta > 1 ? ZOOM_COUNTRY : ZOOM_FIELD,
@@ -485,18 +542,18 @@ export default function FarmFieldDrawer({
       >
         {/* The whole strip is the grab area, not just the bar: a 4 pt line is
             far below the 44 pt a thumb can reliably hit. */}
-        <View {...pan.panHandlers} style={styles.grip}>
-          <TouchableOpacity
-            onPress={() => settle(collapsed ? 0 : Math.max(0, sheetHeightRef.current - PEEK))}
-            accessibilityRole="button"
-            accessibilityLabel={collapsed ? 'Expand the panel' : 'Collapse the panel to see the map'}
-            style={styles.gripTap}
-          >
-            <View style={styles.sheetHandle} />
-          </TouchableOpacity>
+        <View
+          {...pan.panHandlers}
+          style={styles.grip}
+          accessibilityRole="adjustable"
+          accessibilityLabel={collapsed ? 'Panel collapsed' : 'Panel open'}
+          accessibilityHint="Drag or tap to show more of the map"
+        >
+          <View style={styles.sheetHandle} />
         </View>
 
         <ScrollView
+          style={styles.sheetScroll}
           contentContainerStyle={styles.sheetBody}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -531,7 +588,7 @@ export default function FarmFieldDrawer({
             </View>
             <View style={styles.areaBadge}>
               <MaterialIcons name="straighten" size={14} color={Colors.primary} />
-              <Text style={styles.areaText}>~{estimatedAcres} acres</Text>
+              <Text style={styles.areaText}>{describeArea(Number(estimatedAcres), locState)}</Text>
             </View>
             {saveError && <Text style={styles.saveError}>{saveError}</Text>}
             <TouchableOpacity onPress={handleSave} disabled={saving || !fieldName.trim()}>
@@ -648,9 +705,16 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: -6 },
     shadowOpacity: 0.1, shadowRadius: 20, elevation: 20,
   },
+  // The sheet sizes itself to its content up to maxHeight; without
+  // flexShrink the scroll view inside an auto-height parent can collapse to
+  // nothing, taking the form with it.
+  sheetScroll: { flexShrink: 1 },
   sheetBody:   { gap: 10 },
-  grip:        { marginTop: -10, marginHorizontal: -22 },
-  gripTap:     { paddingVertical: 12, alignItems: 'center' },
+  grip: {
+    marginTop: -14, marginHorizontal: -22,
+    paddingTop: 14, paddingBottom: 10,
+    alignItems: 'center',
+  },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.outlineVariant, alignSelf: 'center' },
   sheetTitle:  { fontSize: 20, fontWeight: '800', color: Colors.onSurface, letterSpacing: -0.3 },
   locRow:      { flexDirection: 'row', alignItems: 'center', gap: 4 },
