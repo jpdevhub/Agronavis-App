@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { Farm, FarmField } from '@agronavis/shared-types';
-import { Colors, Radii } from '@/constants/theme';
+import { Colors, Elevation, Radii, Shape, Spacing, TypeEmphasized } from '@/constants/theme';
 import { farmApi } from '@/services/endpoints';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Avatar, Loader } from '@/components/ui';
@@ -241,22 +241,30 @@ export default function MyFarmsScreen() {
             </View>
           ))}
 
-          <View style={{ height: tabBarHeight + SAHAYAK_FAB_SPACE + 72 }} />
-        </ScrollView>
-      )}
+          {/*
+            At the end of the list rather than floating over it. A floating
+            button has to be placed around the tab bar and the Sahayak pill,
+            and it lost that argument twice — landing on top of one or the
+            other. Sitting where the list ends it cannot collide with
+            anything, and it reads as the next item: the fields, then the way
+            to add one more. The empty state has carried its own copy all
+            along, which is the same idea.
+          */}
+          {!loading && farms.length > 0 && (
+            <TouchableOpacity
+              style={styles.addField}
+              onPress={() => router.push('/(tabs)/farm/map' as any)}
+              activeOpacity={0.9}
+              accessibilityRole="button"
+              accessibilityLabel="Map a new field"
+            >
+              <MaterialIcons name="add-location-alt" size={22} color={Colors.onPrimary} />
+              <Text style={styles.addFieldLabel}>Map New Field</Text>
+            </TouchableOpacity>
+          )}
 
-      {/* Only once there is something to add to. The empty state carries its
-          own Map New Field button, and rendering the floating one as well put
-          two identical buttons on top of each other. */}
-      {!loading && farms.length > 0 && (
-        <TouchableOpacity
-          style={[styles.fab, { bottom: tabBarHeight + SAHAYAK_FAB_SPACE }]}
-          onPress={() => router.push('/(tabs)/farm/map' as any)}
-          activeOpacity={0.88}
-        >
-          <MaterialIcons name="add-location-alt" size={22} color="#fff" />
-          <Text style={styles.fabLabel}>Map New Field</Text>
-        </TouchableOpacity>
+          <View style={{ height: tabBarHeight + SAHAYAK_FAB_SPACE }} />
+        </ScrollView>
       )}
     </View>
   );
@@ -368,13 +376,16 @@ const styles = StyleSheet.create({
   },
   activeBadgeText: { fontSize: 11, fontWeight: '800', color: '#fff' },
 
-  fab: {
-    position: 'absolute', right: 20,
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 18, paddingVertical: 14, borderRadius: Radii.xl,
+  addField: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+    paddingVertical: Spacing.lg, paddingHorizontal: Spacing.xl,
+    // Same radius as the cards above it, so it reads as the last row of the
+    // list rather than something laid on top.
+    borderRadius: Shape.extraLarge,
     backgroundColor: Colors.primary,
-    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35, shadowRadius: 16, elevation: 8,
+    ...Elevation.level1,
   },
-  fabLabel: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  addFieldLabel: { ...TypeEmphasized.titleSmall, color: Colors.onPrimary },
 });
