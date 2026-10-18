@@ -8,7 +8,9 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, Radii } from '@/constants/theme';
+import { Colors, Radii, Spacing } from '@/constants/theme';
+import { useTabBarHeight } from '@/hooks/useTabBarHeight';
+import { SAHAYAK_FAB_SPACE } from '@/features/sahayak';
 import { holdCapture } from '@/features/scan';
 import { Loader } from '@/components/ui';
 
@@ -17,6 +19,7 @@ const CORNER_THICK = 4;
 const CORNER_COLOR = Colors.primaryContainer;
 
 export default function ScanScreen() {
+  const tabBarHeight = useTabBarHeight();
   const router  = useRouter();
   const cameraRef = useRef<CameraView>(null);
 
@@ -191,7 +194,15 @@ export default function ScanScreen() {
       </View>
 
       {/* ── Bottom tips ── */}
-      <View style={styles.bottomSection}>
+      {/* Padded by the real bar height rather than a guess: 90 was close on
+          one device and short on any phone with a taller navigation bar,
+          leaving the tips tucked behind the tab bar and the Sahayak pill. */}
+      <View
+        style={[
+          styles.bottomSection,
+          { paddingBottom: tabBarHeight + SAHAYAK_FAB_SPACE + Spacing.md },
+        ]}
+      >
         <Text style={styles.tipsHeader}>Scanning Tips</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
           {TIPS.map(tip => (
@@ -262,7 +273,7 @@ const styles = StyleSheet.create({
   },
   captureBtnInner: { flex: 1, borderRadius: 35, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
 
-  bottomSection:  { backgroundColor: Colors.surface, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 90, gap: 12 },
+  bottomSection:  { backgroundColor: Colors.surface, paddingHorizontal: 20, paddingTop: 16, gap: 12 },
   tipsHeader:     { fontSize: 15, fontWeight: '800', color: Colors.onSurface },
   tipCard: {
     backgroundColor: Colors.surfaceContainerLow, borderRadius: Radii.xl,

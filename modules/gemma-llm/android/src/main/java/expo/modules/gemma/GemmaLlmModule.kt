@@ -25,6 +25,9 @@ private fun normalizeModelPath(modelPath: String): String {
 
 class GemmaLlmModule : Module() {
     private var engine: Engine? = null
+
+    /** Which model the live engine was built from, so a reload can be skipped. */
+    private var loadedPath: String? = null
     @Volatile private var conversation: com.google.ai.edge.litertlm.Conversation? = null
     @Volatile private var isCancelled = false
     private val moduleJob = SupervisorJob()
@@ -40,12 +43,37 @@ class GemmaLlmModule : Module() {
             engine?.close()
         }
 
+        /**
+         * True when a model is already in memory and ready to answer.
+         *
+         * Lets the screen skip straight to the chat instead of offering a
+         * "Start Sahayak" button that would spend half a minute rebuilding
+         * something the process already holds.
+         */
+        Function("isLoaded") {
+            engine != null && conversation != null
+        }
+
         AsyncFunction("load") { modelPath: String, promise: Promise ->
             moduleScope.launch {
                 try {
+                    val fsPath = normalizeModelPath(modelPath)
+
+                    // Already holding this exact model: hand it straight back.
+                    // This used to close the engine and rebuild it on every
+                    // call, so leaving the screen and returning paid the full
+                    // multi-gigabyte load again for no reason at all.
+                    if (engine != null && conversation != null && loadedPath == fsPath) {
+                        promise.resolve(true)
+                        return@launch
+                    }
+
                     conversation?.close()
                     engine?.close()
-                    val fsPath = normalizeModelPath(modelPath)
+                    conversation = null
+                    engine = null
+                    loadedPath = null
+
                     val config = EngineConfig(
                         modelPath = fsPath,
                         backend = Backend.CPU(),
@@ -55,6 +83,7 @@ class GemmaLlmModule : Module() {
                     e.initialize()
                     conversation = e.createConversation()
                     engine = e
+                    loadedPath = fsPath
                     promise.resolve(true)
                 } catch (ex: Exception) {
                     promise.reject("LOAD_FAILED", ex.message ?: "Failed to load model", ex)

@@ -222,14 +222,19 @@ export default function SahayakScreen() {
           <Notice
             icon="bolt"
             title="Ready to start"
-            body="The model is on your phone. Loading it takes a few seconds the first time."
+            body={
+              'The model is already on your phone — nothing is downloaded or fetched from here. '
+              + 'It has to be read into memory once after the app starts, which takes a moment; '
+              + 'after that Sahayak opens straight into the chat.'
+            }
             actionLabel="Start Sahayak"
             onAction={load}
           />
         ) : status === 'loading' ? (
           <View style={styles.centre}>
             <Loader size={28} />
-            <Text style={styles.centreText}>Waking Sahayak up</Text>
+            <Text style={styles.centreText}>Reading the model into memory</Text>
+            <Text style={styles.centreNote}>Once only — it stays ready until you close the app</Text>
           </View>
         ) : status === 'error' ? (
           <Notice icon="error-outline" title="Could not start" body={error ?? 'Unknown error.'} actionLabel="Try again" onAction={load} />
@@ -377,6 +382,7 @@ const styles = StyleSheet.create({
   subtitle: { ...Type.bodySmall, color: Colors.onSurfaceVariant },
 
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md },
+  centreNote: { ...Type.bodySmall, color: Colors.onSurfaceVariant, textAlign: 'center' },
   centreText: { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
 
   thread: { padding: Spacing.lg, gap: Spacing.md },

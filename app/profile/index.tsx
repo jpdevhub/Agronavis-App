@@ -11,7 +11,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useFarmer, useUpdateFarmer } from '@/hooks/useFarmer';
 import { LANGUAGES } from '@/constants';
 import { setAppLanguage } from '@/i18n';
-import { Loader } from '@/components/ui';
+import { Loader, NavScrim } from '@/components/ui';
 
 function initialsOf(name: string | undefined, email: string | undefined): string {
   const source = (name || email || 'A').trim();
@@ -178,6 +178,7 @@ function Row({ icon, label, value }: { icon: React.ComponentProps<typeof Materia
         <Text style={styles.rowLabel}>{label}</Text>
         <Text style={styles.rowValue}>{value}</Text>
       </View>
+      <NavScrim />
     </View>
   );
 }

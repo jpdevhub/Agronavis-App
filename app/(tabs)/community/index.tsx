@@ -13,6 +13,7 @@ import { Colors, Radii, Shape, Spacing, TypeEmphasized } from '@/constants/theme
 import { showAlert } from '@/utils/alert';
 import { useFarmer } from '@/hooks/useFarmer';
 import { useNotifications } from '@/hooks/useNotifications';
+import { SAHAYAK_FAB_SPACE } from '@/features/sahayak';
 import { useAuthStore } from '@/store/useAuthStore';
 import { storageApi } from '@/services/endpoints';
 import { useCommunityPosts, useCreatePost, useToggleVote } from '@/hooks/useCommunityPosts';
@@ -425,7 +426,10 @@ export default function CommunityScreen() {
           </View>
         </View>
 
-        <View style={{ height: tabBarHeight + 24 }} />
+        {/* Clear of the tab bar AND the Sahayak pill floating above it. This
+            allowed for the bar alone, so the last card sat behind the pill
+            and could not be read or tapped. */}
+        <View style={{ height: tabBarHeight + SAHAYAK_FAB_SPACE + Spacing.xl }} />
       </ScrollView>
       </>
       )}

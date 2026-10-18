@@ -19,13 +19,18 @@ import { Colors } from '@/constants/theme';
 export function NavScrim() {
   const insets = useSafeAreaInsets();
 
-  // Gesture navigation reports almost nothing here and needs no cover.
-  if (insets.bottom < 12) return null;
+  // Gesture navigation leaves a thin hint bar that needs no cover; a
+  // three-button bar is tall and does. The threshold was 12, which some
+  // devices report for a real button bar, so the strip never appeared.
+  if (insets.bottom < 8) return null;
 
   return (
     <View style={[styles.wrap, { height: insets.bottom }]} pointerEvents="none">
       <BlurView
-        intensity={Platform.OS === 'android' ? 24 : 32}
+        // Stronger than the tab bar's: that one sits under a solid pill which
+        // already hides most of what passes behind it, while this is the only
+        // thing between a table of readings and the home button.
+        intensity={Platform.OS === 'android' ? 40 : 48}
         tint="light"
         experimentalBlurMethod="dimezisBlurView"
         style={[StyleSheet.absoluteFill, styles.tint]}
@@ -36,6 +41,8 @@ export function NavScrim() {
 
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 30 },
-  // Never fully opaque: content should read as behind it, not cut off.
-  tint: { backgroundColor: 'rgba(248, 249, 255, 0.72)' },
+  // Never fully opaque: content should read as passing behind it rather than
+  // being cut off. Opaque enough, though, that text under the buttons is no
+  // longer readable — half-legible is what made it look like a fault.
+  tint: { backgroundColor: 'rgba(248, 249, 255, 0.88)' },
 });

@@ -5,6 +5,7 @@ import {
   cancelGeneration,
   generateText,
   isNativeGemmaModuleLinked,
+  isModelLoaded,
   loadModel,
 } from '@/modules/gemma-llm/src';
 import { useQueryClient } from '@tanstack/react-query';
@@ -160,6 +161,16 @@ export function useSahayak() {
       .then((probe) => {
         if (cancelled) return;
         setModelPath(probe.complete ? probe.path : null);
+
+        // The engine outlives this screen. If it is still holding the model,
+        // go straight to the chat — asking someone to press "Start" so it can
+        // reload several gigabytes it already has is the whole of the wait
+        // they were complaining about.
+        if (probe.complete && isModelLoaded()) {
+          setStatus('loaded');
+          return;
+        }
+
         setStatus(probe.complete ? 'ready' : 'missing');
       })
       .catch(() => {

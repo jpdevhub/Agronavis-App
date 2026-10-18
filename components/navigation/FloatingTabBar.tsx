@@ -124,28 +124,30 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceContainerLowest,
     borderWidth: 1,
     borderColor: Colors.outlineVariant,
+    // The bar sizes to its contents, so without a ceiling a long label pushes
+    // it past the screen edge.
+    maxWidth: '94%',
     ...Elevation.level2,
   },
   item: {
     height: 48,
-    // Fixed rather than a minimum: the active pill grows to fit its label, and
-    // a flexible inactive item gave that growth away from the icons. With a
-    // long title like "Community" the three unselected icons were squeezed
-    // into the left third of the bar.
-    width: 56,
+    minWidth: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
     borderRadius: Shape.full,
+    // The unselected icons hold their size no matter how long the selected
+    // label is. Letting them shrink packed all three into the left third of
+    // the bar; giving the active item a fixed width instead collapsed the
+    // label to nothing, which is how the labels disappeared entirely.
+    flexShrink: 0,
   },
   itemActive: {
     backgroundColor: Colors.primary,
-    width: 'auto',
     paddingHorizontal: Spacing.lg,
-    // Never more than the bar can spare; the label shrinks before the row
-    // starts overflowing.
-    maxWidth: '46%',
+    // Only this one gives way, and it gives way by truncating its label.
+    flexShrink: 1,
   },
   label: { ...TypeEmphasized.labelLarge, color: Colors.onPrimary, flexShrink: 1 },
 });

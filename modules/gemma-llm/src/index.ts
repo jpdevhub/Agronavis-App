@@ -2,6 +2,7 @@ import { requireNativeModule } from "expo-modules-core";
 import type { EventSubscription } from "expo-modules-core";
 
 type NativeGemma = {
+  isLoaded?: () => boolean;
   load: (modelPath: string) => Promise<boolean>;
   generate: (prompt: string) => Promise<string>;
   generateWithImage: (prompt: string, imageBase64: string, mimeType: string) => Promise<string>;
@@ -19,6 +20,22 @@ try {
 
 export function isNativeGemmaModuleLinked(): boolean {
   return native != null;
+}
+
+/**
+ * Whether a model is already in memory and ready to answer.
+ *
+ * The engine lives in the native module and outlives the screen, so a farmer
+ * returning to Sahayak should land in the chat rather than on a button that
+ * rebuilds something the process already holds.
+ */
+export function isModelLoaded(): boolean {
+  try {
+    return native?.isLoaded?.() === true;
+  } catch {
+    // An older build without this function simply has nothing loaded yet.
+    return false;
+  }
 }
 
 export const loadModel = (modelPath: string): Promise<boolean> => {
