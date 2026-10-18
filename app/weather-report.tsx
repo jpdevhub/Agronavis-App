@@ -42,6 +42,10 @@ function dayLabel(iso: string): string {
   });
 }
 
+/** "Mon", in the device's own language. */
+const weekday = (iso: string) =>
+  new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short' });
+
 function Row({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
     <View style={styles.row}>
@@ -150,7 +154,7 @@ export default function WeatherReportScreen() {
   const fieldId = params.fieldId ?? storeFieldId;
   const farmId = params.farmId ?? storeFarmId;
 
-  const { data, current, isLoading, isStale } = useWeather(farmId, fieldId);
+  const { data, current, forecast, isLoading, isStale } = useWeather(farmId, fieldId);
 
   const solar = useMemo(
     () => [...(data?.solar ?? [])].map(normalise).reverse(),
@@ -203,6 +207,48 @@ export default function WeatherReportScreen() {
                   OpenWeatherMap, live{isStale ? ' — showing the last stored reading' : ''}
                 </Text>
               </View>
+            </>
+          )}
+
+          {/*
+            The days ahead, which is what someone planning an irrigation or a
+            spray actually needs. NASA POWER cannot supply this — it publishes
+            observed days and runs about two behind — so the forecast is
+            OpenWeatherMap's, and the page says so rather than letting the
+            NASA credit in the header imply otherwise.
+          */}
+          {forecast.length > 0 && (
+            <>
+              <Text style={styles.section}>Next few days</Text>
+              <View style={styles.forecastRow}>
+                {forecast.slice(0, 5).map((d, i) => (
+                  <View key={d.date} style={[styles.fcDay, i === 0 && styles.fcDayNext]}>
+                    <Text style={[styles.fcName, i === 0 && styles.fcNameNext]}>
+                      {i === 0 ? 'Tomorrow' : weekday(d.date)}
+                    </Text>
+                    <Text style={[styles.fcTemp, i === 0 && styles.fcTempNext]}>
+                      {Math.round(d.tempMax)}°
+                    </Text>
+                    <Text style={[styles.fcLow, i === 0 && styles.fcLowNext]}>
+                      {Math.round(d.tempMin)}°
+                    </Text>
+                    <View style={[styles.rainPill, d.rainMm > 0 && styles.rainPillWet]}>
+                      <MaterialIcons
+                        name={d.rainMm > 0 ? 'water-drop' : 'wb-sunny'}
+                        size={12}
+                        color={d.rainMm > 0 ? Colors.onPrimaryContainer : Colors.onTertiaryContainer}
+                      />
+                      <Text style={[styles.rainText, d.rainMm > 0 && styles.rainTextWet]}>
+                        {d.rainMm > 0 ? `${Math.round(d.rainMm)}mm` : 'dry'}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.sourceLine}>
+                OpenWeatherMap forecast. The measurements below are NASA&apos;s record of days
+                already past.
+              </Text>
             </>
           )}
 
@@ -296,6 +342,32 @@ const styles = StyleSheet.create({
   body: { padding: Spacing.lg, gap: Spacing.md },
 
   section: { ...TypeEmphasized.titleMedium, color: Colors.onSurface, marginTop: Spacing.sm },
+  // ── Forecast ────────────────────────────────────────────────────────
+  forecastRow: { flexDirection: 'row', gap: Spacing.sm },
+  fcDay: {
+    flex: 1, alignItems: 'center', gap: 2,
+    paddingVertical: Spacing.md, paddingHorizontal: Spacing.xs,
+    // Expressive shape: the nearest day is the one being decided on, so it
+    // carries the colour and the rest recede.
+    borderRadius: Shape.large,
+    backgroundColor: Colors.surfaceContainerHigh,
+  },
+  fcDayNext: { backgroundColor: Colors.secondaryContainer },
+  fcName: { ...Type.labelSmall, color: Colors.onSurfaceVariant },
+  fcNameNext: { color: Colors.onSecondaryContainer },
+  fcTemp: { ...TypeEmphasized.titleLarge, color: Colors.onSurface },
+  fcTempNext: { color: Colors.onSecondaryContainer },
+  fcLow: { ...Type.labelMedium, color: Colors.onSurfaceVariant },
+  fcLowNext: { color: Colors.onSecondaryContainer },
+  rainPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2,
+    paddingHorizontal: Spacing.sm, paddingVertical: 2,
+    borderRadius: Shape.full, backgroundColor: Colors.tertiaryContainer,
+  },
+  rainPillWet: { backgroundColor: Colors.primaryContainer },
+  rainText: { ...Type.labelSmall, color: Colors.onTertiaryContainer },
+  rainTextWet: { color: Colors.onPrimaryContainer },
+
   card: {
     gap: Spacing.sm, padding: Spacing.md,
     borderRadius: Shape.large, backgroundColor: Colors.surfaceContainerLowest,
