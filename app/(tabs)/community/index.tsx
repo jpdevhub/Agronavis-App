@@ -12,6 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Colors, Radii, Shape, Spacing, TypeEmphasized } from '@/constants/theme';
 import { showAlert } from '@/utils/alert';
 import { useFarmer } from '@/hooks/useFarmer';
+import { useNotifications } from '@/hooks/useNotifications';
 import { useAuthStore } from '@/store/useAuthStore';
 import { storageApi } from '@/services/endpoints';
 import { useCommunityPosts, useCreatePost, useToggleVote } from '@/hooks/useCommunityPosts';
@@ -243,6 +244,7 @@ export default function CommunityScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useTabBarHeight();
   const { data: farmer }  = useFarmer();
+  const { unread }        = useNotifications();
   const { data: posts = [], isLoading, refetch } = useCommunityPosts();
   const toggleVote = useToggleVote();
   const { data: prices = [] } = useMarketPrices(farmer?.state);
@@ -273,8 +275,25 @@ export default function CommunityScreen() {
           <Avatar uri={farmer?.avatarUrl} name={farmer?.fullName} size={40} />
         </TouchableOpacity>
         <Text style={styles.logo}>Agronavis</Text>
-        <TouchableOpacity style={styles.notifBtn}>
-          <MaterialIcons name="notifications-none" size={24} color={Colors.primary} />
+        {/* Was a bell with no onPress — it looked like the dashboard's and
+            did nothing at all. Same destination, same unread count. */}
+        <TouchableOpacity
+          style={styles.notifBtn}
+          activeOpacity={0.8}
+          onPress={() => router.push('/alerts' as never)}
+          accessibilityRole="button"
+          accessibilityLabel={unread > 0 ? `Alerts, ${unread} unread` : 'Alerts'}
+        >
+          <MaterialIcons
+            name={unread > 0 ? 'notifications-active' : 'notifications-none'}
+            size={24}
+            color={Colors.primary}
+          />
+          {unread > 0 ? (
+            <View style={styles.notifBadge}>
+              <Text style={styles.notifBadgeText}>{unread > 9 ? '9+' : unread}</Text>
+            </View>
+          ) : null}
         </TouchableOpacity>
       </View>
 
@@ -439,6 +458,13 @@ const styles = StyleSheet.create({
   },
   logo:     { fontSize: 22, fontWeight: '900', letterSpacing: -0.8, color: Colors.primary },
   notifBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  notifBadge: {
+    position: 'absolute', top: 4, right: 2,
+    minWidth: 18, height: 18, borderRadius: Shape.full,
+    paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.error, borderWidth: 2, borderColor: Colors.surface,
+  },
+  notifBadgeText: { ...TypeEmphasized.labelSmall, color: Colors.onPrimary },
 
   // Mandi ticker — now BELOW topbar
   segments: {

@@ -16,7 +16,14 @@ export function SahayakGateway() {
 
   if (!Env.features.sahayak) return null;
 
-  const bottom = FLOATING_BAR_HEIGHT + insets.bottom + Spacing.md;
+  /**
+   * Clear of the tab bar rather than resting on it.
+   *
+   * FLOATING_BAR_HEIGHT excludes the safe-area inset and the gap the bar
+   * itself sits above, so adding only one gap left the pill overlapping the
+   * bar's top edge — visible as Sahayak sitting across the nav row.
+   */
+  const bottom = FLOATING_BAR_HEIGHT + insets.bottom + Spacing.xl;
 
   return (
     <>

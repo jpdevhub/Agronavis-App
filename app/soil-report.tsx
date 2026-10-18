@@ -8,7 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import type { MicronutrientSpread, NutrientSpread, SoilReport } from '@agronavis/shared-types';
 import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { soilApi } from '@/services/endpoints';
-import { Loader } from '@/components/ui';
+import { Loader, NavScrim } from '@/components/ui';
 
 const pct = (part: number, total: number): number => (total > 0 ? (part / total) * 100 : 0);
 
@@ -228,6 +228,7 @@ export default function SoilReportScreen() {
           </Text>
         </ScrollView>
       )}
+      <NavScrim />
     </View>
   );
 }

@@ -8,3 +8,4 @@ export { Surface } from './Surface';
 export { Loader, type LoaderProps } from './Loader';
 export { LoadingScreen, type LoadingScreenProps } from './LoadingScreen';
 export { ScreenError } from './ScreenError';
+export { NavScrim } from './NavScrim';

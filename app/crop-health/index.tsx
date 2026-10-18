@@ -2,9 +2,9 @@ import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Camera, ImageSource, MapView, RasterLayer, ShapeSource, LineLayer } from '@rnmapbox/maps';
+import { Camera, ImageSource, MapView, RasterLayer, ShapeSource, LineLayer, UserLocation } from '@rnmapbox/maps';
 import { mapsReady } from '@/features/maps/init';
-import { Loader } from '@/components/ui';
+import { Loader, NavScrim } from '@/components/ui';
 import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { Env } from '@/constants/env';
 import { useGoBack } from '@/hooks/useGoBack';
@@ -109,7 +109,14 @@ export default function CropHealthScreen() {
           {/* ── The field, with the reading laid over it ───────────────── */}
           <View style={styles.mapCard}>
             {centre && mapsReady ? (
-              <MapView style={styles.map} styleURL={SATELLITE_STYLE} scaleBarEnabled={false}>
+              <MapView
+                style={styles.map}
+                styleURL={SATELLITE_STYLE}
+                scaleBarEnabled={false}
+                logoEnabled={false}
+                attributionEnabled={false}
+              >
+                <UserLocation visible androidRenderMode="normal" />
                 <Camera centerCoordinate={centre} zoomLevel={15.5} animationDuration={0} />
 
                 {heatmapUri && ndvi.bounds ? (
@@ -251,6 +258,7 @@ export default function CropHealthScreen() {
           </Text>
         </ScrollView>
       )}
+      <NavScrim />
     </View>
   );
 }

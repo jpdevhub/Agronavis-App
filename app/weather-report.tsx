@@ -8,7 +8,7 @@ import type { SolarDay } from '@agronavis/shared-types';
 import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { useWeather } from '@/hooks/useWeather';
 import { useFarmStore } from '@/store/useFarmStore';
-import { Loader } from '@/components/ui';
+import { Loader, NavScrim } from '@/components/ui';
 
 /** Deficit thresholds the irrigation advisory uses, in mm over three days. */
 const DEFICIT = { severe: 18, high: 10, mild: 4 };
@@ -273,6 +273,7 @@ export default function WeatherReportScreen() {
           </View>
         </ScrollView>
       )}
+      <NavScrim />
     </View>
   );
 }

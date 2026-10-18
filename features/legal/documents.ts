@@ -259,6 +259,13 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
         ],
       },
       { kind: 'text', text: 'The weather, map and geocoding services receive coordinates with nothing identifying you attached. Agmarknet, the Soil Health Card scheme and the fertiliser scheme receive nothing — we read their published data on a schedule.' },
+      /**
+       * Mapbox's terms require their attribution to be visible somewhere in
+       * the app. It used to sit on the map itself, over the bottom-left of a
+       * screen whose whole purpose is tapping the corners of a field, so it
+       * lives here instead — which their terms allow.
+       */
+      { kind: 'text', text: 'Map and imagery credits: satellite imagery and maps © Mapbox, © OpenStreetMap contributors. Field monitoring uses Sentinel-2 imagery from the European Space Agency, through the Copernicus programme. Fire detections are from NASA FIRMS, and weather and soil moisture from NASA POWER.' },
     ],
   },
   {

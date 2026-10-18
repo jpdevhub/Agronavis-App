@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Loader } from '@/components/ui';
+import { Loader, NavScrim } from '@/components/ui';
 import { SoilProfile } from '@/components/insight/SoilProfile';
 import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { useGoBack } from '@/hooks/useGoBack';
@@ -257,6 +257,7 @@ export default function RootZoneScreen() {
           </Text>
         </ScrollView>
       )}
+      <NavScrim />
     </View>
   );
 }

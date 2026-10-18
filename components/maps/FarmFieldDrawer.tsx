@@ -7,7 +7,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Platform, KeyboardAvoidingView, Animated, PanResponder, ScrollView,
 } from 'react-native';
-import { Camera, MapView, MarkerView, ShapeSource, FillLayer, LineLayer } from '@rnmapbox/maps';
+import { Camera, MapView, MarkerView, ShapeSource, FillLayer, LineLayer, UserLocation } from '@rnmapbox/maps';
 // Side-effect import: the access token must be set before any MapView mounts.
 import '@/features/maps/init';
 import * as Location from 'expo-location';
@@ -428,9 +428,17 @@ export default function FarmFieldDrawer({
         // A scale bar is how someone judges whether the shape they have drawn
         // is the size of their plot. Essential when the plot is metres across.
         scaleBarEnabled
-        logoEnabled
-        attributionEnabled
+        logoEnabled={false}
+        attributionEnabled={false}
+        // Mapbox's own badge and attribution sat over the bottom-left corner
+        // of a map whose whole job is letting someone tap a corner of their
+        // field. Hidden here; the attribution Mapbox's terms require belongs
+        // in the app's about screen rather than on top of the work.
       >
+        {/* Where the farmer is standing, which is the reference point for
+            every corner they are about to tap. */}
+        <UserLocation visible androidRenderMode="normal" showsUserHeadingIndicator />
+
         <Camera
           ref={cameraRef}
           // Let a farmer zoom past the imagery's own resolution. Blurry, but a

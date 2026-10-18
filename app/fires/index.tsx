@@ -5,7 +5,7 @@ import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NearbyFire } from '@agronavis/shared-types';
-import { EmptyState, Loader } from '@/components/ui';
+import { EmptyState, Loader, NavScrim } from '@/components/ui';
 import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { useFarmFires, useFireSummary } from '@/hooks/useFires';
 
@@ -276,6 +276,7 @@ export default function FiresScreen() {
           </Text>
         </ScrollView>
       )}
+      <NavScrim />
     </View>
   );
 }

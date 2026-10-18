@@ -47,6 +47,8 @@ We do not sell your data and we do not share it with advertisers. Each party bel
 
 The weather, map and geocoding services receive coordinates with nothing identifying you attached. Agmarknet, the Soil Health Card scheme and the fertiliser scheme receive nothing — we read their published data on a schedule.
 
+Map and imagery credits: satellite imagery and maps © Mapbox, © OpenStreetMap contributors. Field monitoring uses Sentinel-2 imagery from the European Space Agency, through the Copernicus programme. Fire detections are from NASA FIRMS, and weather and soil moisture from NASA POWER.
+
 ## 5. How long we keep it
 
 Your account, profile, farms, fields, scans and posts are kept while your account exists. Server logs are kept for 30 days.
@@ -66,7 +68,7 @@ Cached public data such as district soil records and mandi prices is not persona
 - Object to a particular use
 - Nominate someone to exercise these rights if you are unable to
 
-Write to contact@agronavis.in. We reply within 30 days. If you are not satisfied you may complain to the Data Protection Board of India.
+Write to [privacy@agronavis.example]. We reply within 30 days. If you are not satisfied you may complain to the Data Protection Board of India.
 
 ## 8. Children
 
@@ -76,8 +78,8 @@ Agronavis is for adults who farm. We do not knowingly collect data from anyone u
 
 Material changes will be announced in the app before they take effect, and the date at the top of this page will change.
 
-Agronavis · Barrackpore, Kolkata, West Bengal, India · contact@agronavis.in
+[Registered business name] · [Registered address, India] · [privacy@agronavis.example]
 
 ---
 
-Agronavis · Barrackpore, Kolkata, West Bengal, India
+[Registered business name] · [Registered address, India]

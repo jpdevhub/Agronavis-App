@@ -128,13 +128,24 @@ const styles = StyleSheet.create({
   },
   item: {
     height: 48,
-    minWidth: 56,
+    // Fixed rather than a minimum: the active pill grows to fit its label, and
+    // a flexible inactive item gave that growth away from the icons. With a
+    // long title like "Community" the three unselected icons were squeezed
+    // into the left third of the bar.
+    width: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
     borderRadius: Shape.full,
   },
-  itemActive: { backgroundColor: Colors.primary },
-  label: { ...TypeEmphasized.labelLarge, color: Colors.onPrimary },
+  itemActive: {
+    backgroundColor: Colors.primary,
+    width: 'auto',
+    paddingHorizontal: Spacing.lg,
+    // Never more than the bar can spare; the label shrinks before the row
+    // starts overflowing.
+    maxWidth: '46%',
+  },
+  label: { ...TypeEmphasized.labelLarge, color: Colors.onPrimary, flexShrink: 1 },
 });

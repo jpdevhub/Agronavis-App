@@ -28,7 +28,7 @@ import { describeArea } from '@/features/maps/area';
  */
 
 /** How much of the next card shows, which is what makes it look swipeable. */
-const PEEK = 26;
+const PEEK = 30;
 const GAP = Spacing.md;
 
 export function FieldCarousel({
@@ -89,10 +89,24 @@ export function FieldCarousel({
     [fields, stride, activeFieldId, onSelect],
   );
 
+  /** Step one card, for the chevrons. */
+  const step = useCallback(
+    (delta: number) => {
+      const next = Math.max(0, Math.min(fields.length - 1, index + delta));
+      const field = fields[next];
+      if (field) onSelect(field.id, field.farmId);
+    },
+    [fields, index, onSelect],
+  );
+
   if (fields.length === 0) return null;
+
+  const hasPrev = index > 0;
+  const hasNext = index < fields.length - 1;
 
   return (
     <View style={styles.wrap}>
+      <View>
       <FlatList
         ref={listRef}
         data={fields}
@@ -147,6 +161,37 @@ export function FieldCarousel({
         }}
       />
 
+      {/*
+        Chevrons over the peek, which is otherwise dead space — most visibly
+        on the first and last card, where there is no neighbour to show and
+        the row looked lopsided. They also give the carousel a tap target for
+        anyone who does not swipe.
+      */}
+      {hasPrev ? (
+        <TouchableOpacity
+          style={[styles.chev, styles.chevLeft]}
+          onPress={() => step(-1)}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Previous field"
+        >
+          <MaterialIcons name="chevron-left" size={22} color={Colors.onSurfaceVariant} />
+        </TouchableOpacity>
+      ) : null}
+
+      {hasNext ? (
+        <TouchableOpacity
+          style={[styles.chev, styles.chevRight]}
+          onPress={() => step(1)}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Next field"
+        >
+          <MaterialIcons name="chevron-right" size={22} color={Colors.onSurfaceVariant} />
+        </TouchableOpacity>
+      ) : null}
+      </View>
+
       {/* One dot per field, the current one drawn as a bar. With several
           fields a farmer needs to see how far along the row they are. */}
       {fields.length > 1 ? (
@@ -183,6 +228,13 @@ const styles = StyleSheet.create({
   nameActive: { color: Colors.onPrimary },
   area: { ...Type.bodySmall, color: Colors.onSurfaceVariant, marginTop: 1 },
   areaActive: { color: Colors.primaryFixed },
+
+  chev: {
+    position: 'absolute', top: 0, bottom: 0, width: Spacing.xl + PEEK,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  chevLeft: { left: 0 },
+  chevRight: { right: 0 },
 
   dots: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.outlineVariant },

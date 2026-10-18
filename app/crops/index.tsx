@@ -17,7 +17,7 @@ import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/const
 import { cropApi } from '@/services/endpoints';
 import { useFarmStore } from '@/store/useFarmStore';
 import { showAlert } from '@/utils/alert';
-import { Loader } from '@/components/ui';
+import { Loader, NavScrim } from '@/components/ui';
 
 /**
  * Most field crops in the recommendation list run a season of roughly four
@@ -210,6 +210,7 @@ function Empty({
       <MaterialIcons name={icon} size={40} color={Colors.onSurfaceVariant} />
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyBody}>{body}</Text>
+      <NavScrim />
     </View>
   );
 }
