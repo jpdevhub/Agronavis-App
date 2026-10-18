@@ -137,7 +137,9 @@ drift apart: **[TERMS.md](TERMS.md)**, **[PRIVACY.md](PRIVACY.md)**,
 Setup, architecture, scripts and deployment are in
 **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**. How every model works, where
 the data comes from and the limits of each are in
-**[docs/architecture/](docs/architecture/README.md)**.
+**[docs/architecture/](docs/architecture/README.md)**. Step-by-step builds of
+individual features, written so one could be rebuilt from nothing, are in
+**[docs/guides/](docs/guides/BUILDING-FIELD-MONITORING.md)**.
 
 ```bash
 git clone https://github.com/jpdevhub/Agronavis-App.git && cd Agronavis-App
