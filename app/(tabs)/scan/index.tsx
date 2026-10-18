@@ -156,11 +156,7 @@ export default function ScanScreen() {
         // Grows to the full height so the tips panel can fill whatever the
         // camera leaves. Without it the panel ended at its content and the
         // screen's near-black background showed through underneath.
-        contentContainerStyle={[
-          styles.scrollBody,
-          // No Sahayak pill on this screen, so only the bar to clear.
-          { paddingBottom: tabBarHeight + Spacing.md },
-        ]}
+        contentContainerStyle={styles.scrollBody}
         showsVerticalScrollIndicator={false}
       >
 
@@ -221,7 +217,10 @@ export default function ScanScreen() {
         clearance moved inside, onto a scroll view. The strip stays the height
         it always was and its content scrolls out from under the bar.
       */}
-      <View style={styles.bottomSection}>
+      {/* The clearance lives on this panel rather than on the scroll view.
+          Outside it, the padded strip showed the screen's near-black
+          background as a band between the tips and the tab bar. */}
+      <View style={[styles.bottomSection, { paddingBottom: tabBarHeight + Spacing.md }]}>
         <Text style={styles.tipsHeader}>Scanning Tips</Text>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -311,7 +310,7 @@ const styles = StyleSheet.create({
   bottomSection:  {
     flexGrow: 1,
     backgroundColor: Colors.surface, paddingHorizontal: 20, paddingTop: 16,
-    paddingBottom: 16, gap: 12,
+    gap: 12,
   },
   tipsHeader:     { fontSize: 15, fontWeight: '800', color: Colors.onSurface },
   tipCard: {
