@@ -223,8 +223,16 @@ export default function WeatherReportScreen() {
               <View style={styles.forecastRow}>
                 {forecast.slice(0, 5).map((d, i) => (
                   <View key={d.date} style={[styles.fcDay, i === 0 && styles.fcDayNext]}>
-                    <Text style={[styles.fcName, i === 0 && styles.fcNameNext]}>
-                      {i === 0 ? 'Tomorrow' : weekday(d.date)}
+                    {/* Every card shows a weekday. "Tomorrow" is three
+                        characters too long for a fifth of the screen and
+                        wrapped to "Tomorro / w", which made the first card
+                        taller than the four beside it. The highlight already
+                        says which day is next. */}
+                    <Text
+                      style={[styles.fcName, i === 0 && styles.fcNameNext]}
+                      numberOfLines={1}
+                    >
+                      {weekday(d.date)}
                     </Text>
                     <Text style={[styles.fcTemp, i === 0 && styles.fcTempNext]}>
                       {Math.round(d.tempMax)}°
@@ -341,7 +349,12 @@ const styles = StyleSheet.create({
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   body: { padding: Spacing.lg, gap: Spacing.md },
 
-  section: { ...TypeEmphasized.titleMedium, color: Colors.onSurface, marginTop: Spacing.sm },
+  // Headings lead the page rather than sitting at the same weight as the
+  // rows beneath them, which is what made this screen read as one flat list.
+  section: {
+    ...TypeEmphasized.titleLarge, color: Colors.onSurface,
+    marginTop: Spacing.lg, marginBottom: Spacing.xs,
+  },
   // ── Forecast ────────────────────────────────────────────────────────
   forecastRow: { flexDirection: 'row', gap: Spacing.sm },
   fcDay: {

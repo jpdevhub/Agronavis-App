@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { Farm, FarmField } from '@agronavis/shared-types';
-import { Colors, Elevation, Radii, Shape, Spacing, TypeEmphasized } from '@/constants/theme';
+import { Colors, Elevation, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { farmApi } from '@/services/endpoints';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Avatar, Loader } from '@/components/ui';
@@ -195,7 +195,7 @@ export default function MyFarmsScreen() {
                           <MaterialIcons
                             name="crop-free"
                             size={20}
-                            color={isActive ? '#fff' : Colors.primary}
+                            color={isActive ? Colors.onPrimary : Colors.primary}
                           />
                         </View>
                         <View style={{ flex: 1 }}>
@@ -277,11 +277,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingBottom: 14,
     backgroundColor: Colors.surface,
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05, shadowRadius: 12, elevation: 6,
+    ...Elevation.level1,
   },
-  logo:    { fontSize: 26, fontWeight: '900', letterSpacing: -0.6, color: Colors.onSurface },
-  topSub:  { fontSize: 12, color: Colors.onSurfaceVariant, fontWeight: '600', marginTop: 2 },
+  logo:    { ...TypeEmphasized.headlineSmall, color: Colors.onSurface },
+  topSub:  { ...Type.labelMedium, color: Colors.onSurfaceVariant, marginTop: 2 },
   notifBtn:{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 
   subNav: {
@@ -291,26 +290,26 @@ const styles = StyleSheet.create({
   },
   subNavBtn:       { flex: 1, alignItems: 'center', gap: 3, paddingVertical: 4 },
   subNavBtnActive: { borderBottomWidth: 2, borderBottomColor: Colors.primary },
-  subNavLabel:     { fontSize: 11, fontWeight: '700', color: Colors.onSurfaceVariant, letterSpacing: 0.3 },
+  subNavLabel:     { ...TypeEmphasized.labelSmall, color: Colors.onSurfaceVariant },
   subNavLabelActive: { color: Colors.primary },
 
   center: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     gap: 12, paddingHorizontal: 40,
   },
-  loadingText: { fontSize: 14, color: Colors.onSurfaceVariant, fontWeight: '600' },
-  errorText:   { fontSize: 14, color: Colors.onSurfaceVariant, textAlign: 'center' },
+  loadingText: { ...Type.labelLarge, color: Colors.onSurfaceVariant },
+  errorText:   { ...Type.bodyMedium, color: Colors.onSurfaceVariant, textAlign: 'center' },
   retryBtn:    { backgroundColor: Colors.primaryFixed, borderRadius: Radii.lg, paddingHorizontal: 24, paddingVertical: 10 },
-  retryText:   { fontSize: 14, fontWeight: '700', color: Colors.primary },
+  retryText:   { ...TypeEmphasized.labelLarge, color: Colors.primary },
 
-  emptyTitle:  { fontSize: 22, fontWeight: '800', color: Colors.onSurface, textAlign: 'center' },
-  emptyText:   { fontSize: 14, color: Colors.onSurfaceVariant, textAlign: 'center', lineHeight: 20 },
+  emptyTitle:  { ...TypeEmphasized.titleLarge, color: Colors.onSurface, textAlign: 'center' },
+  emptyText:   { ...Type.bodyMedium, color: Colors.onSurfaceVariant, textAlign: 'center' },
   emptyBtn: {
     marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 22, paddingVertical: 14, borderRadius: Radii.xl,
     backgroundColor: Colors.primary,
   },
-  emptyBtnText:{ fontSize: 15, fontWeight: '700', color: '#fff' },
+  emptyBtnText:{ ...TypeEmphasized.titleSmall, color: Colors.onPrimary },
 
   scroll: { paddingHorizontal: 16, paddingTop: 16, gap: 20 },
 
@@ -320,18 +319,18 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   farmIconWrap: {
-    width: 42, height: 42, borderRadius: 14,
+    width: 42, height: 42, borderRadius: Shape.large,
     backgroundColor: Colors.primaryFixed,
     alignItems: 'center', justifyContent: 'center',
   },
-  farmName: { fontSize: 17, fontWeight: '800', color: Colors.onSurface },
-  farmMeta: { fontSize: 12, color: Colors.onSurfaceVariant, fontWeight: '600', marginTop: 1 },
+  farmName: { ...TypeEmphasized.titleMedium, color: Colors.onSurface },
+  farmMeta: { ...Type.labelMedium, color: Colors.onSurfaceVariant, marginTop: 1 },
 
   noFieldsCard: {
     backgroundColor: Colors.surfaceContainerLow,
     borderRadius: Radii.xl, padding: 20, alignItems: 'center',
   },
-  noFieldsText: { fontSize: 13, color: Colors.onSurfaceVariant },
+  noFieldsText: { ...Type.bodySmall, color: Colors.onSurfaceVariant },
 
   fieldCard: {
     backgroundColor: Colors.surfaceContainerLowest,
@@ -342,11 +341,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderWidth: 1.5,
     borderColor: Colors.outlineVariant,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    ...Elevation.level1,
   },
   fieldCardActive: {
     borderColor: Colors.primary,
@@ -354,27 +349,27 @@ const styles = StyleSheet.create({
   },
   fieldCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   fieldCardRight:{ flexDirection: 'row', alignItems: 'center', gap: 8 },
-  deleteBtn:     { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  deleteBtn:     { width: 36, height: 36, borderRadius: Shape.full, alignItems: 'center', justifyContent: 'center' },
 
   fieldIconWrap: {
-    width: 40, height: 40, borderRadius: 12,
+    width: 40, height: 40, borderRadius: Shape.medium,
     backgroundColor: Colors.primaryFixed,
     alignItems: 'center', justifyContent: 'center',
   },
   fieldIconActive: { backgroundColor: Colors.primary },
 
-  fieldName:       { fontSize: 15, fontWeight: '700', color: Colors.onSurface },
+  fieldName:       { ...TypeEmphasized.titleSmall, color: Colors.onSurface },
   fieldNameActive: { color: Colors.primary },
-  fieldMeta:       { fontSize: 12, color: Colors.onSurfaceVariant, marginTop: 2 },
+  fieldMeta:       { ...Type.bodySmall, color: Colors.onSurfaceVariant, marginTop: 2 },
   remapRow:        { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  remapText:       { fontSize: 12, color: Colors.error },
+  remapText:       { ...Type.bodySmall, color: Colors.error },
 
   activeBadge: {
     backgroundColor: Colors.primary,
     borderRadius: Radii.full,
     paddingHorizontal: 10, paddingVertical: 3,
   },
-  activeBadgeText: { fontSize: 11, fontWeight: '800', color: '#fff' },
+  activeBadgeText: { ...TypeEmphasized.labelSmall, color: Colors.onPrimary },
 
   addField: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',

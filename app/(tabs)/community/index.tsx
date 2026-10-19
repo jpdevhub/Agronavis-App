@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarHeight } from '@/hooks/useTabBarHeight';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors, Radii, Shape, Spacing, TypeEmphasized } from '@/constants/theme';
+import { Colors, Elevation, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { showAlert } from '@/utils/alert';
 import { useFarmer } from '@/hooks/useFarmer';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -457,10 +457,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 12,
     paddingTop: Platform.OS === 'ios' ? 56 : 44,
     backgroundColor: 'rgba(248,249,255,0.96)',
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06, shadowRadius: 12, elevation: 6,
+    ...Elevation.level1,
   },
-  logo:     { fontSize: 22, fontWeight: '900', letterSpacing: -0.8, color: Colors.primary },
+  logo:     { ...TypeEmphasized.titleLarge, color: Colors.primary },
   notifBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   notifBadge: {
     position: 'absolute', top: 4, right: 2,
@@ -494,49 +493,48 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 4,
     borderTopRightRadius: Radii.full, borderBottomRightRadius: Radii.full, marginRight: 8,
   },
-  tickerBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
-  tickerItem:      { fontSize: 13, fontWeight: '600', color: Colors.onSurfaceVariant, marginHorizontal: 12 },
+  tickerBadgeText: { ...TypeEmphasized.labelSmall, color: Colors.onPrimary },
+  tickerItem:      { ...Type.labelLarge, color: Colors.onSurfaceVariant, marginHorizontal: Spacing.md },
 
   scroll:    { paddingHorizontal: 20, paddingTop: 16, gap: 14 },
-  pageTitle: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5, color: Colors.onSurface },
-  pageSub:   { fontSize: 14, color: Colors.onSurfaceVariant },
+  pageTitle: { ...TypeEmphasized.headlineSmall, color: Colors.onSurface },
+  pageSub:   { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
 
   createPost: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radii.xl, padding: 16,
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 3 },
+    ...Elevation.level1,
     shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
   },
-  createIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.surfaceContainerHigh, alignItems: 'center', justifyContent: 'center' },
-  createText: { fontSize: 14, color: Colors.onSurfaceVariant },
+  createIcon: { width: 40, height: 40, borderRadius: Shape.medium, backgroundColor: Colors.surfaceContainerHigh, alignItems: 'center', justifyContent: 'center' },
+  createText: { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
 
   postCard: {
     backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radii.xxl, overflow: 'hidden',
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05, shadowRadius: 12, elevation: 3,
+    ...Elevation.level1,
   },
   postHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16, paddingBottom: 10 },
-  postAvatar:  { width: 46, height: 46, borderRadius: 14 },
+  postAvatar:  { width: 46, height: 46, borderRadius: Shape.large },
   postAuthor:  { flex: 1 },
-  postName:    { fontSize: 15, fontWeight: '700', color: Colors.onSurface },
-  postLoc:     { fontSize: 12, color: Colors.onSurfaceVariant, marginTop: 1 },
-  postTitle:   { fontSize: 15, fontWeight: '700', color: Colors.onSurface, paddingHorizontal: 16, paddingBottom: 4 },
-  postContent: { fontSize: 14, color: Colors.onSurfaceVariant, lineHeight: 21, paddingHorizontal: 16, paddingBottom: 12 },
+  postName:    { ...TypeEmphasized.titleSmall, color: Colors.onSurface },
+  postLoc:     { ...Type.bodySmall, color: Colors.onSurfaceVariant, marginTop: 1 },
+  postTitle:   { ...TypeEmphasized.titleSmall, color: Colors.onSurface, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xs },
+  postContent: { ...Type.bodyMedium, color: Colors.onSurfaceVariant, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
   postImg:     { width: '100%', height: 180, marginBottom: 12 },
   postActions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: Colors.outlineVariant },
   actionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 50,
   },
-  actionText:  { fontSize: 14, fontWeight: '600', color: Colors.onSurface },
+  actionText:  { ...Type.labelLarge, color: Colors.onSurface },
 
   highlightsRow: { flexDirection: 'row', gap: 12 },
   highlightCard: { flex: 1, borderRadius: Radii.xxl, padding: 20, gap: 6, aspectRatio: 1, justifyContent: 'flex-end' },
-  highlightNum:  { fontSize: 26, fontWeight: '900', color: Colors.onSurface },
-  highlightLabel:{ fontSize: 11, fontWeight: '700', color: Colors.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: 0.8 },
+  highlightNum:  { ...TypeEmphasized.headlineSmall, color: Colors.onSurface },
+  highlightLabel:{ ...TypeEmphasized.labelSmall, color: Colors.onSurfaceVariant, textTransform: 'uppercase' },
 
   emptyState:  { alignItems: 'center', paddingVertical: 40, gap: 10 },
-  emptyTitle:  { fontSize: 18, fontWeight: '700', color: Colors.onSurface },
-  emptySub:    { fontSize: 14, color: Colors.onSurfaceVariant, textAlign: 'center' },
+  emptyTitle:  { ...TypeEmphasized.titleMedium, color: Colors.onSurface },
+  emptySub:    { ...Type.bodyMedium, color: Colors.onSurfaceVariant, textAlign: 'center' },
 
   // Reply panel
   replyModal:  { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
@@ -544,34 +542,34 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
   },
-  replyHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.outlineVariant, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
+  replyHandle: { width: 40, height: 4, borderRadius: Shape.full, backgroundColor: Colors.outlineVariant, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
   replyTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 8 },
-  replyTitle:  { fontSize: 18, fontWeight: '800', color: Colors.onSurface },
+  replyTitle:  { ...TypeEmphasized.titleMedium, color: Colors.onSurface },
   replyRow:    { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  replyAvatar: { width: 36, height: 36, borderRadius: 10 },
+  replyAvatar: { width: 36, height: 36, borderRadius: Shape.medium },
   replyBubble: { flex: 1, backgroundColor: Colors.surfaceContainerHigh, borderRadius: Radii.lg, padding: 10 },
-  replyAuthor: { fontSize: 13, fontWeight: '700', color: Colors.onSurface, marginBottom: 3 },
-  replyText:   { fontSize: 14, color: Colors.onSurfaceVariant, lineHeight: 20 },
+  replyAuthor: { ...TypeEmphasized.labelLarge, color: Colors.onSurface, marginBottom: 3 },
+  replyText:   { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
   emptyReply:  { textAlign: 'center', color: Colors.outline, paddingVertical: 20 },
   replyInputRow: { flexDirection: 'row', gap: 10, padding: 16, alignItems: 'flex-end' },
   replyInput: {
     flex: 1, backgroundColor: Colors.surfaceContainerHigh, borderRadius: Radii.lg,
-    paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: Colors.onSurface,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, ...Type.bodyMedium, color: Colors.onSurface,
     maxHeight: 100,
   },
   replySendBtn: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary,
+    width: 44, height: 44, borderRadius: Shape.full, backgroundColor: Colors.primary,
     alignItems: 'center', justifyContent: 'center',
   },
 
   // Create post modal
   createInput: {
     backgroundColor: Colors.surfaceContainerHigh, borderRadius: Radii.lg,
-    paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: Colors.onSurface,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, ...Type.bodyMedium, color: Colors.onSurface,
   },
   submitBtn:     { height: 54, borderRadius: Radii.xxl, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, backgroundColor: Colors.primary },
   submitBtnDisabled: { backgroundColor: Colors.outlineVariant },
-  submitBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  submitBtnText: { ...TypeEmphasized.titleSmall, color: Colors.onPrimary },
 
   // Media picker / preview
   mediaPicker: {
@@ -579,16 +577,16 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryFixed, borderRadius: Radii.lg,
     paddingHorizontal: 14, paddingVertical: 12,
   },
-  mediaPickerText:  { fontSize: 14, fontWeight: '600', color: Colors.primary },
+  mediaPickerText:  { ...Type.labelLarge, color: Colors.primary },
   mediaPreviewWrap: { borderRadius: Radii.lg, overflow: 'hidden', height: 160, position: 'relative' },
   mediaPreview:     { width: '100%', height: '100%' },
   videoOverlay:     { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
-  removeMediaBtn:   { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12 },
+  removeMediaBtn:   { position: 'absolute', top: Spacing.sm, right: Spacing.sm, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: Shape.full },
   mediaTypePill: {
     position: 'absolute', bottom: 8, left: 8,
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: Radii.full,
     paddingHorizontal: 8, paddingVertical: 4,
   },
-  mediaTypePillText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  mediaTypePillText: { ...TypeEmphasized.labelSmall, color: Colors.onPrimary },
 });
