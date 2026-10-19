@@ -3,6 +3,7 @@ import type { EventSubscription } from "expo-modules-core";
 
 type NativeGemma = {
   isLoaded?: () => boolean;
+  unload?: () => boolean;
   load: (modelPath: string) => Promise<boolean>;
   generate: (prompt: string) => Promise<string>;
   generateWithImage: (prompt: string, imageBase64: string, mimeType: string) => Promise<string>;
@@ -35,6 +36,21 @@ export function isModelLoaded(): boolean {
   } catch {
     // An older build without this function simply has nothing loaded yet.
     return false;
+  }
+}
+
+/**
+ * Hands the model's memory back.
+ *
+ * Android also calls this itself when it is short of memory, which is the
+ * point: several gigabytes held with no way to release them is what makes a
+ * process worth killing.
+ */
+export function unloadModel(): void {
+  try {
+    native?.unload?.();
+  } catch {
+    // Nothing loaded, or an older build without it.
   }
 }
 

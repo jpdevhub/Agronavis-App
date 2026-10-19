@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import {
   addTokenListener,
   cancelGeneration,
@@ -183,6 +183,22 @@ export function useSahayak() {
       cancelled = true;
     };
   }, [variant]);
+
+  /**
+   * Notice when Android has taken the model back.
+   *
+   * It releases the engine under memory pressure, which is the whole point of
+   * letting it — but the screen would still believe a model was loaded and
+   * fail on the next question with something unhelpful. Re-checking as the app
+   * returns to the foreground puts it back on "Ready to start" instead.
+   */
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next !== 'active') return;
+      setStatus((current) => (current === 'loaded' && !isModelLoaded() ? 'ready' : current));
+    });
+    return () => sub.remove();
+  }, []);
 
   const load = useCallback(async () => {
     if (!modelPath) return;

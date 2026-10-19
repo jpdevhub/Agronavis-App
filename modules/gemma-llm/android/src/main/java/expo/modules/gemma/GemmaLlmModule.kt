@@ -1,6 +1,9 @@
 package expo.modules.gemma
 
+import android.content.ComponentCallbacks2
+import android.content.res.Configuration
 import android.util.Base64
+import android.util.Log
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
@@ -33,6 +36,20 @@ class GemmaLlmModule : Module() {
     private val moduleJob = SupervisorJob()
     private val moduleScope = CoroutineScope(Dispatchers.IO + moduleJob)
 
+    /** Closes the engine and forgets it, so the next load rebuilds cleanly. */
+    @Synchronized
+    private fun releaseEngine() {
+        try {
+            conversation?.close()
+            engine?.close()
+        } catch (ex: Exception) {
+            Log.w("GemmaLlm", "Error releasing engine: ${ex.message}")
+        }
+        conversation = null
+        engine = null
+        loadedPath = null
+    }
+
     override fun definition() = ModuleDefinition {
         Name("GemmaLlm")
         Events("onToken")
@@ -52,6 +69,50 @@ class GemmaLlmModule : Module() {
          */
         Function("isLoaded") {
             engine != null && conversation != null
+        }
+
+        /**
+         * Hands the model's memory back.
+         *
+         * The engine holds several gigabytes for the life of the process, and
+         * nothing could release it — so a phone running this alongside the map
+         * and the camera had no way to give anything up, and Android resolved
+         * that by killing the app. Which looks, from the outside, like it
+         * crashed for no reason.
+         */
+        Function("unload") {
+            releaseEngine()
+            true
+        }
+
+        /**
+         * Release before Android decides to take the whole process instead.
+         *
+         * onTrimMemory is the system asking politely. At the critical levels
+         * it is minutes from killing us, and the model is by far the largest
+         * thing we hold, so letting go of it is usually enough to survive —
+         * and reloading it later costs a wait, not a lost session.
+         */
+        OnCreate {
+            appContext.reactContext?.registerComponentCallbacks(
+                object : ComponentCallbacks2 {
+                    override fun onTrimMemory(level: Int) {
+                        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+                            if (engine != null) {
+                                Log.i("GemmaLlm", "Releasing model under memory pressure (level $level)")
+                                releaseEngine()
+                            }
+                        }
+                    }
+
+                    override fun onConfigurationChanged(newConfig: Configuration) {}
+
+                    @Deprecated("Required by ComponentCallbacks2")
+                    override fun onLowMemory() {
+                        releaseEngine()
+                    }
+                },
+            )
         }
 
         AsyncFunction("load") { modelPath: String, promise: Promise ->
