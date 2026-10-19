@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, StatusBar, Image, } from 'react-native';
+  StyleSheet, StatusBar, Image, Alert, } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, Radii, Type } from '@/constants/theme';
+import { Colors, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFarmer, useUpdateFarmer } from '@/hooks/useFarmer';
+import { farmerApi } from '@/services/endpoints';
 import { isInterfaceReady } from '@/i18n';
 import { LANGUAGES } from '@/constants';
 import { setAppLanguage } from '@/i18n';
@@ -24,6 +25,43 @@ export default function ProfileScreen() {
   const goBack = useGoBack('/(tabs)/dashboard');
   const insets = useSafeAreaInsets();
   const signOut = useAuthStore((state) => state.signOut);
+  const [deleting, setDeleting] = useState(false);
+
+  /**
+   * Asks once, in plain words, then does it.
+   *
+   * Deliberately not a "type DELETE to confirm" ritual: the people using this
+   * read at a range of levels, and a sentence naming exactly what goes is
+   * clearer than a password-style gate.
+   */
+  const confirmDelete = useCallback(() => {
+    Alert.alert(
+      'Delete your account?',
+      'Your farm, your fields, your scans and your saved advice will all be removed. '
+      + 'This cannot be undone.',
+      [
+        { text: 'Keep my account', style: 'cancel' },
+        {
+          text: 'Delete everything',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await farmerApi.deleteAccount();
+              await signOut();
+              router.replace('/(auth)/welcome' as never);
+            } catch (error) {
+              setDeleting(false);
+              Alert.alert(
+                'Could not delete the account',
+                (error as Error).message || 'Please try again in a moment.',
+              );
+            }
+          },
+        },
+      ],
+    );
+  }, [signOut, router]);
   const { data: farmer, isLoading } = useFarmer();
   const updateFarmer = useUpdateFarmer();
   const [langOpen, setLangOpen] = useState(false);
@@ -171,6 +209,34 @@ export default function ProfileScreen() {
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
 
+          {/*
+            Google Play has required an in-app route to account deletion since
+            2022 and rejects apps that lack one. Set apart from Log Out and
+            behind a confirmation, because the two sit next to each other and
+            only one of them can be undone.
+          */}
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={confirmDelete}
+            activeOpacity={0.85}
+            disabled={deleting}
+            accessibilityRole="button"
+            accessibilityLabel="Delete my account"
+          >
+            {deleting ? (
+              <Loader size={20} />
+            ) : (
+              <MaterialIcons name="delete-forever" size={20} color={Colors.onErrorContainer} />
+            )}
+            <Text style={styles.deleteText}>
+              {deleting ? 'Deleting your account' : 'Delete My Account'}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.deleteNote}>
+            This removes your farm, your fields and every scan you have saved. It cannot be undone.
+          </Text>
+
           <View style={{ height: 100 }} />
         </ScrollView>
       )}
@@ -252,6 +318,17 @@ const styles = StyleSheet.create({
   langRowText: { fontSize: 15, color: Colors.onSurface },
   langRowTextActive: { color: Colors.onPrimary, fontWeight: '700' },
 
+  deleteBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.sm, marginTop: Spacing.sm,
+    paddingVertical: Spacing.lg, borderRadius: Shape.full,
+    backgroundColor: Colors.errorContainer,
+  },
+  deleteText: { ...TypeEmphasized.titleSmall, color: Colors.onErrorContainer },
+  deleteNote: {
+    ...Type.bodySmall, color: Colors.onSurfaceVariant,
+    textAlign: 'center', marginTop: Spacing.sm, paddingHorizontal: Spacing.lg,
+  },
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 16, borderRadius: Radii.xl,

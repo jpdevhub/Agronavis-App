@@ -53,6 +53,8 @@ export const authApi = {
 export const farmerApi = {
   me: () => api.get<FarmerProfile>('/farmers/me'),
   update: (payload: UpdateFarmerPayload) => api.patch<FarmerProfile>('/farmers/me', payload),
+  /** Deletes the account and everything belonging to it. Irreversible. */
+  deleteAccount: () => api.delete<void>('/farmers/me'),
   registerPushToken: (token: string) => api.post<void>('/farmers/me/push-token', { token }),
 };
 
