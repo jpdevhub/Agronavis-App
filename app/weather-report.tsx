@@ -244,7 +244,7 @@ export default function WeatherReportScreen() {
                       <MaterialIcons
                         name={d.rainMm > 0 ? 'water-drop' : 'wb-sunny'}
                         size={12}
-                        color={d.rainMm > 0 ? Colors.onPrimaryContainer : Colors.onTertiaryContainer}
+                        color={d.rainMm > 0 ? Colors.onPrimaryContainer : Colors.onSurfaceVariant}
                       />
                       <Text style={[styles.rainText, d.rainMm > 0 && styles.rainTextWet]}>
                         {d.rainMm > 0 ? `${Math.round(d.rainMm)}mm` : 'dry'}
@@ -375,10 +375,15 @@ const styles = StyleSheet.create({
   rainPill: {
     flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2,
     paddingHorizontal: Spacing.sm, paddingVertical: 2,
-    borderRadius: Shape.full, backgroundColor: Colors.tertiaryContainer,
+    borderRadius: Shape.full,
+    // Neutral, not tertiaryContainer: that token is a saturated orange here
+    // rather than the soft tint its name suggests, and five orange pills in a
+    // row drew the eye to the least important thing on the card. A dry day is
+    // the ordinary case and should look it; rain is what stands out.
+    backgroundColor: Colors.surfaceContainerHighest,
   },
   rainPillWet: { backgroundColor: Colors.primaryContainer },
-  rainText: { ...Type.labelSmall, color: Colors.onTertiaryContainer },
+  rainText: { ...Type.labelSmall, color: Colors.onSurfaceVariant },
   rainTextWet: { color: Colors.onPrimaryContainer },
 
   card: {

@@ -25,7 +25,17 @@ export const LightScheme = {
   onSecondaryFixedVariant: '#237157',
 
   tertiary: '#855300',
-  tertiaryContainer: '#e29100',
+  /**
+   * A container is a tint, not the colour itself.
+   *
+   * This was #e29100 — a saturated orange — which made every surface using it
+   * shout: the Medium soil band, the fire watch card, the Soon badge on
+   * alerts. Worse, onTertiaryContainer is #523200, a dark brown meant to sit
+   * on a pale ground, and on that orange it was barely readable. Tone 90 is
+   * what the role calls for, and the palette already had it as
+   * tertiaryFixed.
+   */
+  tertiaryContainer: '#ffddb8',
   onTertiary: '#ffffff',
   onTertiaryContainer: '#523200',
   tertiaryFixed: '#ffddb8',
