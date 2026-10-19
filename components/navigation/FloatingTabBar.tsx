@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.xs,
     borderRadius: Shape.full,
     // The unselected icons hold their size no matter how long the selected
     // label is. Letting them shrink packed all three into the left third of
@@ -145,7 +145,9 @@ const styles = StyleSheet.create({
   },
   itemActive: {
     backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.lg,
+    // Tighter than it was: at Spacing.lg the selected pill was half again as
+    // wide as it needed to be and crowded the three icons beside it.
+    paddingHorizontal: Spacing.md,
     // Only this one gives way, and it gives way by truncating its label.
     flexShrink: 1,
   },

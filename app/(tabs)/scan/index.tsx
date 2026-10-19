@@ -161,7 +161,10 @@ export default function ScanScreen() {
       >
 
       {/* ── Live camera (only mounted while tab is active) ── */}
-      <View style={[styles.cameraWrap, { height: windowHeight * 0.62 }]}>
+      {/* The viewfinder gets most of the screen — it is what this page is
+          for — and the tips sit below it, reached by scrolling rather than by
+          squeezing both into one viewport. */}
+      <View style={[styles.cameraWrap, { height: windowHeight * 0.74 }]}>
         {cameraLive && (
           <CameraView
             ref={cameraRef}
