@@ -97,17 +97,26 @@ export const globalLimiter = rateLimit({
  * dashboard alone asks for farms, fields, weather, advisories, fires,
  * satellite passes and NDVI on every open.
  */
-export const readLimiter = tier('read', 60_000, 120);
+export const readLimiter = tier('read', 60_000, 240);
 
 /** Anything that writes. Lower, because nothing legitimate writes in bursts. */
-export const writeLimiter = tier('write', 60_000, 30);
+export const writeLimiter = tier('write', 60_000, 60);
 
 /**
  * Requests that reach an upstream we do not control — NASA, OpenWeatherMap,
  * Agmarknet — or that start one. Their quotas and their patience are finite,
  * and a retry storm here becomes our key getting throttled for everyone.
  */
-export const upstreamLimiter = tier('upstream', 60_000, 20);
+/**
+ * Twenty a minute turned out to be a limit on using the app, not on abusing
+ * it: the mandi screen asks for prices, then states, districts and markets to
+ * populate its filter, and a farmer flicking between commodities spent the
+ * budget in under a minute. They were shown "Too many requests" for browsing.
+ *
+ * Sixty still stops a runaway client dead while leaving room for someone
+ * actually reading prices.
+ */
+export const upstreamLimiter = tier('upstream', 60_000, 60);
 
 /**
  * Model inference. The heaviest thing this server does: a leaf photograph runs

@@ -4,7 +4,10 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setAppLanguage } from '@/i18n';
 import { useFarmer } from '@/hooks/useFarmer';
 import { Colors, Spacing, Type } from '@/constants/theme';
@@ -20,17 +23,58 @@ import { useFarmStore } from '@/store/useFarmStore';
 // map. Doing this inside a component meant whichever map screen was opened
 // first decided whether the others crashed.
 import '@/features/maps/init';
+import { warmApi } from '@/services/warmup';
 import { ScreenError } from '@/components/ui';
 import { supabase } from '@/utils/supabase';
+
+/** A week. Long enough that an app opened yesterday still has yesterday's data. */
+const CACHE_LIFETIME_MS = 7 * 24 * 60 * 60_000;
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
+      /**
+       * Never retry a refusal the server meant.
+       *
+       * The default retried everything twice, so one rate-limited request
+       * became three and pushed the farmer further past the limit — which is
+       * how browsing mandi prices produced "Too many requests". A 4xx is the
+       * server's answer, not a failure to deliver one; only network trouble
+       * and 5xx are worth asking again.
+       */
+      retry: (failureCount, error) => {
+        const status = (error as { response?: { status?: number } })?.response?.status;
+        if (status && status >= 400 && status < 500) return false;
+        return failureCount < 2;
+      },
       staleTime: 1000 * 60 * 5,
+      /**
+       * How long an answer survives after nothing is using it. The default is
+       * five minutes, which meant an app reopened the next day started from
+       * nothing and showed spinners while every screen refetched. Kept for a
+       * week instead, so yesterday's reading is on screen immediately and the
+       * network call behind it only corrects what changed.
+       */
+      gcTime: CACHE_LIFETIME_MS,
       refetchOnWindowFocus: false,
     },
   },
+});
+
+/**
+ * The cache, written to the device.
+ *
+ * React Query holds everything in memory, so closing the app threw all of it
+ * away — opening it the next morning meant ten to fifteen seconds of empty
+ * screens while a sleeping free-tier API woke up and answered one request at a
+ * time. Persisted, the app draws yesterday's figures at once and quietly
+ * replaces them when the answers arrive.
+ */
+const persister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: 'agronavis.query-cache',
+  // Writing on every change thrashes storage while a screen is loading.
+  throttleTime: 2_000,
 });
 
 function AppShell() {
@@ -60,6 +104,19 @@ function AppShell() {
   useEffect(() => {
     void hydrateFarm();
   }, [hydrateFarm]);
+
+  /**
+   * Wake the API while the farmer is still looking at yesterday's figures.
+   *
+   * The free tier sleeps after fifteen minutes idle and takes most of a
+   * minute to come back. This was only called from the sign-in screens, so
+   * anyone already signed in — which is everyone, after the first day — paid
+   * that wait on their first real request instead. Pinging at launch means
+   * the instance is usually up by the time anything needs it.
+   */
+  useEffect(() => {
+    warmApi();
+  }, []);
 
   usePushNotifications();
   useSyncOnReconnect();
@@ -204,7 +261,22 @@ function AppShell() {
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: CACHE_LIFETIME_MS,
+        // Bump when a cached shape changes, so an old payload cannot be
+        // rehydrated into code that no longer understands it.
+        buster: 'v1',
+        dehydrateOptions: {
+          // Only successful answers are worth keeping. A cached error would
+          // be restored tomorrow as though it were still true.
+          shouldDehydrateQuery: (query) =>
+            query.state.status === 'success' && query.state.data !== undefined,
+        },
+      }}
+    >
       <SafeAreaProvider>
         <ConnectivityProvider>
           <GestureHandlerRootView style={styles.root}>
@@ -213,7 +285,7 @@ export default function RootLayout() {
           </GestureHandlerRootView>
         </ConnectivityProvider>
       </SafeAreaProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
 
