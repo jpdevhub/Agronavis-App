@@ -6,7 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { LANGUAGES } from '@/constants';
-import { setAppLanguage, isSupported } from '@/i18n';
+import { setAppLanguage, isInterfaceReady } from '@/i18n';
 import { useUpdateFarmer } from '@/hooks/useFarmer';
 
 export default function OnboardingLanguage() {
@@ -36,7 +36,7 @@ export default function OnboardingLanguage() {
         <View style={styles.options}>
           {LANGUAGES.map((l) => {
             const selected = l.code === choice;
-            const ready = isSupported(l.code);
+            const ready = isInterfaceReady(l.code);
             return (
               <Pressable
                 key={l.code}
@@ -46,9 +46,10 @@ export default function OnboardingLanguage() {
                 <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
                   {l.label}
                 </Text>
-                {/* Sahayak answers in every language; the interface is
-                    translated for these two so far. */}
-                {!ready && <Text style={styles.partial}>Sahayak only</Text>}
+                {/* Sahayak answers in every language; the screens are
+                    translated into two so far. "Sahayak only" said that
+                    accurately and told nobody anything. */}
+                {!ready && <Text style={styles.partial}>Screens coming soon</Text>}
                 {selected && <MaterialIcons name="check" size={20} color={Colors.onPrimary} />}
               </Pressable>
             );

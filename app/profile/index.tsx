@@ -6,9 +6,10 @@ import { useRouter } from 'expo-router';
 import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, Radii } from '@/constants/theme';
+import { Colors, Radii, Type } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFarmer, useUpdateFarmer } from '@/hooks/useFarmer';
+import { isInterfaceReady } from '@/i18n';
 import { LANGUAGES } from '@/constants';
 import { setAppLanguage } from '@/i18n';
 import { Loader, NavScrim } from '@/components/ui';
@@ -110,6 +111,13 @@ export default function ProfileScreen() {
                   <Text style={[styles.langRowText, l.code === farmer?.language && styles.langRowTextActive]}>
                     {l.label}
                   </Text>
+                  {/* The interface is translated into two languages so far.
+                      Picking another still works — Sahayak answers in it —
+                      but the screens stay in English, and saying so beats
+                      letting someone choose and wonder what broke. */}
+                  {!isInterfaceReady(l.code) ? (
+                    <Text style={styles.langSoon}>Coming soon</Text>
+                  ) : null}
                 </TouchableOpacity>
               ))}
             </View>
@@ -240,6 +248,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceContainerLowest,
   },
   langRowActive: { backgroundColor: Colors.primary },
+  langSoon: { ...Type.labelSmall, color: Colors.onSurfaceVariant },
   langRowText: { fontSize: 15, color: Colors.onSurface },
   langRowTextActive: { color: Colors.onPrimary, fontWeight: '700' },
 
