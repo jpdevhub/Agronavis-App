@@ -243,6 +243,17 @@ function AppShell() {
         <Stack.Screen name="fires/index" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="root-zone/index" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="crop-health/index" options={{ animation: 'slide_from_right' }} />
+        {/*
+          Sahayak was the only full-screen route missing from this list.
+          Expo Router still routed to it, but inside a Stack whose children
+          are declared explicitly an undeclared screen does not get the same
+          native container configuration — and it showed: the screen mounted
+          blank and only appeared after switching to another app and back,
+          because returning forced the layout it had never been given.
+        */}
+        <Stack.Screen name="sahayak" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="weather-report" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="soil-report" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="legal/terms" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="legal/privacy" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="legal/security" options={{ animation: 'slide_from_bottom' }} />
