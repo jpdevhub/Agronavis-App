@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { requireTwoFactor } from '../../middleware/two-factor.middleware';
 import { standardLimiter, upstreamLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
@@ -17,6 +18,7 @@ export const marketRoutes = Router();
 
 marketRoutes.use(requireAuth);
 marketRoutes.use(standardLimiter);
+marketRoutes.use(requireTwoFactor);
 // Reaches NASA, OpenWeatherMap or Agmarknet. Their quotas and their patience
 // are finite, and a retry storm here gets our key throttled for everyone.
 marketRoutes.use(upstreamLimiter);

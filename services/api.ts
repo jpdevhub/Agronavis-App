@@ -54,6 +54,29 @@ function toApiError(error: unknown): ApiError {
   return new ApiError(error instanceof Error ? error.message : 'Something went wrong');
 }
 
+/**
+ * Told when the server refuses a session that has not passed the second
+ * factor, so the app can send the farmer to the code screen rather than
+ * showing a failure on whatever they happened to tap.
+ *
+ * Set by the root layout; a plain callback rather than a router import,
+ * because this module is used well outside React.
+ */
+let onTwoFactorRequired: (() => void) | null = null;
+
+export function setTwoFactorHandler(handler: (() => void) | null): void {
+  onTwoFactorRequired = handler;
+}
+
+/** TWO_FACTOR_REQUIRED, as the API spells it. */
+export const TWO_FACTOR_REQUIRED = 'TWO_FACTOR_REQUIRED';
+
+function noteTwoFactor(error: unknown): void {
+  if (error instanceof ApiError && error.code === TWO_FACTOR_REQUIRED) {
+    onTwoFactorRequired?.();
+  }
+}
+
 async function request<T>(config: AxiosRequestConfig): Promise<T> {
   try {
     const response = await client.request<ApiResponse<T>>(config);
@@ -63,8 +86,9 @@ async function request<T>(config: AxiosRequestConfig): Promise<T> {
     }
     return (body as { data: T }).data;
   } catch (error) {
-    if (error instanceof ApiError) throw error;
-    throw toApiError(error);
+    const api = error instanceof ApiError ? error : toApiError(error);
+    noteTwoFactor(api);
+    throw api;
   }
 }
 

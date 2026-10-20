@@ -23,6 +23,13 @@ export interface AuthenticatedUser {
   role: string;
   /** Present when the session was elevated through a second factor. */
   amr: string[];
+  /**
+   * The Supabase session this token belongs to.
+   *
+   * Two-factor verification is recorded against this rather than against the
+   * farmer, so signing in on another handset has to pass the check again.
+   */
+  sessionId: string | null;
 }
 
 declare global {
@@ -50,6 +57,7 @@ function toUser(payload: JWTPayload): AuthenticatedUser {
     email: typeof payload.email === 'string' ? payload.email : null,
     role: typeof payload.role === 'string' ? payload.role : 'authenticated',
     amr: amr.filter(Boolean),
+    sessionId: typeof payload.session_id === 'string' ? payload.session_id : null,
   };
 }
 

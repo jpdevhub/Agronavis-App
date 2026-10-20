@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { requireTwoFactor } from '../../middleware/two-factor.middleware';
 import { standardLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
@@ -10,6 +11,7 @@ export const taskRoutes = Router();
 
 taskRoutes.use(requireAuth);
 taskRoutes.use(standardLimiter);
+taskRoutes.use(requireTwoFactor);
 
 taskRoutes.get('/', validate(listTasksSchema, 'query'), handler(tasksController.list));
 taskRoutes.post('/', validate(createTaskSchema), handler(tasksController.create));

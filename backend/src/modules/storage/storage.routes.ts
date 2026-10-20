@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 import { farmerId, requireAuth } from '../../middleware/auth.middleware';
+import { requireTwoFactor } from '../../middleware/two-factor.middleware';
 import { standardLimiter, uploadLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { badRequest } from '../../shared/errors';
@@ -20,6 +21,7 @@ export const storageRoutes = Router();
 
 storageRoutes.use(requireAuth);
 storageRoutes.use(standardLimiter);
+storageRoutes.use(requireTwoFactor);
 
 storageRoutes.post(
   '/:bucket',

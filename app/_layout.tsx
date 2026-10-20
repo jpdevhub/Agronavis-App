@@ -24,6 +24,7 @@ import { useFarmStore } from '@/store/useFarmStore';
 // first decided whether the others crashed.
 import '@/features/maps/init';
 import { warmApi } from '@/services/warmup';
+import { setTwoFactorHandler } from '@/services/api';
 import { ScreenError } from '@/components/ui';
 import { supabase } from '@/utils/supabase';
 
@@ -117,6 +118,18 @@ function AppShell() {
   useEffect(() => {
     warmApi();
   }, []);
+
+  /**
+   * The server now refuses a session that has not passed the second factor,
+   * and says so with a code. Without this the farmer would see a failure on
+   * whatever they happened to tap rather than the screen that fixes it.
+   */
+  useEffect(() => {
+    setTwoFactorHandler(() => {
+      router.replace('/(auth)/two-factor' as never);
+    });
+    return () => setTwoFactorHandler(null);
+  }, [router]);
 
   usePushNotifications();
   useSyncOnReconnect();

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { inferenceLimiter, standardLimiter } from '../../middleware/rate-limit.middleware';
+import { requireTwoFactor } from '../../middleware/two-factor.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
 import { cropsController } from './crops.controller';
@@ -22,6 +23,7 @@ export const cropRoutes = Router();
 
 cropRoutes.use(requireAuth);
 cropRoutes.use(standardLimiter);
+cropRoutes.use(requireTwoFactor);
 
 cropRoutes.get('/scans', handler(cropsController.listScans));
 cropRoutes.post('/scans', validate(recordScanSchema), handler(cropsController.recordScan));

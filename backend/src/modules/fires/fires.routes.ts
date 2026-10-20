@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { requireTwoFactor } from '../../middleware/two-factor.middleware';
 import { standardLimiter, upstreamLimiter } from '../../middleware/rate-limit.middleware';
 import { handler } from '../../shared/http';
 import { firesController } from './fires.controller';
@@ -8,6 +9,7 @@ export const fireRoutes = Router();
 
 fireRoutes.use(requireAuth);
 fireRoutes.use(standardLimiter);
+fireRoutes.use(requireTwoFactor);
 // Reaches NASA, OpenWeatherMap or Agmarknet. Their quotas and their patience
 // are finite, and a retry storm here gets our key throttled for everyone.
 fireRoutes.use(upstreamLimiter);

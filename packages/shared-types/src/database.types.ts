@@ -269,6 +269,13 @@ export type FireDetectionRow = {
   created_at: string;
 };
 
+export type TwoFactorSessionRow = {
+  /** The Supabase session this verification belongs to. */
+  session_id: string;
+  farmer_id: string;
+  verified_at: string;
+};
+
 export type NdviReadingRow = {
   id: string;
   field_id: string;
@@ -557,6 +564,7 @@ export interface Database {
         FireDetectionRow,
         'id' | 'created_at' | 'confidence' | 'source' | 'brightness_k'
       >;
+      two_factor_sessions: Table<TwoFactorSessionRow, 'verified_at'>;
       ndvi_readings: Table<
         NdviReadingRow,
         'id' | 'created_at' | 'pixels' | 'cloud_percent' | 'scene_id' | 'grid'

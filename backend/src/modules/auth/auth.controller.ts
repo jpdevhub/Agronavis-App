@@ -4,6 +4,10 @@ import { badRequest, unauthorized } from '../../shared/errors';
 import { ok } from '../../shared/http';
 import { farmersService } from '../farmers/farmers.service';
 import { totpService } from './totp.service';
+import {
+  forgetTwoFactorStatus,
+  markSessionVerified,
+} from '../../middleware/two-factor.middleware';
 
 export const authController = {
   /**
@@ -30,6 +34,11 @@ export const authController = {
 
   async verifyTwoFactor(req: Request, res: Response) {
     const verified = await totpService.verify(farmerId(req), (req.body as { token: string }).token);
+    // Elevates this session, which is what the rest of the API checks for.
+    if (verified) {
+      await markSessionVerified(req.user?.sessionId ?? null, farmerId(req));
+      forgetTwoFactorStatus(farmerId(req));
+    }
     if (!verified) throw unauthorized('That code is not valid. Check the time on your phone and try again.');
     ok(res, await totpService.status(farmerId(req)));
   },
@@ -40,6 +49,10 @@ export const authController = {
       (req.body as { code: string }).code,
     );
     if (!verified) throw unauthorized('That backup code is not valid, or has already been used');
+    // A backup code is the route back in when the authenticator is gone, so
+    // it has to elevate the session exactly as a six-digit code does.
+    await markSessionVerified(req.user?.sessionId ?? null, farmerId(req));
+    forgetTwoFactorStatus(farmerId(req));
     ok(res, await totpService.status(farmerId(req)));
   },
 
@@ -50,6 +63,9 @@ export const authController = {
     const verified = await totpService.verify(id, token);
     if (!verified) throw unauthorized('Enter a current code to turn two-factor off');
     await totpService.disable(id);
+    // The cached "this farmer uses 2FA" answer would otherwise keep refusing
+    // their requests for up to a minute after they turned it off.
+    forgetTwoFactorStatus(id);
     ok(res, { enabled: false, backupCodesRemaining: 0 });
   },
 

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { requireTwoFactor } from '../../middleware/two-factor.middleware';
 import { standardLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
@@ -10,6 +11,7 @@ export const farmRoutes = Router();
 
 farmRoutes.use(requireAuth);
 farmRoutes.use(standardLimiter);
+farmRoutes.use(requireTwoFactor);
 
 farmRoutes.get('/fields', handler(farmsController.listFields));
 farmRoutes.post('/fields', validate(createFieldSchema), handler(farmsController.createField));

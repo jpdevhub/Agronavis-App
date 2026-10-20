@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { requireTwoFactor } from '../../middleware/two-factor.middleware';
 import { standardLimiter, upstreamLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { handler } from '../../shared/http';
@@ -12,6 +13,7 @@ export const weatherRoutes = Router();
 // never be callable anonymously.
 weatherRoutes.use(requireAuth);
 weatherRoutes.use(standardLimiter);
+weatherRoutes.use(requireTwoFactor);
 // Reaches NASA, OpenWeatherMap or Agmarknet. Their quotas and their patience
 // are finite, and a retry storm here gets our key throttled for everyone.
 weatherRoutes.use(upstreamLimiter);
