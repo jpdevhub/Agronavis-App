@@ -1,3 +1,9 @@
+// A module, not a script. These files reach the runtime through require()
+// rather than import, so without this TypeScript treats them as global
+// scripts and their top-level consts collide across files — `chain` is
+// declared in three of them. Jest never noticed; the CI typecheck did.
+export {};
+
 jest.mock('../../src/config/env', () => ({
   env: { RATE_LIMIT_WINDOW_MS: 900_000, RATE_LIMIT_MAX: 300 },
 }));

@@ -1,3 +1,9 @@
+// A module, not a script. These files reach the runtime through require()
+// rather than import, so without this TypeScript treats them as global
+// scripts and their top-level consts collide across files — `chain` is
+// declared in three of them. Jest never noticed; the CI typecheck did.
+export {};
+
 /**
  * Two-factor used to exist only in the app: the screen appeared after sign-in
  * and the API answered perfectly well to a session that never saw it. These

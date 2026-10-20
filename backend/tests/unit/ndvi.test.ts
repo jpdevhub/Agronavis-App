@@ -1,3 +1,9 @@
+// A module, not a script. These files reach the runtime through require()
+// rather than import, so without this TypeScript treats them as global
+// scripts and their top-level consts collide across files — `chain` is
+// declared in three of them. Jest never noticed; the CI typecheck did.
+export {};
+
 /**
  * NDVI is the number a farmer would act on — a fall between passes is meant to
  * send them out to walk the field. So the arithmetic is pinned, and so is the
