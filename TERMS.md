@@ -87,7 +87,7 @@ We may suspend or close an account that breaches these terms, that is used unlaw
 
 ## 12. Grievance redressal
 
-In accordance with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, complaints about content or about your use of Agronavis may be sent to our Grievance Officer: [Name of Grievance Officer], [grievance@agronavis.example], [Registered address, India].
+In accordance with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, complaints about content or about your use of Agronavis may be sent to our Grievance Officer: The Grievance Officer, Agronavis, contact@agronavis.in, Kolkata, West Bengal, India.
 
 We acknowledge a complaint within 24 hours of receiving it and work to resolve it within 15 days.
 
@@ -99,8 +99,8 @@ These terms are governed by the laws of India, and the courts at [city of regist
 
 We may update these terms. Material changes will be shown in the app before they take effect, and the date at the top of this page will change. Continuing to use Agronavis after that means you accept the updated terms.
 
-Questions about these terms: [support@agronavis.example]
+Questions about these terms: contact@agronavis.in
 
 ---
 
-[Registered business name] · [Registered address, India]
+Agronavis · MSME Udyam Registration UDYAM-WB-14-0290868 · Kolkata, West Bengal, India

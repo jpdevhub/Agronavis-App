@@ -11,15 +11,19 @@ import type { LegalSection } from '@/components/legal/LegalDocument';
  */
 export const LEGAL_UPDATED = '9 October 2026';
 
-/** Fill these in before publishing. Play Store rejects placeholder contacts. */
+/**
+ * One mailbox answers all of these. Listing addresses that bounce is worse
+ * than listing one that is read, and a reviewer checks that they resolve.
+ */
 export const LEGAL_CONTACT = {
-  company: '[Registered business name]',
-  address: '[Registered address, India]',
-  support: '[support@agronavis.example]',
-  privacy: '[privacy@agronavis.example]',
-  security: '[security@agronavis.example]',
-  grievanceOfficer: '[Name of Grievance Officer]',
-  grievanceEmail: '[grievance@agronavis.example]',
+  company: 'Agronavis',
+  registration: 'MSME Udyam Registration UDYAM-WB-14-0290868',
+  address: 'Kolkata, West Bengal, India',
+  support: 'contact@agronavis.in',
+  privacy: 'contact@agronavis.in',
+  security: 'contact@agronavis.in',
+  grievanceOfficer: 'The Grievance Officer, Agronavis',
+  grievanceEmail: 'contact@agronavis.in',
 };
 
 export const TERMS_SECTIONS: LegalSection[] = [
@@ -246,6 +250,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
           'Location — read when you tap the locate button while mapping a field, and when the app works out which district your field sits in. Never read in the background.',
           'Microphone — only while you hold the microphone button to speak to Sahayak. Speech is turned into text on your phone and the recording is not kept or sent anywhere.',
           'Notifications — to deliver the alerts you have switched on, such as smoke from stubble fires upwind of your field.',
+          'Device storage — to hold a scan or an upload while the app is working with it. Android grants this to the camera and gallery components Agronavis uses. We only ever touch the files you create or choose inside the app.',
         ],
       },
       { kind: 'text', text: 'Refusing any of them leaves the rest of the app working. You can change your mind at any time in Android settings.' },
@@ -301,7 +306,8 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     heading: 'Deleting your account',
     blocks: [
       { kind: 'text', text: 'Open Profile, then Security, and choose to delete your account. This removes your profile, farms and fields, scans and their photographs, tasks, advisories and community posts. It is immediate and cannot be undone.' },
-      { kind: 'text', text: 'Cached public data such as district soil records and mandi prices is not personal to you and remains.' },
+      { kind: 'text', text: 'You can also request deletion without the app, including after uninstalling it, at https://agronavis.in/delete-account. No login is needed. We confirm the request belongs to the account holder, action it within 30 days and usually sooner, and write to you when it is done.' },
+      { kind: 'text', text: 'Cached public data such as district soil records and mandi prices is not personal to you and remains. Billing records are held for seven years because Indian tax law requires it, and encrypted backups are overwritten on their normal cycle within 90 days.' },
     ],
   },
   {
@@ -321,7 +327,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     heading: 'Changes and contact',
     blocks: [
       { kind: 'text', text: 'Material changes will be announced in the app before they take effect, and the date at the top of this page will change.' },
-      { kind: 'text', text: `${LEGAL_CONTACT.company} · ${LEGAL_CONTACT.address} · ${LEGAL_CONTACT.privacy}` },
+      { kind: 'text', text: `${LEGAL_CONTACT.company} · ${LEGAL_CONTACT.registration} · ${LEGAL_CONTACT.address} · ${LEGAL_CONTACT.privacy}` },
     ],
   },
 ];

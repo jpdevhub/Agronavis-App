@@ -30,6 +30,7 @@ Android asks your permission before any of these. Each is used only while you ar
 - Location — read when you tap the locate button while mapping a field, and when the app works out which district your field sits in. Never read in the background.
 - Microphone — only while you hold the microphone button to speak to Sahayak. Speech is turned into text on your phone and the recording is not kept or sent anywhere.
 - Notifications — to deliver the alerts you have switched on, such as smoke from stubble fires upwind of your field.
+- Device storage — to hold a scan or an upload while the app is working with it. Android grants this to the camera and gallery components Agronavis uses. We only ever touch the files you create or choose inside the app.
 
 Refusing any of them leaves the rest of the app working. You can change your mind at any time in Android settings.
 
@@ -69,7 +70,9 @@ Your account, profile, farms, fields, scans and posts are kept while your accoun
 
 Open Profile, then Security, and choose to delete your account. This removes your profile, farms and fields, scans and their photographs, tasks, advisories and community posts. It is immediate and cannot be undone.
 
-Cached public data such as district soil records and mandi prices is not personal to you and remains.
+You can also request deletion without the app, including after uninstalling it, at https://agronavis.in/delete-account. No login is needed. We confirm the request belongs to the account holder, action it within 30 days and usually sooner, and write to you when it is done.
+
+Cached public data such as district soil records and mandi prices is not personal to you and remains. Billing records are held for seven years because Indian tax law requires it, and encrypted backups are overwritten on their normal cycle within 90 days.
 
 ## 8. Your rights
 
@@ -80,7 +83,7 @@ Cached public data such as district soil records and mandi prices is not persona
 - Object to a particular use
 - Nominate someone to exercise these rights if you are unable to
 
-Write to [privacy@agronavis.example]. We reply within 30 days. If you are not satisfied you may complain to the Data Protection Board of India.
+Write to contact@agronavis.in. We reply within 30 days. If you are not satisfied you may complain to the Data Protection Board of India.
 
 ## 9. Children
 
@@ -90,8 +93,8 @@ Agronavis is for adults who farm. We do not knowingly collect data from anyone u
 
 Material changes will be announced in the app before they take effect, and the date at the top of this page will change.
 
-[Registered business name] · [Registered address, India] · [privacy@agronavis.example]
+Agronavis · MSME Udyam Registration UDYAM-WB-14-0290868 · Kolkata, West Bengal, India · contact@agronavis.in
 
 ---
 
-[Registered business name] · [Registered address, India]
+Agronavis · MSME Udyam Registration UDYAM-WB-14-0290868 · Kolkata, West Bengal, India

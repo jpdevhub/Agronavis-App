@@ -44,7 +44,7 @@ function render(title: string, intro: string, sections: LegalSection[]): string 
     }
   });
 
-  out.push('---', '', `${LEGAL_CONTACT.company} · ${LEGAL_CONTACT.address}`);
+  out.push('---', '', `${LEGAL_CONTACT.company} · ${LEGAL_CONTACT.registration} · ${LEGAL_CONTACT.address}`);
   return out.join('\n').replace(/\n{3,}/g, '\n\n') + '\n';
 }
 
