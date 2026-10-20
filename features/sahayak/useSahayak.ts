@@ -295,10 +295,56 @@ export function useSahayak() {
       let settled = false;
       let idle: ReturnType<typeof setTimeout> | undefined;
 
+      /**
+       * Tokens arrive far faster than a screen can usefully redraw.
+       *
+       * Each one used to call setMessages, so a model emitting twenty or
+       * thirty a second produced twenty or thirty full React renders a
+       * second — each mapping the whole thread and re-parsing the answer's
+       * markdown. That starves the JavaScript thread: the screen stops
+       * painting and goes blank, and only comes back when switching to
+       * another app and returning forces a repaint. It reads as a crash and
+       * is not one.
+       *
+       * The text still accumulates on every token. Only the redraw is paced,
+       * at about twelve frames a second, which is faster than anyone reads.
+       */
+      const PAINT_MS = 80;
+      let painted = 0;
+      let paintTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const paint = () => {
+        paintTimer = null;
+        painted = streamRef.current.length;
+        const partial = streamRef.current;
+        setMessages((prev) =>
+          prev.map((m) => (m.id === replyId ? { ...m, text: partial } : m)),
+        );
+      };
+
+      const schedulePaint = () => {
+        if (paintTimer) return;
+        paintTimer = setTimeout(paint, PAINT_MS);
+      };
+
+      const paintNow = () => {
+        if (paintTimer) {
+          clearTimeout(paintTimer);
+          paintTimer = null;
+        }
+        if (streamRef.current.length !== painted) paint();
+      };
+
       const finish = () => {
         if (settled) return;
         settled = true;
         clearTimeout(idle);
+        // A pending redraw after the turn has settled would repaint a
+        // message that is already final.
+        if (paintTimer) {
+          clearTimeout(paintTimer);
+          paintTimer = null;
+        }
         subscription.remove();
         setStreaming(false);
       };
@@ -311,16 +357,21 @@ export function useSahayak() {
       const subscription = addTokenListener((token: string, done: boolean) => {
         if (settled) return;
         streamRef.current += token;
-        const partial = streamRef.current;
-        setMessages((prev) =>
-          prev.map((m) => (m.id === replyId ? { ...m, text: partial } : m)),
-        );
-        if (done) finish();
-        else if (partial.length > 0) nudge();
+
+        if (done) {
+          paintNow();
+          finish();
+          return;
+        }
+
+        schedulePaint();
+        if (streamRef.current.length > 0) nudge();
       });
 
       try {
         const full = await generateText(prompt);
+        // Whatever is still buffered belongs on screen before the final text.
+        paintNow();
         // A late return must not overwrite an answer the farmer is reading, nor
         // revive a turn that has already been settled.
         if (full && full.length >= streamRef.current.length) {

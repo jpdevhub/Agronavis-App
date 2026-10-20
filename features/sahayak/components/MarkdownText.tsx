@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Colors, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 
@@ -7,7 +8,16 @@ import { Colors, Spacing, Type, TypeEmphasized } from '@/constants/theme';
  * far more surface than this needs, and none of them style cleanly against the
  * MD3 type scale.
  */
-export function MarkdownText({ text, color }: { text: string; color: string }) {
+/**
+ * Memoised because the streaming answer re-renders the whole thread.
+ *
+ * Every earlier message in the conversation was re-parsing its markdown on
+ * each repaint of the one still being written, which is work that can never
+ * change its result — their text is finished.
+ */
+export const MarkdownText = memo(function MarkdownText(
+  { text, color }: { text: string; color: string },
+) {
   const lines = text.split('\n');
   const blocks: React.ReactNode[] = [];
 
@@ -55,7 +65,7 @@ export function MarkdownText({ text, color }: { text: string; color: string }) {
   });
 
   return <View style={styles.wrap}>{blocks}</View>;
-}
+});
 
 /** Splits a line on **bold**, *italic* and `code`, keeping the delimiters out. */
 function inline(text: string, color: string): React.ReactNode[] {
