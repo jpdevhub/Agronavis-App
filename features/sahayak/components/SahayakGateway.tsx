@@ -26,12 +26,14 @@ export const SAHAYAK_FAB_SPACE = SAHAYAK_LIFT + SAHAYAK_HEIGHT + Spacing.md;
 /**
  * Screens the pill stays off.
  *
- * The scanner is a viewfinder and a short strip of advice beneath it, with no
- * room to give away — the pill landed squarely on the tips however the strip
- * was sized. It is also a single-purpose screen: someone holding a phone over
- * a leaf is not looking for a chat button.
+ * Both are single-purpose and full-bleed, with nothing to spare at the bottom.
+ * The scanner is a viewfinder over a short strip of advice; the field drawer
+ * is a map whose own sheet explains what to tap, and the pill landed across
+ * that sentence. Someone holding a phone over a leaf, or tracing the corners
+ * of their land, is not looking for a chat button — and on the drawer it was
+ * covering the only instruction on the screen.
  */
-const WITHOUT_SAHAYAK = ['/scan'];
+const WITHOUT_SAHAYAK = ['/scan', '/farm/map'];
 
 export function SahayakGateway() {
   const router = useRouter();
