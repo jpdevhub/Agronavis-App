@@ -3,6 +3,10 @@
 Every capability in the app, what it gives the person standing in the field,
 and the release it arrived in.
 
+Everything here is in **1.0.0**, the first public release. The pull request
+numbers record when each part was built, not when it shipped — they all
+shipped together.
+
 ---
 
 ## Know your soil

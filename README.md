@@ -1,11 +1,15 @@
 <div align="center">
 
+<img src="assets/images/agronavis.png" alt="Agronavis" width="132" />
+
 # Agronavis
 
 ### Every field in India, advised.
 
 Soil, weather, crops, disease and the day's market price — for one mapped field,
 in the farmer's own language.
+
+**Version 1.0.0** · Android · [agronavis.in](https://agronavis.in)
 
 </div>
 
@@ -48,6 +52,20 @@ hold many fields, and plots hundreds of kilometres apart read differently.
 | **Sahayak** | An assistant that already knows their fields, soil and weather. They can speak to it, and it speaks back.                     |
 
 ---
+
+## What a farmer gets
+
+Map one field, and the app reads what is above and below it.
+
+| | |
+| --- | --- |
+| **Soil** | Twelve nutrients for your district, from the Government of India's Soil Health Card, with the number of samples behind each so you can judge it |
+| **Water** | How much the soil holds, measured by satellite rather than worked out from rainfall, beside the irrigation the water balance calls for |
+| **Crop health** | Sentinel-2 vigour at 10 m, measured every clear pass, leading with the change since last time |
+| **Disease** | A reading from a photograph of a leaf, with a confidence figure and the honesty to say when it does not know |
+| **Smoke** | Stubble fires within 150 km, and whether the wind is bringing their smoke to you |
+| **Prices** | Mandi rates from Agmarknet for the commodities you grow |
+| **Sahayak** | A farming assistant that runs on the phone — your questions never leave it |
 
 ## What is loaded today
 
