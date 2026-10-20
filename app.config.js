@@ -129,7 +129,9 @@ module.exports = () => ({
   experiments: { typedRoutes: true },
 
   extra: {
-    eas: { projectId: '4418b05e-cf5e-4ccc-a472-1bc936253a63' },
+    // The project this app belongs to on EAS. Hand-written because this is a
+    // dynamic config and `eas init` cannot edit one.
+    eas: { projectId: '8a29ef5b-4b2a-4b41-949e-c391efad1ad9' },
     router: {},
     ...publicEnv,
   },
