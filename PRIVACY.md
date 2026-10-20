@@ -21,19 +21,31 @@ Your device location is read only when you tap the locate button while mapping a
 
 We do not collect your contacts, call logs, SMS, installed applications, browsing history or advertising identifiers.
 
-## 2. Your conversations stay on your phone
+## 2. Permissions this app asks for
+
+Android asks your permission before any of these. Each is used only while you are in the part of the app that needs it, and none of them runs in the background.
+
+- Camera — to photograph a leaf for a disease reading. The photograph is sent to our server to be identified and stored against your account so you can look back at it.
+- Photos — only the picture you pick yourself, when you choose one from your gallery instead of taking it. We do not read the rest of your library.
+- Location — read when you tap the locate button while mapping a field, and when the app works out which district your field sits in. Never read in the background.
+- Microphone — only while you hold the microphone button to speak to Sahayak. Speech is turned into text on your phone and the recording is not kept or sent anywhere.
+- Notifications — to deliver the alerts you have switched on, such as smoke from stubble fires upwind of your field.
+
+Refusing any of them leaves the rest of the app working. You can change your mind at any time in Android settings.
+
+## 3. Your conversations stay on your phone
 
 Sahayak runs a language model on your device. What you ask it, and what it answers, is processed on the handset and never sent to us or to anyone else. The farm details it reads to answer usefully are held in a copy on the phone.
 
 Speech recognition and speech output use your device’s own services, governed by your phone’s settings rather than by us.
 
-## 3. Why we process it, and your consent
+## 4. Why we process it, and your consent
 
 Under the Digital Personal Data Protection Act, 2023 we process your data to provide the service you have asked for, and on your consent for optional items such as location and notifications.
 
 You may withdraw consent at any time in your device settings or by deleting your account, though features that depend on it will stop working.
 
-## 4. Who else receives anything
+## 5. Who else receives anything
 
 We do not sell your data and we do not share it with advertisers. Each party below receives only what it needs:
 
@@ -49,17 +61,17 @@ The weather, map and geocoding services receive coordinates with nothing identif
 
 Map and imagery credits: satellite imagery and maps © Mapbox, © OpenStreetMap contributors. Field monitoring uses Sentinel-2 imagery from the European Space Agency, through the Copernicus programme. Fire detections are from NASA FIRMS, and weather and soil moisture from NASA POWER.
 
-## 5. How long we keep it
+## 6. How long we keep it
 
 Your account, profile, farms, fields, scans and posts are kept while your account exists. Server logs are kept for 30 days.
 
-## 6. Deleting your account
+## 7. Deleting your account
 
 Open Profile, then Security, and choose to delete your account. This removes your profile, farms and fields, scans and their photographs, tasks, advisories and community posts. It is immediate and cannot be undone.
 
 Cached public data such as district soil records and mandi prices is not personal to you and remains.
 
-## 7. Your rights
+## 8. Your rights
 
 - See everything we hold about you
 - Correct anything that is wrong
@@ -70,11 +82,11 @@ Cached public data such as district soil records and mandi prices is not persona
 
 Write to [privacy@agronavis.example]. We reply within 30 days. If you are not satisfied you may complain to the Data Protection Board of India.
 
-## 8. Children
+## 9. Children
 
 Agronavis is for adults who farm. We do not knowingly collect data from anyone under 18. If you believe a child has given us data, write to us and we will remove it.
 
-## 9. Changes and contact
+## 10. Changes and contact
 
 Material changes will be announced in the app before they take effect, and the date at the top of this page will change.
 

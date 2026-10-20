@@ -229,6 +229,29 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     ],
   },
   {
+    /**
+     * Named one by one because Google Play's data safety declaration has to
+     * match what the policy says, and a permission the policy never mentions
+     * is the sort of gap a review stops on. Camera and microphone were both
+     * requested and neither appeared here.
+     */
+    heading: 'Permissions this app asks for',
+    blocks: [
+      { kind: 'text', text: 'Android asks your permission before any of these. Each is used only while you are in the part of the app that needs it, and none of them runs in the background.' },
+      {
+        kind: 'bullets',
+        items: [
+          'Camera — to photograph a leaf for a disease reading. The photograph is sent to our server to be identified and stored against your account so you can look back at it.',
+          'Photos — only the picture you pick yourself, when you choose one from your gallery instead of taking it. We do not read the rest of your library.',
+          'Location — read when you tap the locate button while mapping a field, and when the app works out which district your field sits in. Never read in the background.',
+          'Microphone — only while you hold the microphone button to speak to Sahayak. Speech is turned into text on your phone and the recording is not kept or sent anywhere.',
+          'Notifications — to deliver the alerts you have switched on, such as smoke from stubble fires upwind of your field.',
+        ],
+      },
+      { kind: 'text', text: 'Refusing any of them leaves the rest of the app working. You can change your mind at any time in Android settings.' },
+    ],
+  },
+  {
     heading: 'Your conversations stay on your phone',
     blocks: [
       { kind: 'text', text: 'Sahayak runs a language model on your device. What you ask it, and what it answers, is processed on the handset and never sent to us or to anyone else. The farm details it reads to answer usefully are held in a copy on the phone.' },
