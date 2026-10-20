@@ -192,6 +192,7 @@ export default function ChooseCropScreen() {
           )}
         </>
       )}
+      <NavScrim />
     </View>
   );
 }
@@ -210,7 +211,6 @@ function Empty({
       <MaterialIcons name={icon} size={40} color={Colors.onSurfaceVariant} />
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyBody}>{body}</Text>
-      <NavScrim />
     </View>
   );
 }

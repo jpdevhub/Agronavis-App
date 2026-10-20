@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
+import { Colors, Elevation, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFarmer, useUpdateFarmer } from '@/hooks/useFarmer';
 import { farmerApi } from '@/services/endpoints';
@@ -240,6 +240,7 @@ export default function ProfileScreen() {
           <View style={{ height: 100 }} />
         </ScrollView>
       )}
+      <NavScrim />
     </View>
   );
 }
@@ -252,7 +253,6 @@ function Row({ icon, label, value }: { icon: React.ComponentProps<typeof Materia
         <Text style={styles.rowLabel}>{label}</Text>
         <Text style={styles.rowValue}>{value}</Text>
       </View>
-      <NavScrim />
     </View>
   );
 }
@@ -289,8 +289,7 @@ const styles = StyleSheet.create({
   infoCard: {
     backgroundColor: Colors.surfaceContainerLowest,
     borderRadius: Radii.xl, overflow: 'hidden',
-    shadowColor: '#0b1c30', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04, shadowRadius: 12, elevation: 2,
+    ...Elevation.level1,
   },
   row: {
     flexDirection: 'row', alignItems: 'center',
@@ -299,8 +298,8 @@ const styles = StyleSheet.create({
   },
   rowIcon:    { marginRight: 14 },
   rowContent: { flex: 1 },
-  rowLabel:   { fontSize: 11, fontWeight: '600', color: Colors.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: 0.5 },
-  rowValue:   { fontSize: 15, fontWeight: '500', color: Colors.onSurface, marginTop: 2 },
+  rowLabel:   { ...Type.labelSmall, color: Colors.onSurfaceVariant, textTransform: 'uppercase' },
+  rowValue:   { ...Type.bodyLarge, color: Colors.onSurface, marginTop: 2 },
 
   securityBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
