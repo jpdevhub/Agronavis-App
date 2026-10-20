@@ -1,8 +1,15 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
-import { createModelDownload, isOnWifi, type DownloadProgress } from '../ondevice/download';
+import { isOnWifi } from '../ondevice/download';
+import {
+  acknowledgeDownload,
+  getDownloadState,
+  pauseDownload,
+  startDownload,
+  subscribeToDownload,
+} from '../ondevice/downloadManager';
 import { APPROX_SIZE_GB, type ModelVariant } from '../ondevice/modelFile';
 import { Loader } from '@/components/ui';
 
@@ -14,32 +21,42 @@ interface Props {
 const gb = (bytes: number) => `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
 
 export function ModelDownloadCard({ variant, onReady }: Props) {
-  const [progress, setProgress] = useState<DownloadProgress | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [warnMobile, setWarnMobile] = useState(false);
-  const handle = useRef<Awaited<ReturnType<typeof createModelDownload>> | null>(null);
 
-  const [resumed, setResumed] = useState(false);
+  /**
+   * The download runs outside this component and outlives it.
+   *
+   * It used to live here, so walking to another screen unmounted the card
+   * and abandoned several gigabytes of progress. The card now watches a
+   * download it does not own, which means leaving mid-way costs nothing and
+   * coming back shows it where it got to.
+   */
+  const [state, setState] = useState(getDownloadState);
+  useEffect(() => subscribeToDownload(setState), []);
+
+  const progress = state.progress;
+  const busy = state.running;
+  const error = state.error;
+  const resumed = state.resuming;
+
+  // A download that finished while the farmer was elsewhere still has to be
+  // handed over when they come back to this card.
+  useEffect(() => {
+    if (!state.finishedPath) return;
+    const path = state.finishedPath;
+    acknowledgeDownload();
+    onReady(path);
+  }, [state.finishedPath, onReady]);
 
   const begin = useCallback(async () => {
-    setError(null);
     if (!warnMobile && !(await isOnWifi())) {
       setWarnMobile(true);
       return;
     }
-    setBusy(true);
-    handle.current = await createModelDownload(variant, setProgress);
-    setResumed(handle.current.resuming);
-    try {
-      const path = await handle.current.start();
-      onReady(path);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }, [variant, warnMobile, onReady]);
+    // Returns as soon as the download is under way; the manager carries it
+    // from here and tells everyone watching how it goes.
+    void startDownload(variant);
+  }, [variant, warnMobile]);
 
   const pct = progress?.fraction != null ? Math.round(progress.fraction * 100) : null;
 
@@ -67,7 +84,7 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
                 ? 'Continuing where it stopped…'
                 : 'Starting…'}
           </Text>
-          <Pressable onPress={() => handle.current?.pause()} style={styles.secondary}>
+          <Pressable onPress={() => void pauseDownload()} style={styles.secondary}>
             <Text style={styles.secondaryText}>Pause</Text>
           </Pressable>
         </View>
