@@ -14,9 +14,10 @@ import {
 import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
+import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { MarkdownText } from '@/features/sahayak/components/MarkdownText';
 import { ModelDownloadCard } from '@/features/sahayak/components/ModelDownloadCard';
+import { APPROX_SIZE_GB } from '@/features/sahayak/ondevice/modelFile';
 import { useSahayak } from '@/features/sahayak/useSahayak';
 import { useSahayakVoice } from '@/features/sahayak/useSahayakVoice';
 import { LANGUAGES } from '@/constants';
@@ -42,6 +43,7 @@ export default function SahayakScreen() {
 
   /** The download card appears on request rather than replacing the chat. */
   const [showDownload, setShowDownload] = useState(false);
+
 
   /**
    * The keyboard's height, tracked rather than inferred.
@@ -72,6 +74,14 @@ export default function SahayakScreen() {
     status, error, messages, streaming, summary, send, stop, load, variant,
     onModelReady, language, setLanguage,
   } = useSahayak();
+  /**
+   * Sahayak is not on this phone, so nothing can be asked of it yet.
+   *
+   * Distinct from "loading" or "ready": those are a wait, this is a missing
+   * file. The screen invites the download rather than offering a composer
+   * whose every question comes back as an error.
+   */
+  const needsModel = status === 'missing' || status === 'unsupported';
   const voice = useSahayakVoice(language);
   const [draft, setDraft] = useState('');
   const [langOpen, setLangOpen] = useState(false);
@@ -263,6 +273,35 @@ export default function SahayakScreen() {
               scrollEventThrottle={16}
             >
               {messages.length === 0 ? (
+                needsModel ? (
+                  /*
+                    Sahayak is not on the phone yet, so there is nothing to
+                    ask. This used to be a thin strip above the composer while
+                    the middle of the screen sat empty — and the composer
+                    still accepted questions, which came back as "Model not
+                    loaded. Call load() first." The invitation belongs where
+                    the farmer is looking.
+                  */
+                  <View style={styles.gate}>
+                    <View style={styles.gateIcon}>
+                      <MaterialIcons name="download" size={30} color={Colors.onPrimaryContainer} />
+                    </View>
+                    <Text style={styles.gateTitle}>Bring Sahayak to your phone</Text>
+                    <Text style={styles.gateBody}>
+                      Sahayak answers without sending anything anywhere, so it has to live on your
+                      handset. It is a {APPROX_SIZE_GB[variant]} GB download, once, and best done
+                      on wi-fi. You can carry on using the app while it arrives.
+                    </Text>
+                    <Pressable
+                      onPress={() => setShowDownload(true)}
+                      style={styles.gateBtn}
+                      accessibilityRole="button"
+                    >
+                      <MaterialIcons name="download" size={20} color={Colors.onPrimary} />
+                      <Text style={styles.gateBtnText}>Download Sahayak</Text>
+                    </Pressable>
+                  </View>
+                ) : (
                 <View style={styles.empty}>
                   <Text style={styles.emptyTitle}>Ask about your farm</Text>
                   <Text style={styles.emptyBody}>
@@ -276,6 +315,7 @@ export default function SahayakScreen() {
                     ))}
                   </View>
                 </View>
+                )
               ) : (
                 messages.map((m) =>
                   m.role === 'user' ? (
@@ -373,7 +413,8 @@ export default function SahayakScreen() {
               <TextInput
                 value={draft}
                 onChangeText={setDraft}
-                placeholder="Ask Sahayak"
+                editable={!needsModel}
+                placeholder={needsModel ? 'Download Sahayak to ask it anything' : 'Ask Sahayak'}
                 placeholderTextColor={Colors.onSurfaceVariant}
                 style={styles.input}
                 multiline
@@ -392,7 +433,7 @@ export default function SahayakScreen() {
               <Pressable
                 onPress={() => (streaming ? stop() : submit())}
                 style={[styles.send, !draft.trim() && !streaming && styles.sendIdle]}
-                disabled={!draft.trim() && !streaming}
+                disabled={needsModel || (!draft.trim() && !streaming)}
                 accessibilityLabel={streaming ? 'Stop' : 'Send'}
               >
                 <MaterialIcons
@@ -421,6 +462,30 @@ const styles = StyleSheet.create({
   headerText: { flex: 1 },
   title: { ...TypeEmphasized.titleLarge, color: Colors.onSurface },
   subtitle: { ...Type.bodySmall, color: Colors.onSurfaceVariant },
+
+  // ── Sahayak is not on the phone yet ────────────────────────────────
+  gate: {
+    alignItems: 'center', gap: Spacing.md,
+    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.xxl,
+  },
+  gateIcon: {
+    width: 64, height: 64, borderRadius: Shape.full,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.primaryContainer,
+  },
+  gateTitle: { ...TypeEmphasized.titleLarge, color: Colors.onSurface, textAlign: 'center' },
+  gateBody: {
+    ...Type.bodyMedium, color: Colors.onSurfaceVariant,
+    textAlign: 'center', lineHeight: 20,
+  },
+  gateBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.lg,
+    borderRadius: Shape.full, backgroundColor: Colors.primary,
+    ...Elevation.level1,
+  },
+  gateBtnText: { ...TypeEmphasized.titleSmall, color: Colors.onPrimary },
 
   // ── The model's state, above the composer ──────────────────────────
   modelBar: {

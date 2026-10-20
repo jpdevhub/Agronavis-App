@@ -35,6 +35,36 @@ export type ModelStatus =
 /** Gemma runs through a native Android module; everywhere else is unsupported. */
 const SUPPORTED = Platform.OS === 'android';
 
+/**
+ * What went wrong, said to a farmer rather than to a developer.
+ *
+ * The raw message went straight into the thread, so asking a question before
+ * the model was in memory answered with "Could not answer: Model not loaded.
+ * Call load() first." — an instruction to someone who cannot act on it, in a
+ * place where an answer was expected.
+ */
+function readableFailure(error: Error): string {
+  const message = error.message ?? '';
+
+  if (/not loaded|load\(\) first/i.test(message)) {
+    return 'Sahayak is not running yet. It loads once after the app starts — try again in a moment.';
+  }
+  if (/not linked|not part of this build/i.test(message)) {
+    return 'Sahayak is not available in this version of the app.';
+  }
+  if (/NOT_FOUND|not found in the model|corrupt|INVALID_ARGUMENT/i.test(message)) {
+    return 'That download did not finish properly. Downloading Sahayak again should fix it.';
+  }
+  if (/cancel|abort/i.test(message)) {
+    return 'That answer was stopped.';
+  }
+  if (/memory|OOM/i.test(message)) {
+    return 'The phone ran short of memory. Closing a few other apps should let Sahayak answer.';
+  }
+
+  return 'Sahayak could not answer that one. Please try again.';
+}
+
 export function useSahayak() {
   const variant: ModelVariant = useMemo(() => detectModelVariant(), []);
   const [status, setStatus] = useState<ModelStatus>(SUPPORTED ? 'checking' : 'unsupported');
@@ -383,7 +413,7 @@ export function useSahayak() {
         if (!settled) {
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === replyId ? { ...m, text: `Could not answer: ${(e as Error).message}` } : m,
+              m.id === replyId ? { ...m, text: readableFailure(e as Error) } : m,
             ),
           );
         }
