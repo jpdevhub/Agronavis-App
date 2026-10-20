@@ -97,7 +97,20 @@ class GemmaLlmModule : Module() {
             appContext.reactContext?.registerComponentCallbacks(
                 object : ComponentCallbacks2 {
                     override fun onTrimMemory(level: Int) {
-                        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+                        /**
+                         * Only when the system is genuinely about to start
+                         * killing processes.
+                         *
+                         * RUNNING_LOW was too eager: UI_HIDDEN and BACKGROUND
+                         * are numerically higher and fire every time the app
+                         * goes behind another one, so switching away and back
+                         * meant reading several gigabytes off disk again. The
+                         * two levels left are the ones that actually precede
+                         * being killed.
+                         */
+                        val critical = level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
+                            level >= ComponentCallbacks2.TRIM_MEMORY_COMPLETE
+                        if (critical) {
                             if (engine != null) {
                                 Log.i("GemmaLlm", "Releasing model under memory pressure (level $level)")
                                 releaseEngine()

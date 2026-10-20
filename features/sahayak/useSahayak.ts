@@ -12,6 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFarmStore } from '@/store/useFarmStore';
 import { useScreenContext } from './useScreenContext';
+import { clearThread, loadThread, saveThread } from './chatHistory';
 import { buildSahayakPrompt, contextSummary } from './farmerContext';
 import {
   loadContextSnapshot,
@@ -42,7 +43,26 @@ export function useSahayak() {
 
   const [language, setLanguage] = useState<string | null>(null);
   const [messages, setMessages] = useState<SahayakMessage[]>([]);
+
+  // Bring back this afternoon's conversation, if there is one.
+  useEffect(() => {
+    let cancelled = false;
+    loadThread().then((saved) => {
+      if (!cancelled && saved.length > 0) setMessages(saved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [streaming, setStreaming] = useState(false);
+  // Written as it changes, but never mid-answer: a half-streamed reply
+  // restored later would read as the model having stopped in the middle.
+  useEffect(() => {
+    if (streaming) return;
+    if (messages.length === 0) return;
+    saveThread(messages);
+  }, [messages, streaming]);
   const streamRef = useRef('');
 
   const activeFarmId = useFarmStore((s) => s.activeFarmId);
@@ -333,6 +353,11 @@ export function useSahayak() {
     setLanguage,
     variant,
     status,
+    /** Starts a new conversation and forgets the stored one. */
+    reset: () => {
+      setMessages([]);
+      clearThread();
+    },
     error,
     modelPath,
     messages,

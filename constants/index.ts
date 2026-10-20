@@ -6,6 +6,7 @@ export { Env } from './env';
 export const LANGUAGES = [
   { code: 'en', label: 'English' },
   { code: 'hi', label: 'हिंदी' },
+  { code: 'bn', label: 'বাংলা' },
   { code: 'mr', label: 'मराठी' },
   { code: 'pa', label: 'ਪੰਜਾਬੀ' },
   { code: 'gu', label: 'ગુજરાતી' },

@@ -11,7 +11,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -30,7 +29,6 @@ const SUGGESTIONS = [
 ];
 
 export default function SahayakScreen() {
-  const router = useRouter();
   const goBack = useGoBack('/(tabs)/dashboard');
   const insets = useSafeAreaInsets();
 
@@ -41,6 +39,9 @@ export default function SahayakScreen() {
    * it stays where the farmer last saw it.
    */
   const [bottomInset] = useState(() => insets.bottom);
+
+  /** The download card appears on request rather than replacing the chat. */
+  const [showDownload, setShowDownload] = useState(false);
 
   /**
    * The keyboard's height, tracked rather than inferred.
@@ -140,10 +141,38 @@ export default function SahayakScreen() {
   function submit(text?: string) {
     const question = (text ?? draft).trim();
     if (!question) return;
+
+    /**
+     * Asking is as good as pressing Start.
+     *
+     * The model used to be a gate in front of the chat, so there was no way
+     * to type before it was up. Now that the composer is always there, a
+     * question typed while it is still loading should start it rather than
+     * disappear.
+     */
+    if (status === 'ready') {
+      setDraft('');
+      setPending(question);
+      void load();
+      return;
+    }
+
     setDraft('');
     stick.current = true;
     void send(question);
   }
+
+  /**
+   * A question asked before the model was ready, sent once it is.
+   */
+  const [pending, setPending] = useState<string | null>(null);
+  useEffect(() => {
+    if (status !== 'loaded' || !pending) return;
+    const question = pending;
+    setPending(null);
+    stick.current = true;
+    void send(question);
+  }, [status, pending, send]);
 
   return (
     <View style={styles.root}>
@@ -212,34 +241,15 @@ export default function SahayakScreen() {
         down, because the dismiss event says so.
       */}
       <View style={[styles.fill, { paddingBottom: keyboard }]}>
-        {status === 'unsupported' ? (
-          <Notice icon="phonelink-off" title="Not available here" body={error ?? 'Sahayak runs on-device on Android.'} />
-        ) : status === 'checking' ? (
-          <View style={styles.centre}><Loader size={28} /></View>
-        ) : status === 'missing' ? (
-          <ScrollView><ModelDownloadCard variant={variant} onReady={onModelReady} /></ScrollView>
-        ) : status === 'ready' ? (
-          <Notice
-            icon="bolt"
-            title="Ready to start"
-            body={
-              'The model is already on your phone — nothing is downloaded or fetched from here. '
-              + 'It has to be read into memory once after the app starts, which takes a moment; '
-              + 'after that Sahayak opens straight into the chat.'
-            }
-            actionLabel="Start Sahayak"
-            onAction={load}
-          />
-        ) : status === 'loading' ? (
-          <View style={styles.centre}>
-            <Loader size={28} />
-            <Text style={styles.centreText}>Reading the model into memory</Text>
-            <Text style={styles.centreNote}>Once only — it stays ready until you close the app</Text>
-          </View>
-        ) : status === 'error' ? (
-          <Notice icon="error-outline" title="Could not start" body={error ?? 'Unknown error.'} actionLabel="Try again" onAction={load} />
-        ) : (
-          <>
+        {/*
+          The thread and the composer are always on screen.
+
+          Every model state used to replace the whole chat, so opening
+          Sahayak showed a spinner on white until several gigabytes had
+          been read off disk — on the one screen that needs nothing from
+          anywhere, because the model runs on the handset. What the model
+          is doing appears as a strip above the composer instead.
+        */}
             <ScrollView
               ref={scroller}
               style={styles.fill}
@@ -294,6 +304,60 @@ export default function SahayakScreen() {
               )}
             </ScrollView>
 
+            {/* What the model is doing, as a strip rather than a screen. */}
+            {status !== 'loaded' ? (
+              <View style={styles.modelBar}>
+                {status === 'checking' || status === 'loading' ? (
+                  <>
+                    <Loader size={20} />
+                    <Text style={styles.modelBarText}>
+                      {status === 'checking'
+                        ? 'Looking for the model on your phone'
+                        : 'Reading the model into memory — once per app start'}
+                    </Text>
+                  </>
+                ) : status === 'ready' ? (
+                  <>
+                    <MaterialIcons name="bolt" size={18} color={Colors.onSecondaryContainer} />
+                    <Text style={styles.modelBarText}>Sahayak is on this phone and ready</Text>
+                    <Pressable onPress={load} style={styles.modelBarBtn}>
+                      <Text style={styles.modelBarBtnText}>Start</Text>
+                    </Pressable>
+                  </>
+                ) : status === 'missing' ? (
+                  <>
+                    <MaterialIcons name="download" size={18} color={Colors.onSecondaryContainer} />
+                    <Text style={styles.modelBarText}>Sahayak needs downloading once</Text>
+                    <Pressable onPress={() => setShowDownload(true)} style={styles.modelBarBtn}>
+                      <Text style={styles.modelBarBtnText}>Get it</Text>
+                    </Pressable>
+                  </>
+                ) : status === 'unsupported' ? (
+                  <Text style={styles.modelBarText}>{error ?? 'Sahayak runs on Android.'}</Text>
+                ) : (
+                  <>
+                    <MaterialIcons name="error-outline" size={18} color={Colors.error} />
+                    <Text style={styles.modelBarText} numberOfLines={2}>{error ?? 'Could not start.'}</Text>
+                    <Pressable onPress={load} style={styles.modelBarBtn}>
+                      <Text style={styles.modelBarBtnText}>Retry</Text>
+                    </Pressable>
+                  </>
+                )}
+              </View>
+            ) : null}
+
+            {showDownload ? (
+              <View style={styles.downloadSheet}>
+                <ModelDownloadCard
+                  variant={variant}
+                  onReady={(path) => {
+                    setShowDownload(false);
+                    onModelReady(path);
+                  }}
+                />
+              </View>
+            ) : null}
+
             {!atLatest && messages.length > 0 && (
               <Pressable
                 onPress={jumpToLatest}
@@ -338,34 +402,11 @@ export default function SahayakScreen() {
                 />
               </Pressable>
             </View>
-          </>
-        )}
       </View>
     </View>
   );
 }
 
-function Notice({
-  icon, title, body, actionLabel, onAction,
-}: {
-  icon: React.ComponentProps<typeof MaterialIcons>['name'];
-  title: string; body: string; actionLabel?: string; onAction?: () => void;
-}) {
-  return (
-    <View style={styles.notice}>
-      <View style={styles.noticeIcon}>
-        <MaterialIcons name={icon} size={30} color={Colors.onSecondaryContainer} />
-      </View>
-      <Text style={styles.noticeTitle}>{title}</Text>
-      <Text style={styles.noticeBody}>{body}</Text>
-      {actionLabel && onAction ? (
-        <Pressable onPress={onAction} style={styles.noticeBtn}>
-          <Text style={styles.noticeBtnText}>{actionLabel}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surface },
@@ -381,9 +422,21 @@ const styles = StyleSheet.create({
   title: { ...TypeEmphasized.titleLarge, color: Colors.onSurface },
   subtitle: { ...Type.bodySmall, color: Colors.onSurfaceVariant },
 
-  centre: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md },
-  centreNote: { ...Type.bodySmall, color: Colors.onSurfaceVariant, textAlign: 'center' },
-  centreText: { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
+  // ── The model's state, above the composer ──────────────────────────
+  modelBar: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    marginHorizontal: Spacing.lg, marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
+    borderRadius: Shape.full, backgroundColor: Colors.secondaryContainer,
+  },
+  modelBarText: { ...Type.bodySmall, color: Colors.onSecondaryContainer, flex: 1 },
+  modelBarBtn: {
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs,
+    borderRadius: Shape.full, backgroundColor: Colors.onSecondaryContainer,
+  },
+  modelBarBtnText: { ...TypeEmphasized.labelSmall, color: Colors.secondaryContainer },
+  downloadSheet: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
+
 
   thread: { padding: Spacing.lg, gap: Spacing.md },
   threadEmpty: { flexGrow: 1 },
@@ -469,17 +522,4 @@ const styles = StyleSheet.create({
   langOptionTextActive: { ...TypeEmphasized.bodyMedium, color: Colors.onPrimary },
 
   notice: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, padding: Spacing.xxl },
-  noticeIcon: {
-    width: 72, height: 72, borderRadius: Shape.full,
-    backgroundColor: Colors.secondaryContainer,
-    alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm,
-  },
-  noticeTitle: { ...TypeEmphasized.titleLarge, color: Colors.onSurface },
-  noticeBody: { ...Type.bodyMedium, color: Colors.onSurfaceVariant, textAlign: 'center', maxWidth: 320 },
-  noticeBtn: {
-    marginTop: Spacing.md, height: 56, paddingHorizontal: Spacing.xxl,
-    borderRadius: Shape.full, backgroundColor: Colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  noticeBtnText: { ...TypeEmphasized.titleMedium, color: Colors.onPrimary },
 });
