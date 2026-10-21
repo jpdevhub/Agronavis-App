@@ -21,8 +21,13 @@ const publicEnv = {
   },
 };
 
+/**
+ * The user-facing version. The build number is not here on purpose: eas.json
+ * sets `appVersionSource: "remote"`, so EAS owns `versionCode` and increments
+ * it per production build. A copy in this file would be ignored and would
+ * drift.
+ */
 const VERSION = '1.0.0';
-const BUILD_NUMBER = 5;
 
 /** @type {import('expo/config').ExpoConfig} */
 module.exports = () => ({
@@ -45,7 +50,6 @@ module.exports = () => ({
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.agronavis.app',
-    buildNumber: String(BUILD_NUMBER),
     infoPlist: {
       NSCameraUsageDescription:
         'Agronavis uses your camera to scan crops for disease detection.',
@@ -58,7 +62,6 @@ module.exports = () => ({
 
   android: {
     package: 'com.agronavis.app',
-    versionCode: BUILD_NUMBER,
     adaptiveIcon: {
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#0E3D1F',
@@ -69,6 +72,15 @@ module.exports = () => ({
       'android.permission.ACCESS_COARSE_LOCATION',
       'android.permission.READ_EXTERNAL_STORAGE',
       'android.permission.RECORD_AUDIO',
+    ],
+    // Both arrive from Expo's default manifest and nothing in the app uses
+    // either: no code writes to shared storage — the Sahayak model is saved
+    // under the app's own documents directory — and nothing draws over other
+    // apps. Left in, the Play listing tells a farmer this app can display
+    // over other apps and write to their storage, which is not true.
+    blockedPermissions: [
+      'android.permission.SYSTEM_ALERT_WINDOW',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
     ],
   },
 

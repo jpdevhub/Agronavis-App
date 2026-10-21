@@ -7,7 +7,7 @@ release they shipped in; the build number beside each is the Android
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] — 2026-10-20 · build 15
+## [1.0.0] — 2026-10-20 · build 9
 
 **The first public release.**
 
