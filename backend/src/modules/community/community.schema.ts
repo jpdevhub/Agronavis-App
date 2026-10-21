@@ -22,3 +22,31 @@ export const replySchema = z.object({
 
 export const idParamSchema = z.object({ id: z.string().uuid() });
 export const postParamSchema = z.object({ postId: z.string().uuid() });
+
+/**
+ * Why something was reported.
+ *
+ * A fixed list rather than free text: a queue of sentences is a queue nobody
+ * sorts, and the reasons map to what actually gets posted on a farming feed.
+ * The note is optional and is for the one case the list does not cover.
+ */
+export const reportSchema = z.object({
+  reason: z.enum([
+    'spam',
+    'abuse',
+    'misinformation',
+    'off_topic',
+    'impersonation',
+    'other',
+  ]),
+  note: z.string().trim().max(500).optional(),
+});
+
+/**
+ * The thing being reported. Validating the id here keeps a malformed one out
+ * of Postgres, which answers an invalid uuid with a 500 rather than a 400.
+ */
+export const reportTargetSchema = z.object({
+  type: z.enum(['post', 'reply']),
+  id: z.string().uuid(),
+});

@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: 9 October 2026**
+**Last updated: 21 October 2026**
 
 <!-- Generated from features/legal/documents.ts by `npm run legal`.
      Edit that file, not this one — the app renders the same content. -->

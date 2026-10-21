@@ -171,6 +171,16 @@ export default function ProfileScreen() {
             <MaterialIcons name="chevron-right" size={22} color={Colors.outline} />
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.securityBtn}
+            onPress={() => router.push('/profile/blocked' as any)}
+            activeOpacity={0.85}
+          >
+            <MaterialIcons name="block" size={20} color={Colors.primary} />
+            <Text style={styles.securityText}>Blocked farmers</Text>
+            <MaterialIcons name="chevron-right" size={22} color={Colors.outline} />
+          </TouchableOpacity>
+
           {/* Reachable in-app, which the Play Store requires of the privacy
               policy and which a farmer needs anyway once they have agreed to
               something at sign-up and want to read it properly. */}

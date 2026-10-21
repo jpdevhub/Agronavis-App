@@ -21,6 +21,7 @@ import { useMarketPrices } from '@/hooks/useMarketPrices';
 import { MandiPricesView } from '@/features/mandi';
 import { Avatar, Loader } from '@/components/ui';
 import { useCommunityReplies, useAddReply } from '@/hooks/useCommunityReplies';
+import { ContentMenu } from '@/features/community';
 
 const TREND_MARK: Record<string, string> = { up: '▲', down: '▼', stable: '●' };
 
@@ -67,7 +68,20 @@ function ReplyPanel({ postId, onClose }: { postId: string; onClose: () => void }
                 <View key={r.id} style={styles.replyRow}>
                   <Avatar uri={r.author?.avatarUrl} name={r.author?.fullName} size={34} />
                   <View style={styles.replyBubble}>
-                    <Text style={styles.replyAuthor}>{r.author?.fullName ?? 'Farmer'}</Text>
+                    <View style={styles.replyBubbleTop}>
+                      <Text style={styles.replyAuthor} numberOfLines={1}>
+                        {r.author?.fullName ?? 'Farmer'}
+                      </Text>
+                      <ContentMenu
+                        target={{
+                          type: 'reply',
+                          id: r.id,
+                          isOwn: r.isOwn,
+                          authorId: r.author?.id ?? null,
+                          authorName: r.author?.fullName ?? null,
+                        }}
+                      />
+                    </View>
                     <Text style={styles.replyText}>{r.content}</Text>
                   </View>
                 </View>
@@ -377,6 +391,15 @@ export default function CommunityScreen() {
                   <Text style={styles.postName}>{post.author?.fullName ?? 'Farmer'}</Text>
                   <Text style={styles.postLoc}>{post.author?.state ?? 'India'} • {timeAgo}</Text>
                 </View>
+                <ContentMenu
+                  target={{
+                    type: 'post',
+                    id: post.id,
+                    isOwn: post.isOwn,
+                    authorId: post.author?.id ?? null,
+                    authorName: post.author?.fullName ?? null,
+                  }}
+                />
               </View>
               <Text style={styles.postTitle}>{post.title}</Text>
               <Text style={styles.postContent}>{post.content}</Text>
@@ -547,8 +570,9 @@ const styles = StyleSheet.create({
   replyTitle:  { ...TypeEmphasized.titleMedium, color: Colors.onSurface },
   replyRow:    { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   replyAvatar: { width: 36, height: 36, borderRadius: Shape.medium },
+  replyBubbleTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm },
   replyBubble: { flex: 1, backgroundColor: Colors.surfaceContainerHigh, borderRadius: Radii.lg, padding: 10 },
-  replyAuthor: { ...TypeEmphasized.labelLarge, color: Colors.onSurface, marginBottom: 3 },
+  replyAuthor: { ...TypeEmphasized.labelLarge, color: Colors.onSurface, marginBottom: 3, flex: 1 },
   replyText:   { ...Type.bodyMedium, color: Colors.onSurfaceVariant },
   emptyReply:  { textAlign: 'center', color: Colors.outline, paddingVertical: 20 },
   replyInputRow: { flexDirection: 'row', gap: 10, padding: 16, alignItems: 'flex-end' },

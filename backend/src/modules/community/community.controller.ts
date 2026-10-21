@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { farmerId } from '../../middleware/auth.middleware';
+import { badRequest } from '../../shared/errors';
 import { created, noContent, ok } from '../../shared/http';
 import { communityService } from './community.service';
 
@@ -42,6 +43,35 @@ export const communityController = {
 
   async deleteReply(req: Request, res: Response) {
     await communityService.deleteReply(farmerId(req), req.params.id!);
+    noContent(res);
+  },
+
+  /**
+   * Reports a post or a reply.
+   *
+   * Answers the same whether or not the thing was already reported, so a
+   * farmer cannot learn anything about other people's reports by trying.
+   */
+  async report(req: Request, res: Response) {
+    const { type, id } = req.params as { type: string; id: string };
+    if (type !== 'post' && type !== 'reply') throw badRequest('Reportable items are posts and replies');
+
+    const { reason, note } = req.body as { reason: string; note?: string };
+    await communityService.report(farmerId(req), type, id, reason, note);
+    noContent(res);
+  },
+
+  async block(req: Request, res: Response) {
+    await communityService.block(farmerId(req), (req.params as { id: string }).id);
+    noContent(res);
+  },
+
+  async listBlocked(req: Request, res: Response) {
+    res.json(await communityService.listBlocked(farmerId(req)));
+  },
+
+  async unblock(req: Request, res: Response) {
+    await communityService.unblock(farmerId(req), (req.params as { id: string }).id);
     noContent(res);
   },
 };

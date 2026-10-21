@@ -269,6 +269,26 @@ export type FireDetectionRow = {
   created_at: string;
 };
 
+export type ContentReportRow = {
+  id: string;
+  reporter_id: string;
+  /** 'post' or 'reply'. */
+  target_type: string;
+  target_id: string;
+  /** Kept so a report outlives the thing it reported. */
+  author_id: string | null;
+  reason: string;
+  note: string | null;
+  status: string;
+  created_at: string;
+};
+
+export type CommunityBlockRow = {
+  blocker_id: string;
+  blocked_id: string;
+  created_at: string;
+};
+
 export type TwoFactorSessionRow = {
   /** The Supabase session this verification belongs to. */
   session_id: string;
@@ -565,6 +585,8 @@ export interface Database {
         'id' | 'created_at' | 'confidence' | 'source' | 'brightness_k'
       >;
       two_factor_sessions: Table<TwoFactorSessionRow, 'verified_at'>;
+      content_reports: Table<ContentReportRow, 'id' | 'created_at' | 'status' | 'note' | 'author_id'>;
+      community_blocks: Table<CommunityBlockRow, 'created_at'>;
       ndvi_readings: Table<
         NdviReadingRow,
         'id' | 'created_at' | 'pixels' | 'cloud_percent' | 'scene_id' | 'grid'

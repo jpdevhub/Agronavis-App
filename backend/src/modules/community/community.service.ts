@@ -6,7 +6,8 @@ import type {
   PostAuthor,
 } from '@agronavis/shared-types';
 import { db } from '../../config/supabase';
-import { forbidden, fromPostgrest, notFound } from '../../shared/errors';
+import { logger } from '../../config/logger';
+import { badRequest, forbidden, fromPostgrest, notFound } from '../../shared/errors';
 
 /**
  * Author details are embedded with an explicit column list. PostgREST would
@@ -71,12 +72,48 @@ function toReply(row: CommunityReplyRow & { author: AuthorJoin }, viewerId: stri
 }
 
 export const communityService = {
-  async listPosts(viewerId: string, limit = 30, offset = 0): Promise<CommunityPost[]> {
+  /** Everyone this farmer has blocked, whose words they should not see. */
+  /**
+   * Every farmer whose writing must not appear for this viewer.
+   *
+   * Blocking runs both ways. A one-directional block would hide the harasser
+   * from the person being harassed while leaving that person's posts open for
+   * the harasser to read and reply to — which is the half that matters least
+   * to the one being harassed.
+   */
+  async hiddenAuthors(viewerId: string): Promise<string[]> {
     const { data, error } = await db
+      .from('community_blocks')
+      .select('blocker_id, blocked_id')
+      .or(`blocker_id.eq.${viewerId},blocked_id.eq.${viewerId}`);
+
+    if (error) {
+      // A feed that fails to load is worse than one that briefly shows
+      // someone, so this degrades rather than throws — and says so loudly.
+      logger.warn('Could not read the block list', { viewerId, error: error.message });
+      return [];
+    }
+
+    const rows = (data ?? []) as { blocker_id: string; blocked_id: string }[];
+    // Whichever side of the row is not the viewer is the farmer to hide.
+    const others = rows.map((r) => (r.blocker_id === viewerId ? r.blocked_id : r.blocker_id));
+    return [...new Set(others)];
+  },
+
+  async listPosts(viewerId: string, limit = 30, offset = 0): Promise<CommunityPost[]> {
+    const hidden = await this.hiddenAuthors(viewerId);
+
+    let query = db
       .from('community_posts')
       .select(POST_COLUMNS)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .order('created_at', { ascending: false });
+
+    // Blocking has to work on the feed itself. Hiding posts only in the app
+    // would leave them in the payload on the phone, which is not blocking, it
+    // is concealment.
+    if (hidden.length > 0) query = query.not('author_id', 'in', `(${hidden.join(',')})`);
+
+    const { data, error } = await query.range(offset, offset + limit - 1);
     if (error) throw fromPostgrest(error, 'List posts');
 
     const posts = (data ?? []) as unknown as (CommunityPostRow & { author: AuthorJoin })[];
@@ -148,12 +185,98 @@ export const communityService = {
     return data.upvotes;
   },
 
-  async listReplies(viewerId: string, postId: string): Promise<CommunityReply[]> {
+  /**
+   * Records a report. Silent to everyone but the person who filed it.
+   *
+   * The author is stored alongside, so a report still says who wrote the
+   * thing after the thing itself has been deleted — which is exactly what
+   * someone does when reported.
+   */
+  async report(
+    reporterId: string,
+    targetType: 'post' | 'reply',
+    targetId: string,
+    reason: string,
+    note?: string,
+  ): Promise<void> {
+    const table = targetType === 'post' ? 'community_posts' : 'community_replies';
+    const { data: target } = await db
+      .from(table)
+      .select('author_id')
+      .eq('id', targetId)
+      .maybeSingle();
+
+    if (!target) throw notFound('That post is no longer here');
+
+    const { error } = await db.from('content_reports').upsert(
+      {
+        reporter_id: reporterId,
+        target_type: targetType,
+        target_id: targetId,
+        author_id: (target as { author_id: string | null }).author_id,
+        reason,
+        note: note ?? null,
+      },
+      { onConflict: 'reporter_id,target_type,target_id' },
+    );
+    if (error) throw fromPostgrest(error, 'Report content');
+
+    logger.warn('Content reported', { targetType, targetId, reason });
+  },
+
+  /** Stops this farmer seeing another one, in both directions of the feed. */
+  async block(blockerId: string, blockedId: string): Promise<void> {
+    if (blockerId === blockedId) throw badRequest('You cannot block yourself');
+
+    const { error } = await db
+      .from('community_blocks')
+      .upsert({ blocker_id: blockerId, blocked_id: blockedId }, { onConflict: 'blocker_id,blocked_id' });
+    if (error) throw fromPostgrest(error, 'Block farmer');
+  },
+
+  /**
+   * Who this farmer has blocked, with enough detail to recognise them.
+   *
+   * A block nobody can see is a block nobody can lift, so the profile needs
+   * this list.
+   */
+  async listBlocked(blockerId: string): Promise<PostAuthor[]> {
     const { data, error } = await db
+      .from('community_blocks')
+      .select('created_at, blocked:farmers!community_blocks_blocked_id_fkey(id, full_name, avatar_url, state, district)')
+      .eq('blocker_id', blockerId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw fromPostgrest(error, 'List blocked farmers');
+
+    return ((data ?? []) as unknown as { blocked: AuthorJoin }[])
+      .map((r) => toAuthor(r.blocked))
+      .filter((a): a is PostAuthor => a !== null);
+  },
+
+  async unblock(blockerId: string, blockedId: string): Promise<void> {
+    const { error } = await db
+      .from('community_blocks')
+      .delete()
+      .eq('blocker_id', blockerId)
+      .eq('blocked_id', blockedId);
+    if (error) throw fromPostgrest(error, 'Unblock farmer');
+  },
+
+  async listReplies(viewerId: string, postId: string): Promise<CommunityReply[]> {
+    const hidden = await this.hiddenAuthors(viewerId);
+
+    let query = db
       .from('community_replies')
       .select(REPLY_COLUMNS)
       .eq('post_id', postId)
       .order('created_at', { ascending: true });
+
+    // A block that hid someone's posts but not their replies would leave
+    // them talking to you underneath everyone else's.
+    if (hidden.length > 0) query = query.not('author_id', 'in', `(${hidden.join(',')})`);
+
+    const { data, error } = await query;
     if (error) throw fromPostgrest(error, 'List replies');
     return ((data ?? []) as unknown as (CommunityReplyRow & { author: AuthorJoin })[]).map((r) =>
       toReply(r, viewerId),
