@@ -40,6 +40,12 @@ do not know.
 - Second model on the leaf scanner. MobileNetV2 now runs after the colour check
   and refuses a photograph only on positive evidence that it is something a
   crop cannot be — never on failing to recognise a leaf.
+- **Reporting and blocking in the community.** Every post and comment has a
+  menu to report it, with six reasons in plain words, and to block whoever
+  wrote it. Blocking runs both ways and is enforced in the database query, not
+  in the app — a one-way block would leave the harasser still able to read and
+  reply, and filtering on the phone would leave the blocked farmer's words in
+  the payload. Blocks are listed under Profile, where they can be lifted.
 - `LICENSE`, `SECURITY.md`, `PRIVACY.md` and this changelog.
 
 ### Changed

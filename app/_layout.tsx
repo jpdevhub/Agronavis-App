@@ -239,6 +239,7 @@ function AppShell() {
         <Stack.Screen name="profile/index" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="profile/edit" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="profile/security" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="profile/blocked" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="alerts/index" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="fires/index" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="root-zone/index" options={{ animation: 'slide_from_right' }} />

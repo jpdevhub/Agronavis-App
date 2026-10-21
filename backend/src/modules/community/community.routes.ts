@@ -11,6 +11,8 @@ import {
   listPostsSchema,
   postParamSchema,
   replySchema,
+  reportSchema,
+  reportTargetSchema,
   voteSchema,
 } from './community.schema';
 
@@ -23,6 +25,19 @@ communityRoutes.use(requireTwoFactor);
 communityRoutes.get('/posts', validate(listPostsSchema, 'query'), handler(communityController.listPosts));
 communityRoutes.post('/posts', validate(createPostSchema), handler(communityController.createPost));
 communityRoutes.delete('/posts/:id', validate(idParamSchema, 'params'), handler(communityController.deletePost));
+
+// Reporting and blocking. Google Play requires both of an app whose users
+// can see each other's writing, and a feed nobody can moderate is a feed
+// people leave.
+communityRoutes.post(
+  '/:type(post|reply)/:id/report',
+  validate(reportTargetSchema, 'params'),
+  validate(reportSchema),
+  handler(communityController.report),
+);
+communityRoutes.get('/blocks', handler(communityController.listBlocked));
+communityRoutes.post('/block/:id', validate(idParamSchema, 'params'), handler(communityController.block));
+communityRoutes.delete('/block/:id', validate(idParamSchema, 'params'), handler(communityController.unblock));
 communityRoutes.post(
   '/posts/:id/vote',
   validate(idParamSchema, 'params'),

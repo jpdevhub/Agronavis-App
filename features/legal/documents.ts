@@ -9,7 +9,7 @@ import type { LegalSection } from '@/components/legal/LegalDocument';
  * other has to, and the Play Store privacy URL must resolve to the same words
  * a farmer sees in the app.
  */
-export const LEGAL_UPDATED = '9 October 2026';
+export const LEGAL_UPDATED = '21 October 2026';
 
 /**
  * One mailbox answers all of these. Listing addresses that bounce is worse
@@ -121,7 +121,11 @@ export const TERMS_SECTIONS: LegalSection[] = [
       },
       {
         kind: 'text',
-        text: 'We may remove content that breaches these terms or the law, and may suspend an account that does so repeatedly.',
+        text: 'Every post and every comment carries a menu that lets you report it, and lets you block the farmer who wrote it. A block works both ways: you stop seeing their posts and comments, and they stop seeing yours. You can lift a block at any time from Profile, under Blocked farmers.',
+      },
+      {
+        kind: 'text',
+        text: 'We read reports within 24 hours. We may remove content that breaches these terms or the law, and may suspend an account that does so repeatedly.',
       },
     ],
   },

@@ -1,6 +1,6 @@
 # Terms and Conditions
 
-**Last updated: 9 October 2026**
+**Last updated: 21 October 2026**
 
 <!-- Generated from features/legal/documents.ts by `npm run legal`.
      Edit that file, not this one — the app renders the same content. -->
@@ -55,7 +55,9 @@ Community posts and replies are visible to other farmers. You keep ownership of 
 
 Do not post anything unlawful, misleading, abusive, obscene, infringing, or that impersonates another person. Do not post advice that would breach pesticide regulation, and do not use the community to advertise or solicit.
 
-We may remove content that breaches these terms or the law, and may suspend an account that does so repeatedly.
+Every post and every comment carries a menu that lets you report it, and lets you block the farmer who wrote it. A block works both ways: you stop seeing their posts and comments, and they stop seeing yours. You can lift a block at any time from Profile, under Blocked farmers.
+
+We read reports within 24 hours. We may remove content that breaches these terms or the law, and may suspend an account that does so repeatedly.
 
 ## 7. Acceptable use of the service
 

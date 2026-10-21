@@ -33,6 +33,7 @@ import type {
   UploadBucket,
   UploadResult,
   WeatherBundle,
+  PostAuthor,
 } from '@agronavis/shared-types';
 import { api } from './api';
 
@@ -180,6 +181,16 @@ export const satelliteApi = {
     api.get<SatellitePassReport>(`/satellite/farm/${farmId}`, { days }),
   /** Crop vigour, from what the nightly job measured. */
   ndvi: (fieldId: string) => api.get<NdviReport>(`/satellite/ndvi/field/${fieldId}`),
+};
+
+export const communitySafetyApi = {
+  /** Reports a post or reply. Reasons are fixed; the note is optional. */
+  report: (type: 'post' | 'reply', id: string, reason: string, note?: string) =>
+    api.post<void>(`/community/${type}/${id}/report`, { reason, ...(note ? { note } : {}) }),
+  /** Who the signed-in farmer has blocked, newest first. */
+  listBlocked: () => api.get<PostAuthor[]>('/community/blocks'),
+  block: (farmerId: string) => api.post<void>(`/community/block/${farmerId}`),
+  unblock: (farmerId: string) => api.delete<void>(`/community/block/${farmerId}`),
 };
 
 export const advisoryApi = {
