@@ -68,7 +68,7 @@ Your account, profile, farms, fields, scans and posts are kept while your accoun
 
 ## 7. Deleting your account
 
-Open Profile, then Security, and choose to delete your account. This removes your profile, farms and fields, scans and their photographs, tasks, advisories and community posts. It is immediate and cannot be undone.
+Open Profile and choose Delete My Account, directly below Log Out. This removes your profile, farms and fields, scans and their photographs, tasks, advisories and community posts. It is immediate and cannot be undone.
 
 You can also request deletion without the app, including after uninstalling it, at https://agronavis.in/delete-account. No login is needed. We confirm the request belongs to the account holder, action it within 30 days and usually sooner, and write to you when it is done.
 

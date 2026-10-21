@@ -81,7 +81,7 @@ Nothing in these terms limits liability that cannot be limited by law, including
 
 ## 11. Ending your use
 
-You may delete your account at any time from Profile, then Security. Deletion removes your profile, farms, fields, scans, tasks, advisories and community posts, and cannot be undone.
+You may delete your account at any time: open Profile and choose Delete My Account, below Log Out. Deletion removes your profile, farms, fields, scans, tasks, advisories and community posts, and cannot be undone.
 
 We may suspend or close an account that breaches these terms, that is used unlawfully, or where we are required to by law.
 

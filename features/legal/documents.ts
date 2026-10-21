@@ -176,7 +176,7 @@ export const TERMS_SECTIONS: LegalSection[] = [
     blocks: [
       {
         kind: 'text',
-        text: 'You may delete your account at any time from Profile, then Security. Deletion removes your profile, farms, fields, scans, tasks, advisories and community posts, and cannot be undone.',
+        text: 'You may delete your account at any time: open Profile and choose Delete My Account, below Log Out. Deletion removes your profile, farms, fields, scans, tasks, advisories and community posts, and cannot be undone.',
       },
       {
         kind: 'text',
@@ -305,7 +305,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
   {
     heading: 'Deleting your account',
     blocks: [
-      { kind: 'text', text: 'Open Profile, then Security, and choose to delete your account. This removes your profile, farms and fields, scans and their photographs, tasks, advisories and community posts. It is immediate and cannot be undone.' },
+      { kind: 'text', text: 'Open Profile and choose Delete My Account, directly below Log Out. This removes your profile, farms and fields, scans and their photographs, tasks, advisories and community posts. It is immediate and cannot be undone.' },
       { kind: 'text', text: 'You can also request deletion without the app, including after uninstalling it, at https://agronavis.in/delete-account. No login is needed. We confirm the request belongs to the account holder, action it within 30 days and usually sooner, and write to you when it is done.' },
       { kind: 'text', text: 'Cached public data such as district soil records and mandi prices is not personal to you and remains. Billing records are held for seven years because Indian tax law requires it, and encrypted backups are overwritten on their normal cycle within 90 days.' },
     ],

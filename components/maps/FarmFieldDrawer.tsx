@@ -428,12 +428,15 @@ export default function FarmFieldDrawer({
         // A scale bar is how someone judges whether the shape they have drawn
         // is the size of their plot. Essential when the plot is metres across.
         scaleBarEnabled
-        logoEnabled={false}
-        attributionEnabled={false}
-        // Mapbox's own badge and attribution sat over the bottom-left corner
-        // of a map whose whole job is letting someone tap a corner of their
-        // field. Hidden here; the attribution Mapbox's terms require belongs
-        // in the app's about screen rather than on top of the work.
+        scaleBarPosition={{ bottom: 8, left: 8 }}
+        // Mapbox's terms require the wordmark and the attribution notice to be
+        // visible on the map itself, not relegated to an about screen. They sat
+        // bottom-left, over the corner someone taps to place a field vertex, so
+        // they move to the top edge where nothing is drawn instead of off.
+        logoEnabled
+        logoPosition={{ top: 8, left: 8 }}
+        attributionEnabled
+        attributionPosition={{ top: 8, right: 8 }}
       >
         {/* Where the farmer is standing, which is the reference point for
             every corner they are about to tap. */}

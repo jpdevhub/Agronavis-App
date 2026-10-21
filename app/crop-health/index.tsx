@@ -113,8 +113,12 @@ export default function CropHealthScreen() {
                 style={styles.map}
                 styleURL={SATELLITE_STYLE}
                 scaleBarEnabled={false}
-                logoEnabled={false}
-                attributionEnabled={false}
+                // Required by Mapbox's terms, and by OpenStreetMap's licence
+                // for the data underneath. Nothing is interactive down here.
+                logoEnabled
+                logoPosition={{ bottom: 8, left: 8 }}
+                attributionEnabled
+                attributionPosition={{ bottom: 8, right: 8 }}
               >
                 <UserLocation visible androidRenderMode="normal" />
                 <Camera centerCoordinate={centre} zoomLevel={15.5} animationDuration={0} />
