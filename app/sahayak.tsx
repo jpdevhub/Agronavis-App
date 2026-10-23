@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { confirmAction } from '@/utils/alert';
 import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -72,7 +73,7 @@ export default function SahayakScreen() {
   }, []);
   const {
     status, error, messages, streaming, summary, send, stop, load, variant,
-    onModelReady, language, setLanguage,
+    onModelReady, language, setLanguage, reset,
   } = useSahayak();
   /**
    * Sahayak is not on this phone, so nothing can be asked of it yet.
@@ -194,6 +195,26 @@ export default function SahayakScreen() {
           <Text style={styles.title}>Sahayak</Text>
           <Text style={styles.subtitle} numberOfLines={1}>{summary}</Text>
         </View>
+
+        {/* Clearing is the farmer's own decision and cannot be undone, so it
+            asks — but only when there is something to lose. */}
+        <Pressable
+          onPress={() => {
+            if (messages.length === 0 || streaming) return;
+            confirmAction(
+              'Start a new chat?',
+              'This conversation will be deleted from this phone.',
+              'Delete and start new',
+              reset,
+            );
+          }}
+          style={[styles.iconBtn, (messages.length === 0 || streaming) && styles.iconBtnOff]}
+          disabled={messages.length === 0 || streaming}
+          accessibilityRole="button"
+          accessibilityLabel="Start a new chat"
+        >
+          <MaterialIcons name="add-comment" size={20} color={Colors.onSurface} />
+        </Pressable>
 
         <Pressable
           onPress={() => setLangOpen((v) => !v)}
@@ -567,6 +588,7 @@ const styles = StyleSheet.create({
   },
   micActive: { backgroundColor: Colors.error },
 
+  iconBtnOff: { opacity: 0.38 },
   langChip: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
     paddingHorizontal: Spacing.md, height: 36, borderRadius: Shape.full,

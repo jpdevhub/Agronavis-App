@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { Session, User } from '@supabase/supabase-js';
 import { clearNotificationTray } from '@/utils/notificationTray';
+import { clearThread } from '@/features/sahayak/chatHistory';
+import { clearContextSnapshot } from '@/features/sahayak/contextCache';
 import { clearLanding } from '@/features/auth/landingCache';
 import { supabase } from '@/utils/supabase';
 
@@ -37,7 +39,14 @@ export const useAuthStore = create<AuthState & AuthActions>((set) => ({
     // Forget where this farmer landed. Another account signing in on the same
     // handset must not be sent straight past onboarding on their behalf.
     const current = useAuthStore.getState().user?.id;
-    if (current) await clearLanding(current);
+    if (current) {
+      await clearLanding(current);
+      // The conversation is this farmer's, and it is full of their fields and
+      // their problems. Scoping the key stops another account reading it;
+      // signing out is when it should stop existing.
+      clearThread(current);
+      await clearContextSnapshot(current);
+    }
 
     // The next person to hold this handset must not read the last one's
     // alerts out of the shade.

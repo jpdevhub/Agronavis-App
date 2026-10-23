@@ -13,6 +13,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useFarmStore } from '@/store/useFarmStore';
 import { useScreenContext } from './useScreenContext';
 import { clearThread, loadThread, saveThread } from './chatHistory';
+import { asksAboutPrices, mandiFacts } from './mandiFacts';
 import { buildSahayakPrompt, contextSummary } from './farmerContext';
 import {
   loadContextSnapshot,
@@ -73,17 +74,24 @@ export function useSahayak() {
 
   const [language, setLanguage] = useState<string | null>(null);
   const [messages, setMessages] = useState<SahayakMessage[]>([]);
+  const signedInAs = useAuthStore((s) => s.user?.id) ?? null;
 
-  // Bring back this afternoon's conversation, if there is one.
+  // Bring back this afternoon's conversation — this farmer's, and only once
+  // we know who that is. Reading before the session hydrates would show the
+  // thread of whoever used the handset last.
   useEffect(() => {
+    if (!signedInAs) {
+      setMessages([]);
+      return;
+    }
     let cancelled = false;
-    loadThread().then((saved) => {
+    loadThread(signedInAs).then((saved) => {
       if (!cancelled && saved.length > 0) setMessages(saved);
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [signedInAs]);
 
   const [streaming, setStreaming] = useState(false);
   // Written as it changes, but never mid-answer: a half-streamed reply
@@ -91,13 +99,14 @@ export function useSahayak() {
   useEffect(() => {
     if (streaming) return;
     if (messages.length === 0) return;
-    saveThread(messages);
-  }, [messages, streaming]);
+    if (!signedInAs) return;
+    saveThread(signedInAs, messages);
+  }, [messages, streaming, signedInAs]);
   const streamRef = useRef('');
 
   const activeFarmId = useFarmStore((s) => s.activeFarmId);
   const activeFieldId = useFarmStore((s) => s.activeFieldId);
-  const userId = useAuthStore((s) => s.user?.id) ?? null;
+  const userId = signedInAs;
   const userIdForCache = userId ?? undefined;
   /**
    * The farm details, read from what the app already has — never fetched.
@@ -177,6 +186,11 @@ export function useSahayak() {
     }),
     [usingSnapshot, snapshot, live, pathname],
   );
+  // Read inside `send` without making it a dependency: rebuilding that
+  // callback mid-answer would strand the stream handlers it closed over.
+  const contextRef = useRef(context);
+  contextRef.current = context;
+
   const replyLanguage = language ?? context.farmer?.language ?? 'en';
   const systemPrompt = useMemo(
     () => buildSahayakPrompt({ ...context, replyLanguage }),
@@ -304,7 +318,31 @@ export function useSahayak() {
         .map((m) => `${m.role === 'user' ? 'Farmer' : 'Sahayak'}: ${m.text}`)
         .join('\n');
 
-      const prompt = [systemPrompt, '', history, `Farmer: ${question}`, 'Sahayak:']
+      /**
+       * Rates are looked up here, not at open.
+       *
+       * Everything else Sahayak knows comes from cache so the screen appears
+       * instantly. A price question is the one case worth a request, because
+       * a model asked what wheat is selling for will answer with a number
+       * whether or not it knows one — and a farmer who carts a crop to market
+       * on an invented price has lost a day and the cartage.
+       */
+      let priceFacts: string[] = [];
+      if (asksAboutPrices(question)) {
+        priceFacts = await mandiFacts(queryClient, {
+          state: contextRef.current?.farmer?.state,
+          district: contextRef.current?.farmer?.district,
+        });
+      }
+
+      const prompt = [
+        systemPrompt,
+        ...priceFacts,
+        '',
+        history,
+        `Farmer: ${question}`,
+        'Sahayak:',
+      ]
         .filter(Boolean)
         .join('\n');
 
@@ -421,7 +459,7 @@ export function useSahayak() {
         finish();
       }
     },
-    [messages, streaming, systemPrompt],
+    [messages, streaming, systemPrompt, queryClient],
   );
 
   const stop = useCallback(() => {
@@ -437,7 +475,8 @@ export function useSahayak() {
     /** Starts a new conversation and forgets the stored one. */
     reset: () => {
       setMessages([]);
-      clearThread();
+      setError(null);
+      if (signedInAs) clearThread(signedInAs);
     },
     error,
     modelPath,

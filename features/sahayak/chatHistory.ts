@@ -12,8 +12,14 @@ import type { SahayakMessage } from './useSahayak';
  * problem, and a chat from three weeks ago surfacing under today's weather
  * would be worse than nothing. Six hours covers a working day; after that it
  * starts clean.
+ *
+ * Keyed by farmer, like the context snapshot beside it. One key for everyone
+ * meant that signing out and signing in as someone else opened the previous
+ * farmer's conversation — their fields, their yields, their questions — on a
+ * shared handset. Signing out deletes the thread outright; the key only stops
+ * it being read in the meantime.
  */
-const KEY = 'agronavis.sahayak.thread';
+const key = (userId: string): string => `agronavis.sahayak.thread:${userId}`;
 const LIFETIME_MS = 6 * 60 * 60_000;
 
 /** Enough to carry a conversation, not enough to fill the device. */
@@ -24,15 +30,15 @@ interface Stored {
   messages: SahayakMessage[];
 }
 
-export async function loadThread(): Promise<SahayakMessage[]> {
+export async function loadThread(userId: string): Promise<SahayakMessage[]> {
   try {
-    const raw = await AsyncStorage.getItem(KEY);
+    const raw = await AsyncStorage.getItem(key(userId));
     if (!raw) return [];
 
     const parsed = JSON.parse(raw) as Stored;
     if (!parsed?.savedAt || !Array.isArray(parsed.messages)) return [];
     if (Date.now() - parsed.savedAt > LIFETIME_MS) {
-      void AsyncStorage.removeItem(KEY).catch(() => {});
+      void AsyncStorage.removeItem(key(userId)).catch(() => {});
       return [];
     }
 
@@ -43,15 +49,15 @@ export async function loadThread(): Promise<SahayakMessage[]> {
   }
 }
 
-export function saveThread(messages: SahayakMessage[]): void {
+export function saveThread(userId: string, messages: SahayakMessage[]): void {
   const recent = messages.slice(-MAX_MESSAGES);
   const payload: Stored = { savedAt: Date.now(), messages: recent };
-  void AsyncStorage.setItem(KEY, JSON.stringify(payload)).catch(() => {
+  void AsyncStorage.setItem(key(userId), JSON.stringify(payload)).catch(() => {
     // A thread that cannot be written is only a thread that will not come
     // back; nothing about the conversation in progress depends on it.
   });
 }
 
-export function clearThread(): void {
-  void AsyncStorage.removeItem(KEY).catch(() => {});
+export function clearThread(userId: string): void {
+  void AsyncStorage.removeItem(key(userId)).catch(() => {});
 }
