@@ -69,10 +69,16 @@ export const notificationsService = {
     return count ?? 0;
   },
 
+  /**
+   * `read` is a generated column — the database computes it from `read_at`
+   * and refuses any write to it ("column \"read\" can only be updated to
+   * DEFAULT"). Both of these marked `read` directly, so every attempt to read
+   * an alert answered 500 and the badge never cleared.
+   */
   async markRead(farmerId: string, id: string): Promise<AppNotification> {
     const { data, error } = await db
       .from('notifications')
-      .update({ read: true })
+      .update({ read_at: new Date().toISOString() })
       .eq('id', id)
       .eq('farmer_id', farmerId)
       .select('*')
@@ -85,9 +91,11 @@ export const notificationsService = {
   async markAllRead(farmerId: string): Promise<number> {
     const { data, error } = await db
       .from('notifications')
-      .update({ read: true })
+      .update({ read_at: new Date().toISOString() })
       .eq('farmer_id', farmerId)
-      .eq('read', false)
+      // Only the unread ones, so re-reading the screen does not keep moving
+      // the timestamp on alerts that were read days ago.
+      .is('read_at', null)
       .select('id');
     if (error) throw fromPostgrest(error, 'Update notifications');
     return (data ?? []).length;

@@ -23,7 +23,7 @@ let chains: Record<string, Chain>;
 
 function makeChain(): Chain {
   const chain = {} as Chain;
-  for (const m of ['select', 'insert', 'update', 'delete', 'eq', 'order', 'limit', 'maybeSingle', 'single']) {
+  for (const m of ['select', 'insert', 'update', 'delete', 'eq', 'is', 'order', 'limit', 'maybeSingle', 'single']) {
     chain[m] = jest.fn(() => chain);
   }
   // Builders are thenables: `update().eq()` is awaited directly, while
@@ -192,5 +192,40 @@ describe('what Expo actually said', () => {
 
     expect(chainFor('farmers').update).not.toHaveBeenCalled();
     expect(recorded()?.delivery).toBe('failed');
+  });
+});
+
+describe('marking alerts read', () => {
+  /**
+   * `read` is a generated column. Postgres rejects any write to it with
+   * "column \"read\" can only be updated to DEFAULT", so marking an alert
+   * read answered 500 every time and the unread badge never cleared. The
+   * timestamp is the fact; the boolean is the database's shorthand for it.
+   */
+  it('writes read_at, never read', async () => {
+    chainFor('notifications').maybeSingle.mockResolvedValue({
+      data: { id: 'n1', farmer_id: FARMER, title: 't', body: 'b', type: 'general', severity: 'low', data: {}, read: true, read_at: new Date().toISOString(), created_at: new Date().toISOString() },
+      error: null,
+    });
+
+    await notificationsService.markRead(FARMER, 'n1');
+
+    const patch = chainFor('notifications').update.mock.calls[0]?.[0];
+    expect(patch).not.toHaveProperty('read');
+    expect(typeof patch.read_at).toBe('string');
+  });
+
+  it('marks all read by timestamp, touching only the unread ones', async () => {
+    chainFor('notifications').select.mockResolvedValueOnce({ data: [{ id: 'a' }, { id: 'b' }], error: null });
+
+    const updated = await notificationsService.markAllRead(FARMER);
+
+    const patch = chainFor('notifications').update.mock.calls[0]?.[0];
+    expect(patch).not.toHaveProperty('read');
+    expect(typeof patch.read_at).toBe('string');
+    // Re-reading the screen must not keep moving the timestamp on alerts
+    // that were read days ago.
+    expect(chainFor('notifications').is).toHaveBeenCalledWith('read_at', null);
+    expect(updated).toBe(2);
   });
 });
