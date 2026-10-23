@@ -59,9 +59,16 @@ export interface FarmerProfile {
  * anything else would be a switch wired to nothing. Muting one stops the push;
  * the alert is still recorded and still appears in the alerts list, because
  * "do not buzz my phone at night" is not "never tell me".
+ *
+ * A type and not a const array on purpose. This package points `main` at its
+ * TypeScript source, which works only because everything that reads it uses
+ * `import type` and disappears at compile time. The first runtime value
+ * exported from here made the built server actually load `src/index.ts`,
+ * where Node could not resolve the extensionless relative imports, and the
+ * API would not boot. The list itself lives beside each thing that needs it
+ * at runtime, checked against this union.
  */
-export const ALERT_CATEGORIES = ['weather_alert', 'irrigation', 'pest_control'] as const;
-export type AlertCategory = (typeof ALERT_CATEGORIES)[number];
+export type AlertCategory = 'weather_alert' | 'irrigation' | 'pest_control';
 export type AlertPreferences = Record<AlertCategory, boolean>;
 
 export interface UpdateFarmerPayload {

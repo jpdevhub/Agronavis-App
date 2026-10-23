@@ -12,7 +12,7 @@ export {};
  */
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { ALERT_CATEGORIES } = require('@agronavis/shared-types');
+const { ALERT_CATEGORIES } = require('../../src/modules/notifications/alert-categories');
 
 jest.mock('../../src/config/env', () => ({ env: { SUPABASE_URL: 'http://x', SUPABASE_SERVICE_ROLE_KEY: 'k' } }));
 jest.mock('../../src/config/supabase', () => ({ db: { from: jest.fn() } }));

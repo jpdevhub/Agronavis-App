@@ -1,4 +1,4 @@
-import { ALERT_CATEGORIES } from '@agronavis/shared-types';
+import { ALERT_CATEGORIES } from '../notifications/alert-categories';
 import type { AlertPreferences, FarmerProfile, FarmerRow, UpdateFarmerPayload } from '@agronavis/shared-types';
 import { db } from '../../config/supabase';
 import { logger } from '../../config/logger';

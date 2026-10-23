@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ALERT_CATEGORIES } from '@agronavis/shared-types';
+import { ALERT_CATEGORIES } from '../notifications/alert-categories';
 
 export const languageSchema = z.enum(['en', 'hi', 'mr', 'pa', 'gu', 'te', 'kn']);
 export const irrigationSchema = z.enum(['drip', 'sprinkler', 'flood', 'furrow', 'rainfed']);

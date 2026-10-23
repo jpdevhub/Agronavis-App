@@ -60,3 +60,32 @@ jobs:
 
       - name: Build
         run: npm run build --workspace=@agronavis/backend
+
+      # Compiling is not the same as starting. A runtime import of a package
+      # whose `main` points at TypeScript source compiled perfectly and then
+      # would not boot, and this job reported success while the deploy it
+      # gated crash-looped. Loading the built entrypoint is the cheapest
+      # check that the thing we ship actually runs.
+      - name: Boot the built server
+        env:
+          NODE_ENV: production
+          PORT: 4599
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+          SUPABASE_JWT_SECRET: ci-placeholder-secret-at-least-32-chars
+          TOTP_ENCRYPTION_KEY: ci-placeholder-key-at-least-32-characters
+        run: |
+          node backend/dist/server.js & SERVER=$!
+          for i in $(seq 1 20); do
+            if curl -sf "http://localhost:4599/health" >/dev/null; then
+              echo "server answered /health"
+              kill $SERVER
+              exit 0
+            fi
+            # If it died, say so now rather than waiting out the loop.
+            kill -0 $SERVER 2>/dev/null || { echo "server exited during boot"; wait $SERVER; exit 1; }
+            sleep 1
+          done
+          echo "server never answered /health"
+          kill $SERVER 2>/dev/null
+          exit 1

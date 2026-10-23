@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ALERT_CATEGORIES } from '@agronavis/shared-types';
+import { ALERT_CATEGORIES } from './alert-categories';
 import type { AlertCategory, AppNotification, Json, NotificationRow } from '@agronavis/shared-types';
 import { readAlertPreferences } from '../farmers/farmers.service';
 import { logger } from '../../config/logger';
