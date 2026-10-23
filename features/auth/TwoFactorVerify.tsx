@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import { Colors, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
@@ -13,6 +14,7 @@ interface TwoFactorVerifyProps {
 }
 
 export function TwoFactorVerify({ onVerified, onCancel }: TwoFactorVerifyProps) {
+  const insets = useSafeAreaInsets();
   const [useBackup, setUseBackup] = useState(false);
   const [backupCode, setBackupCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +32,13 @@ export function TwoFactorVerify({ onVerified, onCancel }: TwoFactorVerifyProps) 
   });
 
   return (
-    <View style={styles.container}>
+    // A fixed, centred View meant that on a short screen with the keypad up
+    // the Verify button sat below the fold with no way to reach it.
+    <ScrollView
+      contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + Spacing.xl }]}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.hero}>
         <MaterialIcons name="shield" size={28} color={Colors.onPrimaryContainer} />
       </View>
@@ -90,13 +98,13 @@ export function TwoFactorVerify({ onVerified, onCancel }: TwoFactorVerifyProps) 
       />
 
       {onCancel ? <Button label="Cancel" variant="text" onPress={onCancel} /> : null}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: Spacing.xl,
     gap: Spacing.lg,
     backgroundColor: Colors.surface,

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ALERT_CATEGORIES } from '@agronavis/shared-types';
 
 export const languageSchema = z.enum(['en', 'hi', 'mr', 'pa', 'gu', 'te', 'kn']);
 export const irrigationSchema = z.enum(['drip', 'sprinkler', 'flood', 'furrow', 'rainfed']);
@@ -34,6 +35,14 @@ export const updateFarmerSchema = z
     soilType: soilSchema.nullable(),
     yearsOfExperience: z.number().int().min(0).max(100).nullable(),
     onboardingComplete: z.boolean(),
+    // Every category must be stated, so a partial write cannot leave a
+    // toggle in a state neither the phone nor the server agrees on.
+    alertPreferences: z.object(
+      Object.fromEntries(ALERT_CATEGORIES.map((c) => [c, z.boolean()])) as Record<
+        (typeof ALERT_CATEGORIES)[number],
+        z.ZodBoolean
+      >,
+    ),
   })
   .partial();
 

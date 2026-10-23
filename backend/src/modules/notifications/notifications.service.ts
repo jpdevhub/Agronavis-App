@@ -1,10 +1,15 @@
 import axios from 'axios';
-import type { AppNotification, Json, NotificationRow } from '@agronavis/shared-types';
+import { ALERT_CATEGORIES } from '@agronavis/shared-types';
+import type { AlertCategory, AppNotification, Json, NotificationRow } from '@agronavis/shared-types';
+import { readAlertPreferences } from '../farmers/farmers.service';
 import { logger } from '../../config/logger';
 import { db } from '../../config/supabase';
 import { fromPostgrest, notFound } from '../../shared/errors';
 
 const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
+
+const isAlertCategory = (type: string): type is AlertCategory =>
+  (ALERT_CATEGORIES as readonly string[]).includes(type);
 
 function toNotification(row: NotificationRow): AppNotification {
   return {
@@ -142,9 +147,17 @@ export const notificationsService = {
 
     const { data: farmer } = await db
       .from('farmers')
-      .select('expo_push_token')
+      .select('expo_push_token, profile_settings')
       .eq('id', farmerId)
       .maybeSingle();
+
+    // A muted category is still written to the alerts list — the farmer asked
+    // not to be buzzed, not to be kept in the dark.
+    const type = payload.type ?? 'general';
+    if (isAlertCategory(type) && !readAlertPreferences(farmer?.profile_settings)[type]) {
+      await settle('skipped', 'Muted by the farmer');
+      return toNotification(row);
+    }
 
     if (!farmer?.expo_push_token) {
       await settle('skipped', 'No device registered');

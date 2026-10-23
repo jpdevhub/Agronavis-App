@@ -4,6 +4,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   StatusBar, Image, TextInput, Modal, KeyboardAvoidingView, Platform, RefreshControl,
 } from 'react-native';
+import { dismissKeyboard } from '@/utils/keyboard';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarHeight } from '@/hooks/useTabBarHeight';
@@ -39,6 +40,7 @@ function ReplyPanel({ postId, onClose }: { postId: string; onClose: () => void }
 
   async function submit() {
     if (!text.trim()) return;
+    await dismissKeyboard();
     try { await addReply.mutateAsync(text.trim()); setText(''); }
     catch { showAlert('Could not post', 'Your reply was not sent. Try again.'); }
   }
@@ -159,6 +161,7 @@ function CreatePostModal({ visible, onClose }: { visible: boolean; onClose: () =
 
   async function submit() {
     if (!title.trim() || !content.trim() || !user) return;
+    await dismissKeyboard();
     setUploading(true);
     try {
       let uploadedUrl: string | undefined;

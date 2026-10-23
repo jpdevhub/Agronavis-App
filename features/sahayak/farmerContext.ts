@@ -3,7 +3,7 @@ import { isPlausibleField } from '@/constants/field';
 import { platformSection, screenInfoFor } from './screenContext';
 
 const LANGUAGE_NAME: Record<string, string> = {
-  en: 'English', hi: 'Hindi', mr: 'Marathi', pa: 'Punjabi',
+  en: 'English', hi: 'Hindi', bn: 'Bengali', mr: 'Marathi', pa: 'Punjabi',
   gu: 'Gujarati', te: 'Telugu', kn: 'Kannada',
 };
 

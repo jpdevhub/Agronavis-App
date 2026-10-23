@@ -1,4 +1,5 @@
-import type { FarmerProfile, FarmerRow, UpdateFarmerPayload } from '@agronavis/shared-types';
+import { ALERT_CATEGORIES } from '@agronavis/shared-types';
+import type { AlertPreferences, FarmerProfile, FarmerRow, UpdateFarmerPayload } from '@agronavis/shared-types';
 import { db } from '../../config/supabase';
 import { notificationsService } from '../notifications/notifications.service';
 import { fromPostgrest, notFound } from '../../shared/errors';
@@ -7,7 +8,7 @@ import { fromPostgrest, notFound } from '../../shared/errors';
 const PROFILE_COLUMNS =
   'id, email, full_name, phone, language, state, district, village, avatar_url, ' +
   'land_holding_acres, primary_crops, irrigation_type, soil_type, onboarding_complete, ' +
-  'two_factor_enabled, years_of_experience, created_at';
+  'two_factor_enabled, years_of_experience, profile_settings, created_at';
 
 type ProfileRow = Pick<
   FarmerRow,
@@ -27,8 +28,26 @@ type ProfileRow = Pick<
   | 'onboarding_complete'
   | 'two_factor_enabled'
   | 'years_of_experience'
+  | 'profile_settings'
   | 'created_at'
 >;
+
+/**
+ * Alert categories a farmer has not muted.
+ *
+ * Stored inside the existing `profile_settings` jsonb rather than in new
+ * columns: this is a handful of booleans that will grow as the jobs learn to
+ * produce more kinds of advisory, and a column per category would mean a
+ * migration each time.
+ *
+ * Absent means on. A farmer who has never opened the setting expects alerts.
+ */
+export function readAlertPreferences(settings: unknown): AlertPreferences {
+  const stored = (settings as { alerts?: Record<string, unknown> } | null)?.alerts ?? {};
+  return Object.fromEntries(
+    ALERT_CATEGORIES.map((c) => [c, stored[c] !== false]),
+  ) as AlertPreferences;
+}
 
 export function toFarmerProfile(row: ProfileRow): FarmerProfile {
   return {
@@ -48,6 +67,7 @@ export function toFarmerProfile(row: ProfileRow): FarmerProfile {
     onboardingComplete: row.onboarding_complete,
     twoFactorEnabled: row.two_factor_enabled,
     yearsOfExperience: row.years_of_experience,
+    alertPreferences: readAlertPreferences(row.profile_settings),
     createdAt: row.created_at,
   };
 }
@@ -89,6 +109,18 @@ export const farmersService = {
     if (payload.soilType !== undefined) patch.soil_type = payload.soilType;
     if (payload.yearsOfExperience !== undefined) patch.years_of_experience = payload.yearsOfExperience;
     if (payload.onboardingComplete !== undefined) patch.onboarding_complete = payload.onboardingComplete;
+
+    // Merged into whatever else profile_settings holds, so writing the alert
+    // choices cannot wipe a setting added later.
+    if (payload.alertPreferences !== undefined) {
+      const { data: current } = await db
+        .from('farmers')
+        .select('profile_settings')
+        .eq('id', farmerId)
+        .maybeSingle();
+      const existing = ((current?.profile_settings ?? {}) as Record<string, unknown>) ?? {};
+      patch.profile_settings = { ...existing, alerts: payload.alertPreferences } as never;
+    }
 
     if (Object.keys(patch).length === 0) {
       return this.getProfile(farmerId, null);
