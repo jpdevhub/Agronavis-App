@@ -61,32 +61,19 @@ jobs:
       - name: Build
         run: npm run build --workspace=@agronavis/backend
 
-      # Compiling is not the same as starting. A runtime import of a package
-      # whose `main` points at TypeScript source compiled perfectly and then
-      # would not boot, and this job reported success while the deploy it
-      # gated crash-looped. Loading the built entrypoint is the cheapest
-      # check that the thing we ship actually runs.
-      - name: Boot the built server
+      # Compiling is not the same as being loadable. A runtime import of a
+      # package whose `main` points at TypeScript source compiled perfectly
+      # and then would not boot, and this job reported success while the
+      # deploy it gated crash-looped.
+      #
+      # This loads the whole module graph — every route, service and schema —
+      # which is where that import sat. It deliberately stops short of
+      # `server.js`, which opens a database connection: whether Supabase is
+      # reachable from a CI runner says nothing about whether the build runs.
+      - name: Load the built server
         env:
           NODE_ENV: production
-          PORT: 4599
           SUPABASE_URL: https://example.supabase.co
-          # Only the shape is checked at boot; nothing is ever called.
+          # Only the shape is checked on load; nothing is ever called with it.
           SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key-not-a-real-secret
-          SUPABASE_JWT_SECRET: ci-placeholder-secret-at-least-32-chars
-          TOTP_ENCRYPTION_KEY: ci-placeholder-key-at-least-32-characters
-        run: |
-          node backend/dist/server.js & SERVER=$!
-          for i in $(seq 1 20); do
-            if curl -sf "http://localhost:4599/health" >/dev/null; then
-              echo "server answered /health"
-              kill $SERVER
-              exit 0
-            fi
-            # If it died, say so now rather than waiting out the loop.
-            kill -0 $SERVER 2>/dev/null || { echo "server exited during boot"; wait $SERVER; exit 1; }
-            sleep 1
-          done
-          echo "server never answered /health"
-          kill $SERVER 2>/dev/null
-          exit 1
+        run: node -e "require('./backend/dist/app.js'); console.log('built server loads')"
