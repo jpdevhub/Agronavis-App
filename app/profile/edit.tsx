@@ -4,6 +4,7 @@ import {
   StyleSheet, StatusBar, ScrollView,
   Image, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { dismissKeyboard } from '@/utils/keyboard';
 import { useRouter } from 'expo-router';
 import { useGoBack } from '@/hooks/useGoBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,7 +13,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors, Radii } from '@/constants/theme';
+import { Colors, Radii, Spacing } from '@/constants/theme';
 import { showAlert } from '@/utils/alert';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFarmer, useUpdateFarmer } from '@/hooks/useFarmer';
@@ -88,6 +89,7 @@ export default function EditProfileScreen() {
   };
 
   const onSubmit = async (data: FormFields) => {
+    await dismissKeyboard();
     try {
       await updateFarmer.mutateAsync({
         fullName: data.full_name,
@@ -113,7 +115,7 @@ export default function EditProfileScreen() {
         <View style={styles.iconBtn} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + Spacing.xl }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={styles.avatarWrap} onPress={pickAndUpload} activeOpacity={0.8}>
           {avatarUri ? (
             <Image source={{ uri: avatarUri }} style={styles.avatar} />

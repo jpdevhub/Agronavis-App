@@ -47,10 +47,25 @@ export interface FarmerProfile {
   onboardingComplete: boolean;
   twoFactorEnabled: boolean;
   yearsOfExperience: number | null;
+  /** Which alerts may reach the handset. Every category on by default. */
+  alertPreferences: AlertPreferences;
   createdAt: string;
 }
 
+/**
+ * Which kinds of alert may reach the handset.
+ *
+ * These are the advisory categories the jobs actually produce — a toggle for
+ * anything else would be a switch wired to nothing. Muting one stops the push;
+ * the alert is still recorded and still appears in the alerts list, because
+ * "do not buzz my phone at night" is not "never tell me".
+ */
+export const ALERT_CATEGORIES = ['weather_alert', 'irrigation', 'pest_control'] as const;
+export type AlertCategory = (typeof ALERT_CATEGORIES)[number];
+export type AlertPreferences = Record<AlertCategory, boolean>;
+
 export interface UpdateFarmerPayload {
+  alertPreferences?: AlertPreferences;
   fullName?: string;
   phone?: string | null;
   language?: Language;

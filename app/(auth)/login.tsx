@@ -4,13 +4,15 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform,
   ScrollView, StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { dismissKeyboard } from '@/utils/keyboard';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { MaterialIcons } from '@expo/vector-icons';
 import { warmApi } from '@/services/warmup';
-import { Colors, Radii } from '@/constants/theme';
+import { Colors, Radii, Spacing } from '@/constants/theme';
 import { supabase } from '@/utils/supabase';
 import { Loader } from '@/components/ui';
 
@@ -22,6 +24,7 @@ const loginSchema = z.object({
 type LoginFields = z.infer<typeof loginSchema>;
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   // The instance sleeps after fifteen minutes. Waking it now means the
@@ -42,6 +45,9 @@ export default function LoginScreen() {
 
   const onSubmit = async (data: LoginFields) => {
     setAuthError(null);
+    // Put the keyboard away before the root layout swaps in the loading
+    // screen, or the spinner lands in the half of the screen left over.
+    await dismissKeyboard();
     const { error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
@@ -64,7 +70,7 @@ export default function LoginScreen() {
     >
       <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + Spacing.xl }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

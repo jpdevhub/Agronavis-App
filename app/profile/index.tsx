@@ -85,7 +85,10 @@ export default function ProfileScreen() {
           <Loader size={48} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + Spacing.xl }]}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.hero}>
             <View style={styles.avatarWrap}>
               {farmer?.avatarUrl ? (

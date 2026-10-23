@@ -3,13 +3,15 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView,
   StatusBar, } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { dismissKeyboard } from '@/utils/keyboard';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { MaterialIcons } from '@expo/vector-icons';
 import { warmApi } from '@/services/warmup';
-import { Colors, Radii } from '@/constants/theme';
+import { Colors, Radii, Spacing } from '@/constants/theme';
 import { showAlert } from '@/utils/alert';
 import { supabase } from '@/utils/supabase';
 import { Loader } from '@/components/ui';
@@ -32,6 +34,7 @@ const registerSchema = z.object({
 type RegisterFields = z.infer<typeof registerSchema>;
 
 export default function RegisterScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   // The instance sleeps after fifteen minutes. Waking it now means the
@@ -54,6 +57,7 @@ export default function RegisterScreen() {
   const agreedValue = watch('agreed');
 
   const onSubmit = async (data: RegisterFields) => {
+    await dismissKeyboard();
     const { error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -72,7 +76,7 @@ export default function RegisterScreen() {
     >
       <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + Spacing.xl }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

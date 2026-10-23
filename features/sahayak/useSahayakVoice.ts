@@ -9,6 +9,7 @@ import {
 const LOCALE: Record<string, string> = {
   en: 'en-IN',
   hi: 'hi-IN',
+  bn: 'bn-IN',
   mr: 'mr-IN',
   pa: 'pa-IN',
   gu: 'gu-IN',

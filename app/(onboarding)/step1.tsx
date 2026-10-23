@@ -3,10 +3,12 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   StatusBar, Image,
   KeyboardAvoidingView, Platform, ScrollView, } from 'react-native';
+import { dismissKeyboard } from '@/utils/keyboard';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors, Radii } from '@/constants/theme';
+import { Colors, Radii, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { showAlert } from '@/utils/alert';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
@@ -15,6 +17,9 @@ import { Loader } from '@/components/ui';
 
 export default function OnboardingStep1() {
   const router = useRouter();
+  // Android draws edge to edge, so the status bar sits over the header and the
+  // gesture bar over the footer unless both are told how much room to leave.
+  const insets = useSafeAreaInsets();
   const user   = useAuthStore((s) => s.user);
   const { setProfile } = useOnboardingStore();
 
@@ -46,6 +51,7 @@ export default function OnboardingStep1() {
 
   async function handleNext() {
     if (!canContinue || !user) return;
+    await dismissKeyboard();
     setSaving(true);
 
     try {
@@ -82,7 +88,7 @@ export default function OnboardingStep1() {
     >
       <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
         <Text style={styles.brand}>Agronavis</Text>
         <View style={styles.stepPill}>
           <Text style={styles.stepText}>Step 1 of 3</Text>
@@ -153,7 +159,7 @@ export default function OnboardingStep1() {
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.lg }]}>
         <TouchableOpacity
           onPress={handleNext}
           disabled={!canContinue || saving}
@@ -182,18 +188,24 @@ const styles = StyleSheet.create({
   root:          { flex: 1, backgroundColor: Colors.surface },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 24, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 12,
+    paddingHorizontal: Spacing.xl, paddingBottom: Spacing.md,
   },
-  brand:         { fontSize: 22, fontWeight: '900', color: Colors.primary, letterSpacing: -0.5 },
+  brand:         { ...TypeEmphasized.titleLarge, color: Colors.primary },
   stepPill: {
     backgroundColor: Colors.primaryFixed, borderRadius: Radii.full,
-    paddingHorizontal: 12, paddingVertical: 4,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs,
   },
-  stepText:      { fontSize: 12, fontWeight: '700', color: Colors.primary },
-  progressTrack: { height: 6, backgroundColor: Colors.surfaceContainerHigh, marginHorizontal: 24 },
+  stepText:      { ...TypeEmphasized.labelMedium, color: Colors.primary },
+  progressTrack: {
+    height: 6, backgroundColor: Colors.surfaceContainerHigh,
+    marginHorizontal: Spacing.xl, borderRadius: Shape.extraSmall,
+  },
   progressFill33:{ backgroundColor: Colors.primary, width: '33%', height: '100%', borderRadius: 3 },
 
-  scroll:        { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 24, gap: 16 },
+  scroll: {
+    paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xl, gap: Spacing.lg,
+  },
   avatarWrap:    { alignSelf: 'center', marginBottom: 4, position: 'relative' },
   avatarImg:     { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: Colors.primaryFixed },
   avatarPlaceholder: {
@@ -209,29 +221,33 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: '#fff',
   },
-  avatarHint:    { fontSize: 13, color: Colors.primary, fontWeight: '600', textAlign: 'center' },
-  title:         { fontSize: 26, fontWeight: '800', letterSpacing: -0.5, color: Colors.onSurface, textAlign: 'center' },
-  subtitle:      { fontSize: 14, color: Colors.onSurfaceVariant, lineHeight: 20, textAlign: 'center' },
+  avatarHint:    { ...Type.labelLarge, color: Colors.primary, textAlign: 'center' },
+  title:         { ...TypeEmphasized.headlineSmall, color: Colors.onSurface, textAlign: 'center' },
+  subtitle:      { ...Type.bodyMedium, color: Colors.onSurfaceVariant, textAlign: 'center' },
 
-  fieldGroup:    { gap: 6 },
-  label:         { fontSize: 13, fontWeight: '600', color: Colors.onSurface },
+  fieldGroup:    { gap: Spacing.xs + 2 },
+  label:         { ...Type.labelLarge, color: Colors.onSurface },
   inputWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 0,
     backgroundColor: Colors.surfaceContainerHighest,
-    borderRadius: Radii.lg, height: 52, paddingHorizontal: 14,
+    borderRadius: Radii.lg, minHeight: 52, paddingHorizontal: Spacing.lg,
   },
-  inputIcon:     { marginRight: 10 },
-  input:         { flex: 1, fontSize: 15, color: Colors.onSurface },
-  dialCode:      { fontSize: 15, fontWeight: '700', color: Colors.onSurface, marginRight: 10 },
-  divider:       { width: 1, height: 24, backgroundColor: Colors.outlineVariant, marginRight: 10 },
+  inputIcon:     { marginRight: Spacing.sm + 2 },
+  input:         { ...Type.bodyLarge, flex: 1, color: Colors.onSurface, paddingVertical: Spacing.sm },
+  dialCode:      { ...TypeEmphasized.bodyLarge, color: Colors.onSurface, marginRight: Spacing.sm + 2 },
+  divider:       { width: 1, height: 24, backgroundColor: Colors.outlineVariant, marginRight: Spacing.sm + 2 },
 
-  footer:        { padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24, gap: 8 },
+  footer: {
+    paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, gap: Spacing.sm,
+    borderTopWidth: 1, borderTopColor: Colors.outlineVariant,
+    backgroundColor: Colors.surface,
+  },
   nextDisabled:  { opacity: 0.6 },
   nextBtn: { backgroundColor: Colors.primary,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: 56, borderRadius: Radii.xxl, gap: 8,
+    minHeight: 56, borderRadius: Shape.full, gap: Spacing.sm,
   },
   nextBtnIdle: { backgroundColor: Colors.outlineVariant },
-  nextText:      { fontSize: 17, fontWeight: '700', color: '#fff' },
-  hint:          { fontSize: 13, color: Colors.outline, textAlign: 'center' },
+  nextText:      { ...TypeEmphasized.titleMedium, color: Colors.onPrimary },
+  hint:          { ...Type.bodySmall, color: Colors.onSurfaceVariant, textAlign: 'center' },
 });

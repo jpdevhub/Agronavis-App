@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useGoBack } from '@/hooks/useGoBack';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -24,6 +25,7 @@ import { useFarmStore } from '@/store/useFarmStore';
 type SaveState = { status: 'idle' | 'saving' | 'saved'; error?: string };
 
 export default function ScanResultScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const goBack = useGoBack('/(tabs)/scan');
   const { capture } = useLocalSearchParams<{ capture?: string }>();
@@ -132,7 +134,7 @@ export default function ScanResultScreen() {
     <View style={styles.root}>
       <StatusBar barStyle="light-content" />
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + Spacing.xl }]} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
           {imageUri ? (
             <Image source={{ uri: imageUri }} style={styles.photo} resizeMode="cover" />
@@ -376,7 +378,7 @@ function DiseaseCard({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
-  scroll: { paddingBottom: Spacing.xxxl },
+  scroll: { paddingBottom: Spacing.xl },
 
   hero: { height: 260, backgroundColor: Colors.surfaceContainerHigh },
   photo: { width: '100%', height: '100%' },

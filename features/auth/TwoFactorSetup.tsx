@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
@@ -16,6 +17,7 @@ interface TwoFactorSetupProps {
 }
 
 export function TwoFactorSetup({ onDone }: TwoFactorSetupProps) {
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>('intro');
   const [setup, setSetup] = useState<SetupPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export function TwoFactorSetup({ onDone }: TwoFactorSetupProps) {
 
   if (step === 'intro') {
     return (
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + Spacing.xl }]}>
         <View style={styles.hero}>
           <MaterialIcons name="lock" size={28} color={Colors.onPrimaryContainer} />
         </View>
@@ -62,7 +64,7 @@ export function TwoFactorSetup({ onDone }: TwoFactorSetupProps) {
 
   if (step === 'scan' && setup) {
     return (
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + Spacing.xl }]}>
         <Text style={styles.title}>Scan this code</Text>
         <Text style={styles.body}>
           Open Google Authenticator, Authy or any TOTP app and scan the square below.
@@ -92,7 +94,7 @@ export function TwoFactorSetup({ onDone }: TwoFactorSetupProps) {
 
   if (step === 'verify') {
     return (
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + Spacing.xl }]}>
         <Text style={styles.title}>Enter the six-digit code</Text>
         <Text style={styles.body}>Type the code your authenticator app is showing right now.</Text>
 
@@ -109,7 +111,7 @@ export function TwoFactorSetup({ onDone }: TwoFactorSetupProps) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + Spacing.xl }]}>
       <View style={[styles.hero, { backgroundColor: Colors.secondaryContainer }]}>
         <MaterialIcons name="check" size={28} color={Colors.onSecondaryContainer} />
       </View>
