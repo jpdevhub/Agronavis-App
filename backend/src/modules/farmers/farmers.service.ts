@@ -1,7 +1,7 @@
 import { ALERT_CATEGORIES } from '@agronavis/shared-types';
 import type { AlertPreferences, FarmerProfile, FarmerRow, UpdateFarmerPayload } from '@agronavis/shared-types';
 import { db } from '../../config/supabase';
-import { notificationsService } from '../notifications/notifications.service';
+import { logger } from '../../config/logger';
 import { fromPostgrest, notFound } from '../../shared/errors';
 
 /** Columns safe to read. Deliberately excludes the 2FA secret and backup codes. */
@@ -149,39 +149,20 @@ export const farmersService = {
   },
 
   /**
-   * Stores the device token, and on the first one ever stored for this farmer
-   * sends a welcome.
+   * Stores the device token for this handset.
    *
-   * Sent here rather than at sign-up because this is the moment the handset
-   * can actually receive something: permission has been granted and a token
-   * exists. It doubles as proof the whole path works — the farmer sees the
-   * alerts channel do something real before it ever has bad news for them.
+   * The welcome used to be sent from here, which tied every greeting to a push
+   * token — and a build without FCM credentials never gets one, so no farmer
+   * was ever welcomed and the alerts list stayed empty. Greetings belong to
+   * sign-in now; this call does the one job its name claims.
    */
   async registerPushToken(farmerId: string, token: string): Promise<void> {
-    const { data: before } = await db
-      .from('farmers')
-      .select('expo_push_token, full_name')
-      .eq('id', farmerId)
-      .maybeSingle();
-
     const { error } = await db
       .from('farmers')
       .update({ expo_push_token: token })
       .eq('id', farmerId);
     if (error) throw fromPostgrest(error, 'Save push token');
 
-    if (!before?.expo_push_token) {
-      const name = (before?.full_name ?? '').split(' ')[0];
-      await notificationsService.send(farmerId, {
-        title: name ? `Welcome to Agronavis, ${name}` : 'Welcome to Agronavis',
-        body: 'Map a field and you will start getting alerts here — when to irrigate, when disease weather is coming, and what your crop is worth.',
-        type: 'general',
-        // High so it is actually delivered: this is the one notification whose
-        // job is to prove the channel works, and an in-app-only welcome proves
-        // nothing.
-        severity: 'high',
-        data: { welcome: true },
-      });
-    }
+    logger.info('Push token registered', { farmerId });
   },
 };

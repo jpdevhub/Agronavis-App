@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import { notificationApi } from '@/services/endpoints';
 import { Platform } from 'react-native';
 import { createModelDownload, type DownloadProgress } from './download';
 import type { ModelVariant } from './modelFile';
@@ -126,6 +127,14 @@ export async function startDownload(variant: ModelVariant): Promise<void> {
       'Sahayak is ready',
       'The assistant finished downloading and can answer questions now.',
     );
+
+    // The banner is gone the moment it is swiped. Recording it puts the same
+    // message in the alerts list, which is where a farmer goes looking for
+    // something the app told them earlier.
+    void notificationApi.recordDeviceEvent('sahayak_ready').catch(() => {
+      // Offline, or signed out. The model is downloaded either way, and that
+      // is the thing that mattered.
+    });
   } catch (e) {
     const message = (e as Error).message ?? 'The download stopped.';
     publish({ running: false, error: message });

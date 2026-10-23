@@ -227,6 +227,13 @@ export const notificationApi = {
   list: () => api.getWithMeta<AppNotification[]>('/notifications'),
   markRead: (id: string) => api.patch<AppNotification>(`/notifications/${id}/read`),
   markAllRead: () => api.patch<{ updated: number }>('/notifications/read-all'),
+
+  /**
+   * Records something that happened on this handset so it joins the alerts
+   * list. The server owns the wording — this only names the event.
+   */
+  recordDeviceEvent: (event: 'sahayak_ready') =>
+    api.post<AppNotification>('/notifications/device-event', { event }),
 };
 
 export const storageApi = {

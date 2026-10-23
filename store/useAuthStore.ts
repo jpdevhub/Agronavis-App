@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Session, User } from '@supabase/supabase-js';
+import { clearNotificationTray } from '@/utils/notificationTray';
 import { clearLanding } from '@/features/auth/landingCache';
 import { supabase } from '@/utils/supabase';
 
@@ -37,6 +38,10 @@ export const useAuthStore = create<AuthState & AuthActions>((set) => ({
     // handset must not be sent straight past onboarding on their behalf.
     const current = useAuthStore.getState().user?.id;
     if (current) await clearLanding(current);
+
+    // The next person to hold this handset must not read the last one's
+    // alerts out of the shade.
+    await clearNotificationTray();
 
     await supabase.auth.signOut();
     set({ session: null, user: null });

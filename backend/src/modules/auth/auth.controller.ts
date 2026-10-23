@@ -3,6 +3,8 @@ import { farmerId } from '../../middleware/auth.middleware';
 import { badRequest, unauthorized } from '../../shared/errors';
 import { ok } from '../../shared/http';
 import { farmersService } from '../farmers/farmers.service';
+import { notificationsService } from '../notifications/notifications.service';
+import { logger } from '../../config/logger';
 import { totpService } from './totp.service';
 import {
   forgetTwoFactorStatus,
@@ -24,6 +26,12 @@ export const authController = {
       totpService.status(id),
     ]);
     ok(res, { user: { id, email: req.user?.email ?? null }, profile, twoFactor });
+
+    // After the response. A greeting is not worth a millisecond of the wait a
+    // farmer sits through on sign-in, and it must never be able to fail one.
+    void notificationsService.greet(id).catch((error: unknown) => {
+      logger.warn('Greeting not sent', { farmerId: id, error: (error as Error).message });
+    });
   },
 
   async setupTwoFactor(req: Request, res: Response) {

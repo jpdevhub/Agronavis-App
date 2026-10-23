@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { farmerId } from '../../middleware/auth.middleware';
 import { ok } from '../../shared/http';
-import { notificationsService } from './notifications.service';
+import { notificationsService, type DeviceEvent } from './notifications.service';
 
 export const notificationsController = {
   async list(req: Request, res: Response) {
@@ -19,5 +19,10 @@ export const notificationsController = {
 
   async markAllRead(req: Request, res: Response) {
     ok(res, { updated: await notificationsService.markAllRead(farmerId(req)) });
+  },
+
+  async deviceEvent(req: Request, res: Response) {
+    const { event } = req.body as { event: DeviceEvent };
+    ok(res, await notificationsService.recordDeviceEvent(farmerId(req), event));
   },
 };

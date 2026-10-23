@@ -8,6 +8,20 @@ import { fromPostgrest, notFound } from '../../shared/errors';
 
 const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 
+/** What the handset may report, and the words each one is recorded with. */
+export const DEVICE_EVENTS = {
+  sahayak_ready: {
+    title: 'Sahayak is ready',
+    body: 'The assistant finished downloading and now answers on your phone, with no connection needed.',
+    type: 'sahayak',
+  },
+} as const;
+
+export type DeviceEvent = keyof typeof DEVICE_EVENTS;
+
+/** Short enough to be a real absence, long enough not to nag a daily user. */
+const WELCOME_BACK_AFTER_DAYS = 3;
+
 const isAlertCategory = (type: string): type is AlertCategory =>
   (ALERT_CATEGORIES as readonly string[]).includes(type);
 
@@ -94,6 +108,81 @@ export const notificationsService = {
    * indistinguishable from one that was never sent unless something writes it
    * down.
    */
+  /**
+   * A greeting on the way in: the first ever, or one after an absence.
+   *
+   * This used to hang off `registerPushToken`, which fires only once a handset
+   * has a push token — and on a build with no FCM credentials no token is ever
+   * issued, so the welcome never happened and the alerts list stayed empty for
+   * everyone. The record a farmer reads in the app must not depend on whether
+   * a push could be delivered.
+   *
+   * `lastSeenAt` lives in `profile_settings` so this needs no column of its
+   * own. Returning sooner than the gap says nothing, so nothing is sent.
+   */
+  async greet(farmerId: string): Promise<void> {
+    const { data: farmer } = await db
+      .from('farmers')
+      .select('full_name, profile_settings')
+      .eq('id', farmerId)
+      .maybeSingle();
+    if (!farmer) return;
+
+    const settings = ((farmer.profile_settings ?? {}) as Record<string, unknown>) ?? {};
+    const lastSeen = typeof settings.lastSeenAt === 'string' ? Date.parse(settings.lastSeenAt) : NaN;
+    const now = Date.now();
+
+    // Stamped before the send, so a failure there cannot leave a farmer being
+    // greeted on every single launch.
+    await db
+      .from('farmers')
+      .update({ profile_settings: { ...settings, lastSeenAt: new Date(now).toISOString() } })
+      .eq('id', farmerId);
+
+    const name = String(farmer.full_name ?? '').trim().split(' ')[0];
+
+    if (Number.isNaN(lastSeen)) {
+      await this.send(farmerId, {
+        title: name ? `Welcome to Agronavis, ${name}` : 'Welcome to Agronavis',
+        body: 'Map a field and the alerts start here — when to irrigate, when disease weather is coming, and what is burning upwind.',
+        type: 'welcome',
+        severity: 'high',
+        data: { welcome: true },
+      });
+      return;
+    }
+
+    const daysAway = Math.floor((now - lastSeen) / 86_400_000);
+    if (daysAway < WELCOME_BACK_AFTER_DAYS) return;
+
+    await this.send(farmerId, {
+      title: name ? `Welcome back, ${name}` : 'Welcome back',
+      body: `It has been ${daysAway} days. Your fields have been watched while you were away — open the app to see what changed.`,
+      type: 'welcome',
+      severity: 'medium',
+      data: { welcomeBack: true, daysAway },
+    });
+  },
+
+  /**
+   * Records something that happened on the handset itself.
+   *
+   * The Sahayak download posts a local notification when it finishes, which
+   * the farmer sees once and then cannot find again — it was the one message
+   * the app showed that never reached the alerts list.
+   *
+   * The client names an event and nothing else. It does not get to choose the
+   * words, so this cannot become a way to write arbitrary text into a farmer's
+   * own alerts.
+   */
+  async recordDeviceEvent(farmerId: string, event: DeviceEvent): Promise<AppNotification | null> {
+    const copy = DEVICE_EVENTS[event];
+
+    // These are already on the screen in front of the farmer when they happen,
+    // so there is nothing to push — only something to keep.
+    return this.send(farmerId, { ...copy, severity: 'low' });
+  },
+
   async send(
     farmerId: string,
     payload: {
@@ -165,7 +254,7 @@ export const notificationsService = {
     }
 
     try {
-      await axios.post(
+      const response = await axios.post(
         EXPO_PUSH_ENDPOINT,
         {
           to: farmer.expo_push_token,
@@ -181,6 +270,25 @@ export const notificationsService = {
         },
         { timeout: 8_000, headers: { 'Content-Type': 'application/json' } },
       );
+
+      // Expo answers 200 and then reports the real outcome inside the ticket.
+      // Treating the status code as delivery recorded "sent" for every push
+      // that was actually rejected — DeviceNotRegistered, a bad FCM key — so
+      // the one table that could have revealed push was broken said it was
+      // working.
+      const ticket = (response.data as { data?: { status?: string; message?: string; details?: { error?: string } } })?.data;
+      if (ticket?.status === 'error') {
+        const reason = ticket.details?.error ?? ticket.message ?? 'Rejected by Expo';
+        logger.warn('Expo push rejected', { farmerId, reason });
+
+        // The token is dead: stop sending to it rather than failing forever.
+        if (ticket.details?.error === 'DeviceNotRegistered') {
+          await db.from('farmers').update({ expo_push_token: null }).eq('id', farmerId);
+        }
+        await settle('failed', String(reason).slice(0, 500));
+        return toNotification(row);
+      }
+
       await settle('sent');
     } catch (pushError) {
       const message = (pushError as Error).message;

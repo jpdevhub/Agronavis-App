@@ -8,13 +8,35 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    // Banner is the heads-up; list is what keeps it in the shade afterwards.
+    // An alert the farmer glances at and loses is worse than none, because
+    // they believe they have been told something and cannot go back to it.
     shouldShowBanner: true,
     shouldShowList: true,
   }),
 });
+
+/**
+ * Android 8 and later drop any notification naming a channel that does not
+ * exist. This runs at import rather than inside the signed-in effect, because
+ * the channel has to be there before anything can arrive — including the
+ * Sahayak download, which belongs to no account at all.
+ */
+async function ensureChannel(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  await Notifications.setNotificationChannelAsync('default', {
+    name: 'Farm alerts',
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#006C49',
+    // Without this the notification is announced and then gone; it has to be
+    // readable later from the shade.
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+  });
+}
+void ensureChannel();
 
 /**
  * Registers the device with Expo and hands the token to the API, and decides
@@ -38,20 +60,20 @@ export function usePushNotifications() {
         existing.granted || (await Notifications.requestPermissionsAsync()).granted;
       if (!granted || cancelled) return;
 
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-          name: 'Farm alerts',
-          importance: Notifications.AndroidImportance.HIGH,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#006C49',
-        });
-      }
+      await ensureChannel();
 
       try {
         const { data: token } = await Notifications.getExpoPushTokenAsync();
         if (!cancelled && token) await farmerApi.registerPushToken(token);
-      } catch {
-        // A missing projectId or a simulator: push is optional, carry on.
+      } catch (error) {
+        // This was swallowed by a bare catch, and so nobody noticed that no
+        // token had ever been registered for any farmer — which meant no push
+        // had ever been delivered to anyone. A simulator or a build with no
+        // FCM credentials both land here, and both are worth saying out loud.
+        console.warn(
+          '[push] no token — notifications will not reach this device:',
+          (error as Error)?.message,
+        );
       }
     })();
 
