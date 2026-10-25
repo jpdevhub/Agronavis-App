@@ -7,6 +7,7 @@ import {
   isNativeGemmaModuleLinked,
   isModelLoaded,
   loadModel,
+  unloadModel,
 } from '@/modules/gemma-llm/src';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -20,7 +21,28 @@ import {
   saveContextSnapshot,
   type CachedContext,
 } from './contextCache';
-import { deleteModel, detectModelVariant, probeModel, type ModelVariant } from './ondevice/modelFile';
+import {
+  deleteModel,
+  detectModelVariant,
+  deviceMemoryBytes,
+  probeModel,
+  type ModelVariant,
+} from './ondevice/modelFile';
+
+/**
+ * Phones where the model and the rest of the app do not both fit.
+ *
+ * E2B alone is about 2.6 GB on disk and more once running. On a 4–6 GB phone
+ * — most Redmis — keeping it resident after the farmer leaves Sahayak leaves
+ * the dashboard drawing in whatever is left, and MIUI/HyperOS kills a
+ * backgrounded app that large almost at once. There, the model is handed back
+ * when it is not on screen; reloading costs a short wait, not the whole app.
+ */
+const LOW_MEMORY_BYTES = 8 * 1024 * 1024 * 1024;
+const isLowMemoryPhone = (): boolean => {
+  const total = deviceMemoryBytes();
+  return total !== null && total < LOW_MEMORY_BYTES;
+};
 
 export type SahayakMessage = { id: string; role: 'user' | 'assistant'; text: string };
 
@@ -48,7 +70,7 @@ function readableFailure(error: Error): string {
   const message = error.message ?? '';
 
   if (/not loaded|load\(\) first/i.test(message)) {
-    return 'Sahayak is not running yet. It loads once after the app starts — try again in a moment.';
+    return 'Sahayak had to free memory and is starting again. Please ask once more.';
   }
   if (/not linked|not part of this build/i.test(message)) {
     return 'Sahayak is not available in this version of the app.';
@@ -257,11 +279,22 @@ export function useSahayak() {
    * returns to the foreground puts it back on "Ready to start" instead.
    */
   useEffect(() => {
+    const lowMemory = isLowMemoryPhone();
     const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'background' && lowMemory) {
+        unloadModel();
+        setStatus((current) => (current === 'loaded' ? 'ready' : current));
+        return;
+      }
       if (next !== 'active') return;
       setStatus((current) => (current === 'loaded' && !isModelLoaded() ? 'ready' : current));
     });
-    return () => sub.remove();
+    return () => {
+      sub.remove();
+      // Leaving the Sahayak screen on a small phone gives the memory back to
+      // the dashboard and the map.
+      if (lowMemory) unloadModel();
+    };
   }, []);
 
   const load = useCallback(async () => {
@@ -317,6 +350,37 @@ export function useSahayak() {
         .slice(-6)
         .map((m) => `${m.role === 'user' ? 'Farmer' : 'Sahayak'}: ${m.text}`)
         .join('\n');
+
+      /**
+       * Android may have taken the model back while the farmer was reading —
+       * MIUI does this far more readily than Samsung. Start it again here
+       * instead of answering "not running".
+       */
+      if (!isModelLoaded()) {
+        if (!modelPath) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === replyId ? { ...m, text: 'Sahayak needs to be downloaded first.' } : m,
+            ),
+          );
+          setStreaming(false);
+          return;
+        }
+        setStatus('loading');
+        try {
+          await loadModel(modelPath);
+          setStatus('loaded');
+        } catch (e) {
+          setStatus('ready');
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === replyId ? { ...m, text: readableFailure(e as Error) } : m,
+            ),
+          );
+          setStreaming(false);
+          return;
+        }
+      }
 
       /**
        * Rates are looked up here, not at open.
@@ -448,6 +512,8 @@ export function useSahayak() {
           );
         }
       } catch (e) {
+        // Released mid-answer: the next question reloads it.
+        if (/not loaded|load\(\) first/i.test((e as Error).message ?? '')) setStatus('ready');
         if (!settled) {
           setMessages((prev) =>
             prev.map((m) =>
@@ -459,7 +525,7 @@ export function useSahayak() {
         finish();
       }
     },
-    [messages, streaming, systemPrompt, queryClient],
+    [messages, streaming, systemPrompt, queryClient, modelPath],
   );
 
   const stop = useCallback(() => {

@@ -2,11 +2,11 @@ package expo.modules.gemma
 
 import android.content.ComponentCallbacks2
 import android.content.res.Configuration
-import android.util.Base64
 import android.util.Log
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
+import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import expo.modules.kotlin.modules.Module
@@ -17,6 +17,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 
 private fun normalizeModelPath(modelPath: String): String {
@@ -26,28 +28,126 @@ private fun normalizeModelPath(modelPath: String): String {
     return java.net.URLDecoder.decode(trimmed.substring(7), Charsets.UTF_8)
 }
 
+/**
+ * Inference threads, leaving cores free for the UI.
+ *
+ * The native default takes every core. On an eight-core phone with four slow
+ * cores that starves the main thread while an answer is being written, and
+ * Android shows "isn't responding" even though nothing is stuck — the UI
+ * thread simply never got scheduled. Half the cores, between 2 and 4, keeps
+ * generation speed close to the default and the screen responsive.
+ */
+private fun inferenceThreads(): Int =
+    (Runtime.getRuntime().availableProcessors() / 2).coerceIn(2, 4)
+
+/**
+ * The whole turn: prompt plus answer. JS sends the system prompt and the last
+ * few messages every time, so a turn never needs more than this, and a smaller
+ * KV cache is hundreds of megabytes less resident memory.
+ */
+private const val MAX_TOKENS = 4096
+
 class GemmaLlmModule : Module() {
-    private var engine: Engine? = null
+    @Volatile private var engine: Engine? = null
 
     /** Which model the live engine was built from, so a reload can be skipped. */
-    private var loadedPath: String? = null
-    @Volatile private var conversation: com.google.ai.edge.litertlm.Conversation? = null
+    @Volatile private var loadedPath: String? = null
+
+    /** The conversation currently generating, so it can be cancelled from any thread. */
+    @Volatile private var active: Conversation? = null
     @Volatile private var isCancelled = false
+
+    /**
+     * Every create/use/close of the engine goes through this lock.
+     *
+     * Before, onTrimMemory closed the engine on the main thread while the IO
+     * thread was in the middle of generating with it. Native close waits for
+     * (or tears down under) the running inference: the main thread blocks,
+     * which is the "Agronavis isn't responding" dialog, and the next question
+     * finds no engine, which is "Sahayak is not running yet".
+     */
+    private val engineLock = Mutex()
     private val moduleJob = SupervisorJob()
     private val moduleScope = CoroutineScope(Dispatchers.IO + moduleJob)
 
-    /** Closes the engine and forgets it, so the next load rebuilds cleanly. */
-    @Synchronized
-    private fun releaseEngine() {
+    /** Caller must hold [engineLock]. */
+    private fun releaseEngineLocked() {
         try {
-            conversation?.close()
             engine?.close()
         } catch (ex: Exception) {
             Log.w("GemmaLlm", "Error releasing engine: ${ex.message}")
         }
-        conversation = null
         engine = null
         loadedPath = null
+    }
+
+    /**
+     * Release without ever blocking the calling thread.
+     *
+     * A running answer is cancelled first (a quick native flag), then the
+     * close waits its turn on the lock in the background.
+     */
+    private fun requestRelease(reason: String) {
+        if (engine == null) return
+        Log.i("GemmaLlm", "Releasing model: $reason")
+        try {
+            active?.cancelProcess()
+        } catch (_: Exception) {
+        }
+        moduleScope.launch {
+            engineLock.withLock { releaseEngineLocked() }
+        }
+    }
+
+    /**
+     * One fresh conversation per question.
+     *
+     * The JS side already sends the system prompt and recent history in every
+     * prompt. Reusing one native conversation meant each turn was appended to
+     * all the previous ones — the system prompt stored once per question —
+     * so every answer was slower than the last and the KV cache filled up.
+     */
+    private suspend fun runTurn(contents: Contents, promise: Promise) {
+        val sb = StringBuilder()
+        engineLock.withLock {
+            val e = engine
+            if (e == null) {
+                promise.reject("NOT_LOADED", "Model not loaded. Call load() first.", null)
+                return
+            }
+            isCancelled = false
+            val conv = try {
+                e.createConversation()
+            } catch (ex: Exception) {
+                promise.reject("GENERATE_FAILED", ex.message ?: "Could not start a conversation", ex)
+                return
+            }
+            active = conv
+            try {
+                withTimeout(90_000L) {
+                    conv.sendMessageAsync(contents).collect { message ->
+                        if (isCancelled) return@collect
+                        val token = message.toString()
+                        sb.append(token)
+                        sendEvent("onToken", mapOf("token" to token, "done" to false))
+                    }
+                }
+                promise.resolve(sb.toString())
+            } catch (ex: Exception) {
+                if (isCancelled || ex is TimeoutCancellationException) {
+                    // Stop the native side too; a timed-out flow otherwise
+                    // keeps the CPU busy writing an answer nobody will see.
+                    try { conv.cancelProcess() } catch (_: Exception) {}
+                    promise.resolve(sb.toString())
+                } else {
+                    promise.reject("GENERATE_FAILED", ex.message ?: "Generation failed", ex)
+                }
+            } finally {
+                active = null
+                try { conv.close() } catch (_: Exception) {}
+                sendEvent("onToken", mapOf("token" to "", "done" to true))
+            }
+        }
     }
 
     override fun definition() = ModuleDefinition {
@@ -55,74 +155,41 @@ class GemmaLlmModule : Module() {
         Events("onToken")
 
         OnDestroy {
+            try { active?.cancelProcess() } catch (_: Exception) {}
             moduleJob.cancel()
-            conversation?.close()
-            engine?.close()
+            try { engine?.close() } catch (_: Exception) {}
+            engine = null
         }
 
-        /**
-         * True when a model is already in memory and ready to answer.
-         *
-         * Lets the screen skip straight to the chat instead of offering a
-         * "Start Sahayak" button that would spend half a minute rebuilding
-         * something the process already holds.
-         */
+        /** True when a model is in memory and ready to answer. */
         Function("isLoaded") {
-            engine != null && conversation != null
+            engine != null
         }
 
-        /**
-         * Hands the model's memory back.
-         *
-         * The engine holds several gigabytes for the life of the process, and
-         * nothing could release it — so a phone running this alongside the map
-         * and the camera had no way to give anything up, and Android resolved
-         * that by killing the app. Which looks, from the outside, like it
-         * crashed for no reason.
-         */
+        /** Hands the model's memory back. Returns at once; the close runs in the background. */
         Function("unload") {
-            releaseEngine()
+            requestRelease("requested by app")
             true
         }
 
         /**
          * Release before Android decides to take the whole process instead.
-         *
-         * onTrimMemory is the system asking politely. At the critical levels
-         * it is minutes from killing us, and the model is by far the largest
-         * thing we hold, so letting go of it is usually enough to survive —
-         * and reloading it later costs a wait, not a lost session.
+         * Runs on the main thread, so it must never wait for the engine.
          */
         OnCreate {
             appContext.reactContext?.registerComponentCallbacks(
                 object : ComponentCallbacks2 {
                     override fun onTrimMemory(level: Int) {
-                        /**
-                         * Only when the system is genuinely about to start
-                         * killing processes.
-                         *
-                         * RUNNING_LOW was too eager: UI_HIDDEN and BACKGROUND
-                         * are numerically higher and fire every time the app
-                         * goes behind another one, so switching away and back
-                         * meant reading several gigabytes off disk again. The
-                         * two levels left are the ones that actually precede
-                         * being killed.
-                         */
                         val critical = level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
                             level >= ComponentCallbacks2.TRIM_MEMORY_COMPLETE
-                        if (critical) {
-                            if (engine != null) {
-                                Log.i("GemmaLlm", "Releasing model under memory pressure (level $level)")
-                                releaseEngine()
-                            }
-                        }
+                        if (critical) requestRelease("memory pressure (level $level)")
                     }
 
                     override fun onConfigurationChanged(newConfig: Configuration) {}
 
                     @Deprecated("Required by ComponentCallbacks2")
                     override fun onLowMemory() {
-                        releaseEngine()
+                        requestRelease("onLowMemory")
                     }
                 },
             )
@@ -130,122 +197,66 @@ class GemmaLlmModule : Module() {
 
         AsyncFunction("load") { modelPath: String, promise: Promise ->
             moduleScope.launch {
-                try {
-                    val fsPath = normalizeModelPath(modelPath)
+                engineLock.withLock {
+                    try {
+                        val fsPath = normalizeModelPath(modelPath)
 
-                    // Already holding this exact model: hand it straight back.
-                    // This used to close the engine and rebuild it on every
-                    // call, so leaving the screen and returning paid the full
-                    // multi-gigabyte load again for no reason at all.
-                    if (engine != null && conversation != null && loadedPath == fsPath) {
+                        // Already holding this exact model: hand it straight back.
+                        if (engine != null && loadedPath == fsPath) {
+                            promise.resolve(true)
+                            return@withLock
+                        }
+                        releaseEngineLocked()
+
+                        val config = EngineConfig(
+                            modelPath = fsPath,
+                            backend = Backend.CPU(numOfThreads = inferenceThreads()),
+                            // No vision backend: nothing in the app sends an
+                            // image to Sahayak, and the vision encoder is
+                            // several hundred megabytes of RAM on its own.
+                            // generateWithImage reports this instead.
+                            visionBackend = null,
+                            maxNumTokens = MAX_TOKENS,
+                        )
+                        val e = Engine(config)
+                        e.initialize()
+                        engine = e
+                        loadedPath = fsPath
                         promise.resolve(true)
-                        return@launch
+                    } catch (ex: Throwable) {
+                        // Throwable, not Exception: an OutOfMemoryError while
+                        // mapping the model must reach JS as a failure, not
+                        // leave the promise hanging forever.
+                        releaseEngineLocked()
+                        promise.reject("LOAD_FAILED", ex.message ?: "Failed to load model", ex)
                     }
-
-                    conversation?.close()
-                    engine?.close()
-                    conversation = null
-                    engine = null
-                    loadedPath = null
-
-                    val config = EngineConfig(
-                        modelPath = fsPath,
-                        backend = Backend.CPU(),
-                        visionBackend = Backend.CPU(),
-                    )
-                    val e = Engine(config)
-                    e.initialize()
-                    conversation = e.createConversation()
-                    engine = e
-                    loadedPath = fsPath
-                    promise.resolve(true)
-                } catch (ex: Exception) {
-                    promise.reject("LOAD_FAILED", ex.message ?: "Failed to load model", ex)
                 }
             }
         }
 
         AsyncFunction("generate") { prompt: String, promise: Promise ->
             moduleScope.launch {
-                val sb = StringBuilder()
-                try {
-                    isCancelled = false
-                    val conv = conversation
-                    if (conv == null) {
-                        promise.reject("NOT_LOADED", "Model not loaded. Call load() first.", null)
-                        return@launch
-                    }
-                    try {
-                        withTimeout(60_000L) {
-                            conv.sendMessageAsync(Contents.of(Content.Text(prompt)))
-                                .collect { message ->
-                                    if (isCancelled) return@collect
-                                    val token = message.toString()
-                                    sb.append(token)
-                                    sendEvent("onToken", mapOf("token" to token, "done" to false))
-                                }
-                        }
-                    } finally {
-                        sendEvent("onToken", mapOf("token" to "", "done" to true))
-                    }
-                    promise.resolve(sb.toString())
-                } catch (ex: Exception) {
-                    if (isCancelled || ex is TimeoutCancellationException) {
-                        promise.resolve(sb.toString())
-                    } else {
-                        promise.reject("GENERATE_FAILED", ex.message ?: "Generation failed", ex)
-                    }
-                }
+                runTurn(Contents.of(Content.Text(prompt)), promise)
             }
         }
 
-        AsyncFunction("generateWithImage") { prompt: String, imageBase64: String, _mimeType: String, promise: Promise ->
-            moduleScope.launch {
-                val sb = StringBuilder()
-                try {
-                    isCancelled = false
-                    val conv = conversation
-                    if (conv == null) {
-                        promise.reject("NOT_LOADED", "Model not loaded. Call load() first.", null)
-                        return@launch
-                    }
-                    val imageBytes = Base64.decode(imageBase64, Base64.DEFAULT)
-                    try {
-                        withTimeout(60_000L) {
-                            conv.sendMessageAsync(
-                                Contents.of(
-                                    Content.ImageBytes(imageBytes),
-                                    Content.Text(prompt),
-                                )
-                            )
-                                .collect { message ->
-                                    if (isCancelled) return@collect
-                                    val token = message.toString()
-                                    sb.append(token)
-                                    sendEvent("onToken", mapOf("token" to token, "done" to false))
-                                }
-                        }
-                    } finally {
-                        sendEvent("onToken", mapOf("token" to "", "done" to true))
-                    }
-                    promise.resolve(sb.toString())
-                } catch (ex: Exception) {
-                    if (isCancelled || ex is TimeoutCancellationException) {
-                        promise.resolve(sb.toString())
-                    } else {
-                        promise.reject("GENERATE_FAILED", ex.message ?: "Generation failed", ex)
-                    }
-                }
-            }
+        AsyncFunction("generateWithImage") { _prompt: String, _imageBase64: String, _mimeType: String, promise: Promise ->
+            // Kept so the JS API does not change. Nothing calls it today; to
+            // use it, set visionBackend in load() again and budget the memory.
+            promise.reject("NOT_SUPPORTED", "Image questions are not enabled in this build.", null)
         }
 
+        /**
+         * Stop the answer being written. Never closes anything here: this runs
+         * on the JS thread, and closing a native conversation mid-inference
+         * blocked it.
+         */
         Function("cancel") {
             isCancelled = true
             try {
-                conversation?.close()
-                engine?.let { e -> conversation = e.createConversation() }
+                active?.cancelProcess()
             } catch (_: Exception) {
-                // ignore — best effort reset
+                // nothing running
             }
         }
     }
