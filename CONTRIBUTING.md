@@ -14,8 +14,7 @@ gh pr create --base main         # one PR per release — merging it is the rele
 
 Needs **1 review** + **2 green checks**. No direct pushes to `main`.
 
-> `release/` prefix matters: shipping tags the commit `v1.0.1`, so a branch of
-> that exact name collides with its own tag every release.
+> Branches are `release/vX.Y.Z`. Tags are `vX.Y.Z`.
 
 ## Versions
 
@@ -25,8 +24,8 @@ Needs **1 review** + **2 green checks**. No direct pushes to `main`.
 | **→ 1.1.0** | Farmer can do something new |
 | **→ 2.0.0** | Works differently, drops data, or breaks an old client |
 
-An API change an old build can't survive is **major** — an installed APK keeps
-calling the paths it was built with. Add beside the old shape, don't replace.
+An API change an old build can't survive is **major**. Add new shapes beside
+the old ones so installed builds keep working.
 
 Version lives in `app.config.js` → `VERSION`. `versionCode` is EAS's, not ours.
 

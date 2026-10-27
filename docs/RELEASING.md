@@ -3,8 +3,6 @@
 App: [`com.agronavis.app`](https://play.google.com/store/apps/details?id=com.agronavis.app)
 · API deploys from `main` automatically · the app does not.
 
-**The server moves, the handsets don't.** Keep that in mind throughout.
-
 ## 1. The branch already exists
 
 Work lives on `release/v1.0.1` from the day it opens. First commit sets
@@ -21,8 +19,8 @@ One PR, one review, both checks green.
 curl -s https://agronavis-api.onrender.com/health
 ```
 
-`commit` must match your merge. A green build is not proof it booted — one
-passed, deployed, and crash-looped.
+`commit` must match your merge. Confirm it every time — a green build means it
+compiled, not that it started.
 
 **Migration?** Apply it *before* the API that needs it. Adding a column is
 safe; renaming one is not. `npm run db:push`, then verify the table exists.
@@ -34,8 +32,7 @@ npx eas build -p android --profile production-apk   # test this one
 npx eas build -p android --profile production       # ship this one
 ```
 
-Install the APK and use it. Tests don't catch a button under the gesture bar.
-Note the `versionCode` → changelog.
+Install the APK and use it on a real device. Note the `versionCode` → changelog.
 
 ## 5. Submit
 
@@ -58,8 +55,8 @@ git tag -a v1.0.1 -m "1.0.1 — build 13" && git push origin v1.0.1
 
 Same path, smaller. `release/v1.0.2` from `main`, fix one thing, ship.
 
-**No OTA.** `expo-updates` isn't installed — every fix costs a store round
-trip. Worth adding before the user base makes that expensive.
+**No OTA yet.** `expo-updates` isn't installed, so each fix ships as a build.
+Worth adding as the user base grows.
 
 ## Credentials
 
