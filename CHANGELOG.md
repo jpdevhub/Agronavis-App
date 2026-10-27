@@ -9,7 +9,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 Which bump a change earns is set out in
 [CONTRIBUTING.md](CONTRIBUTING.md#versions).
 
-Each release is built on a branch named after it — `v1.0.1` — and every commit
+Each release is built on a branch named after it — `release/v1.0.1` — and every commit
 that changes something a farmer would notice adds its own line here as it
 happens, rather than being reconstructed from commit subjects at the end.
 

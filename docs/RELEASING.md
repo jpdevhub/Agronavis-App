@@ -30,7 +30,7 @@ Work for a release is done on its own branch from the day it opens:
 
 ```bash
 git checkout main && git pull
-git checkout -b v1.0.1
+git checkout -b release/v1.0.1
 ```
 
 Its first commit sets **`app.config.js` → `VERSION`** and opens the version's
@@ -154,8 +154,8 @@ next piece of work starts.
 ## Hotfixes
 
 A fix for something already in a farmer's hands follows the same path, only
-faster and smaller. Open `v1.0.2` from `main`, fix the one thing, open the
-release PR, ship it.
+faster and smaller. Open `release/v1.0.2` from `main`, fix the one thing, open
+the release PR, ship it.
 
 The temptation is to skip the review because it is urgent. Don't — urgency is
 when mistakes get made, and a bad hotfix reaches people who have already been

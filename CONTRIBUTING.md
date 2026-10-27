@@ -14,9 +14,9 @@ no number.
 
 ## The rule
 
-> Work happens on a branch named for the release it is going into — `v1.0.1`,
-> `v1.1.0` — and reaches `main` through one pull request when that release is
-> ready to ship.
+> Work happens on a branch named for the release it is going into —
+> `release/v1.0.1` — and reaches `main` through one pull request when that
+> release is ready to ship.
 
 No direct pushes to `main`. No exceptions for "it is only one line": the
 one-line changes are the ones nobody reviews and nobody notices.
@@ -29,18 +29,23 @@ says which bump a change earns — then open the branch for it:
 
 ```bash
 git checkout main && git pull
-git checkout -b v1.0.1
+git checkout -b release/v1.0.1
 ```
+
+The `release/` prefix is not decoration. Shipping tags the commit `v1.0.1`,
+and a branch of that exact name would make every reference to it ambiguous —
+git refuses to push one while the other exists. The prefix keeps the branch
+and the tag from ever being the same name.
 
 Everything going into that release is committed there. Push freely and as
 often as you like: it is a branch, nobody is running it, and a hundred commits
-on `v1.0.1` are a hundred commits nobody has to reconstruct later. Keep each
-one about one thing, with a subject that says what changed for a farmer rather
+on it are a hundred commits nobody has to reconstruct later. Keep each one
+about one thing, with a subject that says what changed for a farmer rather
 than which file moved.
 
 ```bash
 npm run verify          # typecheck, lint and tests — app and API
-git push                # to v1.0.1, never to main
+git push                # to the release branch, never to main
 ```
 
 `main` only hears about it once, at the end:
@@ -85,7 +90,7 @@ beside the old rather than replacing it.
 
 | | |
 | --- | --- |
-| The branch name | `v1.0.1` — decided when the branch opens, so every commit on it knows what it is for |
+| The branch name | `release/v1.0.1` — decided when the branch opens, so every commit on it knows what it is for |
 | `app.config.js` → `VERSION` | The user-facing `1.0.1`. The only place to edit it, bumped in the branch's first commit. |
 | `versionCode` | **Not in the repo.** `eas.json` sets `appVersionSource: "remote"`, so EAS owns the Android build number and increments it per production build. |
 | `CHANGELOG.md` | Every released version, newest first, with the build number that actually reached Play. |
