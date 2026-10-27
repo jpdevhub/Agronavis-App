@@ -1,5 +1,10 @@
 # Development
 
+> **`main` is production.** Agronavis is published on Google Play, so nothing
+> reaches `main` except through a reviewed pull request with CI green. The
+> process is in [CONTRIBUTING.md](../CONTRIBUTING.md); cutting a release is in
+> [RELEASING.md](RELEASING.md).
+
 An Expo app, an Express API and a Supabase project. The app never touches the
 database: every read and write goes through the API, which is the only holder of
 the service-role key and the third-party API keys.
