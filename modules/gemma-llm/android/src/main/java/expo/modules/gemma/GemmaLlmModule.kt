@@ -31,6 +31,19 @@ class GemmaLlmModule : Module() {
 
     /** Which model the live engine was built from, so a reload can be skipped. */
     private var loadedPath: String? = null
+
+    /**
+     * Tokens are gathered and sent in batches rather than one event each.
+     *
+     * A bridge event per token is twenty to thirty crossings a second, each
+     * carrying a map. A fast phone absorbs it; a modest one spends the whole
+     * answer in the bridge, the JS thread stops yielding, the screen stops
+     * painting and Android puts up "isn't responding". Batching cuts the
+     * crossings by more than an order of magnitude and changes nothing about
+     * what the reader sees — the text still arrives faster than it is read.
+     */
+    private val pendingTokens = StringBuilder()
+    private var lastFlushAt = 0L
     @Volatile private var conversation: com.google.ai.edge.litertlm.Conversation? = null
     @Volatile private var isCancelled = false
     private val moduleJob = SupervisorJob()
@@ -38,6 +51,27 @@ class GemmaLlmModule : Module() {
 
     /** Closes the engine and forgets it, so the next load rebuilds cleanly. */
     @Synchronized
+    private val flushIntervalMs = 100L
+
+    @Synchronized
+    private fun queueToken(token: String) {
+        pendingTokens.append(token)
+        val now = System.currentTimeMillis()
+        if (now - lastFlushAt >= flushIntervalMs) flushTokens(false)
+    }
+
+    @Synchronized
+    private fun flushTokens(done: Boolean) {
+        val batch = pendingTokens.toString()
+        pendingTokens.setLength(0)
+        lastFlushAt = System.currentTimeMillis()
+        // A final event always goes out, so the listener learns the answer
+        // ended even when the last batch was empty.
+        if (batch.isNotEmpty() || done) {
+            sendEvent("onToken", mapOf("token" to batch, "done" to done))
+        }
+    }
+
     private fun releaseEngine() {
         try {
             conversation?.close()
@@ -170,6 +204,8 @@ class GemmaLlmModule : Module() {
                 val sb = StringBuilder()
                 try {
                     isCancelled = false
+                    // Leftovers from a cancelled answer must not open the next one.
+                    synchronized(this@GemmaLlmModule) { pendingTokens.setLength(0) }
                     val conv = conversation
                     if (conv == null) {
                         promise.reject("NOT_LOADED", "Model not loaded. Call load() first.", null)
@@ -182,11 +218,11 @@ class GemmaLlmModule : Module() {
                                     if (isCancelled) return@collect
                                     val token = message.toString()
                                     sb.append(token)
-                                    sendEvent("onToken", mapOf("token" to token, "done" to false))
+                                    queueToken(token)
                                 }
                         }
                     } finally {
-                        sendEvent("onToken", mapOf("token" to "", "done" to true))
+                        flushTokens(true)
                     }
                     promise.resolve(sb.toString())
                 } catch (ex: Exception) {
@@ -204,6 +240,8 @@ class GemmaLlmModule : Module() {
                 val sb = StringBuilder()
                 try {
                     isCancelled = false
+                    // Leftovers from a cancelled answer must not open the next one.
+                    synchronized(this@GemmaLlmModule) { pendingTokens.setLength(0) }
                     val conv = conversation
                     if (conv == null) {
                         promise.reject("NOT_LOADED", "Model not loaded. Call load() first.", null)
@@ -222,11 +260,11 @@ class GemmaLlmModule : Module() {
                                     if (isCancelled) return@collect
                                     val token = message.toString()
                                     sb.append(token)
-                                    sendEvent("onToken", mapOf("token" to token, "done" to false))
+                                    queueToken(token)
                                 }
                         }
                     } finally {
-                        sendEvent("onToken", mapOf("token" to "", "done" to true))
+                        flushTokens(true)
                     }
                     promise.resolve(sb.toString())
                 } catch (ex: Exception) {
