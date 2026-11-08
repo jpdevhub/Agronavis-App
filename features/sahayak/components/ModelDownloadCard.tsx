@@ -20,6 +20,23 @@ interface Props {
 
 const gb = (bytes: number) => `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
 
+/**
+ * What went wrong, said to a farmer rather than to a socket.
+ *
+ * A dropped connection surfaced as "Software caused connection abort" — the
+ * Java exception, verbatim, under a Download button. It also reads as final,
+ * when the transfer picks up from where it stopped.
+ */
+function downloadFailureText(error: string): string {
+  if (/connection abort|connection reset|socket|ECONNRESET|EPIPE|timed? ?out|network/i.test(error)) {
+    return 'The connection dropped. What has downloaded is kept — tap again and it carries on.';
+  }
+  if (/space|ENOSPC/i.test(error)) {
+    return 'There is not enough free space on the phone for the model.';
+  }
+  return error;
+}
+
 export function ModelDownloadCard({ variant, onReady }: Props) {
   const [warnMobile, setWarnMobile] = useState(false);
 
@@ -98,7 +115,7 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
               </Text>
             </View>
           )}
-          {error && <Text style={styles.error}>{error}</Text>}
+          {error ? <Text style={styles.error}>{downloadFailureText(error)}</Text> : null}
           <Pressable onPress={begin} style={styles.primary} accessibilityRole="button">
             {busy ? (
               <Loader tone="onColor" size={28} />
