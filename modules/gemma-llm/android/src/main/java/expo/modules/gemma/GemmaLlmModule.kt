@@ -49,8 +49,7 @@ class GemmaLlmModule : Module() {
     private val moduleJob = SupervisorJob()
     private val moduleScope = CoroutineScope(Dispatchers.IO + moduleJob)
 
-    /** Closes the engine and forgets it, so the next load rebuilds cleanly. */
-    @Synchronized
+    /** How long tokens are allowed to gather before the batch is sent. */
     private val flushIntervalMs = 100L
 
     @Synchronized
@@ -72,6 +71,8 @@ class GemmaLlmModule : Module() {
         }
     }
 
+    /** Closes the engine and forgets it, so the next load rebuilds cleanly. */
+    @Synchronized
     private fun releaseEngine() {
         try {
             conversation?.close()
