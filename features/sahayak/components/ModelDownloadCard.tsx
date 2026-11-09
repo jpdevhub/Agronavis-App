@@ -10,7 +10,7 @@ import {
   startDownload,
   subscribeToDownload,
 } from '../ondevice/downloadManager';
-import { APPROX_SIZE_GB, type ModelVariant } from '../ondevice/modelFile';
+import { APPROX_SIZE_GB, canRunSahayak, type ModelVariant } from '../ondevice/modelFile';
 import { Loader } from '@/components/ui';
 
 interface Props {
@@ -76,6 +76,32 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
   }, [variant, warnMobile]);
 
   const pct = progress?.fraction != null ? Math.round(progress.fraction * 100) : null;
+
+  /**
+   * Some phones cannot hold the model, and the honest thing is to say so
+   * before the download rather than after 2.6 GB of mobile data. Android
+   * evicts it almost as fast as it loads on a small device, so the assistant
+   * would spend its life reloading and slow the phone down around it.
+   */
+  if (!canRunSahayak()) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.icon}>
+          <MaterialIcons name="memory" size={30} color={Colors.onPrimaryContainer} />
+        </View>
+        <Text style={styles.title}>Sahayak needs a larger phone</Text>
+        <Text style={styles.body}>
+          The assistant runs entirely on the handset and needs about{' '}
+          {APPROX_SIZE_GB[variant]} GB of memory free to answer. This phone does not have
+          enough, so it would keep stopping.
+        </Text>
+        <Text style={styles.body}>
+          Everything else in Agronavis works as it is — your soil, weather, fields and
+          prices all come from the app itself.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.card}>
