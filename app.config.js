@@ -27,7 +27,7 @@ const publicEnv = {
  * it per production build. A copy in this file would be ignored and would
  * drift.
  */
-const VERSION = '1.0.0';
+const VERSION = '1.0.1';
 
 /** @type {import('expo/config').ExpoConfig} */
 module.exports = () => ({

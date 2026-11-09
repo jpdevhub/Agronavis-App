@@ -6,8 +6,7 @@ import type { ForecastDay } from '@agronavis/shared-types';
  *
  * ── Kept in step with the server ──────────────────────────────────────────
  * These constants and the dew-point formula mirror
- * `backend/src/modules/advisory/advisory.service.ts` and
- * `backend/src/modules/weather/et0.ts`, which decide whether to raise the
+ * the API's advisory and ET0 modules, which decide whether to raise the
  * alert. The copy exists because the shared package carries types only — it is
  * erased from the app bundle — and adding runtime code to it would change how
  * Metro treats a dependency every screen imports. `__tests__/fungalRisk.test.ts`

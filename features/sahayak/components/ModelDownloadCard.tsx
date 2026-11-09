@@ -10,7 +10,7 @@ import {
   startDownload,
   subscribeToDownload,
 } from '../ondevice/downloadManager';
-import { APPROX_SIZE_GB, type ModelVariant } from '../ondevice/modelFile';
+import { APPROX_SIZE_GB, canRunSahayak, type ModelVariant } from '../ondevice/modelFile';
 import { Loader } from '@/components/ui';
 
 interface Props {
@@ -19,6 +19,23 @@ interface Props {
 }
 
 const gb = (bytes: number) => `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+
+/**
+ * What went wrong, said to a farmer rather than to a socket.
+ *
+ * A dropped connection surfaced as "Software caused connection abort" — the
+ * Java exception, verbatim, under a Download button. It also reads as final,
+ * when the transfer picks up from where it stopped.
+ */
+function downloadFailureText(error: string): string {
+  if (/connection abort|connection reset|socket|ECONNRESET|EPIPE|timed? ?out|network/i.test(error)) {
+    return 'The connection dropped. What has downloaded is kept — tap again and it carries on.';
+  }
+  if (/space|ENOSPC/i.test(error)) {
+    return 'There is not enough free space on the phone for the model.';
+  }
+  return error;
+}
 
 export function ModelDownloadCard({ variant, onReady }: Props) {
   const [warnMobile, setWarnMobile] = useState(false);
@@ -60,6 +77,32 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
 
   const pct = progress?.fraction != null ? Math.round(progress.fraction * 100) : null;
 
+  /**
+   * Some phones cannot hold the model, and the honest thing is to say so
+   * before the download rather than after 2.6 GB of mobile data. Android
+   * evicts it almost as fast as it loads on a small device, so the assistant
+   * would spend its life reloading and slow the phone down around it.
+   */
+  if (!canRunSahayak()) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.icon}>
+          <MaterialIcons name="memory" size={30} color={Colors.onPrimaryContainer} />
+        </View>
+        <Text style={styles.title}>Sahayak needs a larger phone</Text>
+        <Text style={styles.body}>
+          The assistant runs entirely on the handset and needs about{' '}
+          {APPROX_SIZE_GB[variant]} GB of memory free to answer. This phone does not have
+          enough, so it would keep stopping.
+        </Text>
+        <Text style={styles.body}>
+          Everything else in Agronavis works as it is — your soil, weather, fields and
+          prices all come from the app itself.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.card}>
       <View style={styles.icon}>
@@ -98,7 +141,7 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
               </Text>
             </View>
           )}
-          {error && <Text style={styles.error}>{error}</Text>}
+          {error ? <Text style={styles.error}>{downloadFailureText(error)}</Text> : null}
           <Pressable onPress={begin} style={styles.primary} accessibilityRole="button">
             {busy ? (
               <Loader tone="onColor" size={28} />

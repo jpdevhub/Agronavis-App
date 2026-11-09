@@ -8,18 +8,9 @@ KrishiSaathi-AI/
 /android/
 /ios/
 
-# Not part of the app bundle. backend/ and packages/ stay: the root
-# package.json declares them as npm workspaces, so npm install needs them.
+# Not part of the app bundle.
 /notebooks/
 /docs/
-# Scratch folder for building the pitch deck.
-/.deck-build/
-/.expo/
-/backend/dist/
-/backend/tests/
-# The disease classifier runs on the server. Shipping 43 MB of weights to a
-# phone that never loads them would be pure APK weight.
-/backend/model/
 
 # Local tooling and its downloads. None of it builds anything, and because
 # .easignore REPLACES .gitignore these have to be repeated here even though

@@ -144,10 +144,20 @@ export default function SahayakScreen() {
   // Read the finished answer aloud, never a half-streamed one.
   const last = messages[messages.length - 1];
   useEffect(() => {
-    if (!speakReplies || streaming) return;
+    // Switching it off has to silence what is already being read, not just
+    // decline to read the next one.
+    if (!speakReplies) {
+      voice.stopSpeaking();
+      return;
+    }
+    if (streaming) return;
     if (last?.role === 'assistant' && last.text) voice.speak(last.text);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streaming, speakReplies]);
+
+  // Leaving the screen stops the voice. It is reading this conversation, and
+  // there is no way back to it from wherever the farmer has gone.
+  useEffect(() => () => voice.stopSpeaking(), [voice]);
 
   function submit(text?: string) {
     const question = (text ?? draft).trim();
@@ -205,7 +215,10 @@ export default function SahayakScreen() {
               'Start a new chat?',
               'This conversation will be deleted from this phone.',
               'Delete and start new',
-              reset,
+              () => {
+                voice.stopSpeaking();
+                reset();
+              },
             );
           }}
           style={[styles.iconBtn, (messages.length === 0 || streaming) && styles.iconBtnOff]}
@@ -229,7 +242,10 @@ export default function SahayakScreen() {
 
         <Pressable
           onPress={() => {
-            if (voice.speaking) voice.stopSpeaking();
+            // Unconditionally: `speaking` goes stale when Android does not
+            // deliver the finished callback, and a mute button that sometimes
+            // does not mute is worse than none.
+            voice.stopSpeaking();
             setSpeakReplies((v) => !v);
           }}
           style={styles.iconBtn}
