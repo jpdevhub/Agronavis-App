@@ -101,7 +101,12 @@ export const cropApi = {
 };
 
 export const taskApi = {
-  list: (farmId?: string) => api.get<FarmTask[]>('/tasks', farmId ? { farmId } : undefined),
+  /** Scoped to one field when given — a farm's plots grow different crops. */
+  list: (farmId?: string, fieldId?: string) =>
+    api.get<FarmTask[]>('/tasks', {
+      ...(farmId ? { farmId } : {}),
+      ...(fieldId ? { fieldId } : {}),
+    }),
   complete: (id: string) => api.patch<FarmTask>(`/tasks/${id}/complete`),
   skip: (id: string) => api.patch<FarmTask>(`/tasks/${id}/skip`),
   create: (payload: { farmId: string; title: string; dueDate: string; description?: string; taskType?: string }) =>
