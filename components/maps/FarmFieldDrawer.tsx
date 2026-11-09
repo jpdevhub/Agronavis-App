@@ -418,7 +418,10 @@ export default function FarmFieldDrawer({
   const aboveSheet = sheetHeight + 16;
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    /* Android compensates for the keyboard below, by measuring it. Letting
+       KeyboardAvoidingView shrink the container as well moved the sheet twice
+       and left it stranded above the map. */
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
       {/* ── Top header ── */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -577,10 +580,10 @@ export default function FarmFieldDrawer({
         style={[
           styles.sheet,
           { paddingBottom: sheetPadBottom, transform: [{ translateY: slide }] },
-          // Sit the sheet on top of the keyboard rather than behind it. The
-          // window does not resize under edge-to-edge, so without this the
-          // Continue button is drawn under the keys.
-          keyboardInset > 0 && { marginBottom: keyboardInset, maxHeight: '58%' },
+          // Sit the sheet on top of the keyboard rather than behind it, and
+          // give it only the room that is left, so its scroll view can still
+          // reach the button at the bottom.
+          keyboardInset > 0 && { bottom: keyboardInset, maxHeight: '45%' },
         ]}
         onLayout={(e) => {
           const h = e.nativeEvent.layout.height;
