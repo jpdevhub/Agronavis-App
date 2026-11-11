@@ -2,10 +2,16 @@ import { ApiError } from '@/services/api';
 import { classifyOnlineFailure, withSources } from '../cloud';
 
 jest.mock('@/services/endpoints', () => ({ sahayakApi: { chat: jest.fn(), status: jest.fn() } }));
+// No TypeScript parameter properties in here: babel-jest compiles them to
+// assignments the mock hoisting reads as out-of-scope variables.
 jest.mock('@/services/api', () => {
   class ApiError extends Error {
-    constructor(message: string, readonly status?: number, readonly code?: string) {
+    status?: number;
+    code?: string;
+    constructor(message: string, status?: number, code?: string) {
       super(message);
+      this.status = status;
+      this.code = code;
     }
   }
   return { ApiError };

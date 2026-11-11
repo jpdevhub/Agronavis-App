@@ -1,5 +1,13 @@
 import { APPROX_SIZE_GB, EXACT_BYTES, MAX_TOKENS, MODEL_URL, detectModelVariant } from '../modelFile';
 
+// modelFile reads a recorded download size through AsyncStorage, whose native
+// module does not exist under Jest.
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(() => Promise.resolve(null)),
+  setItem: jest.fn(() => Promise.resolve()),
+  removeItem: jest.fn(() => Promise.resolve()),
+}));
+
 /**
  * A model download that stops early must not be recorded as finished.
  *
