@@ -47,11 +47,18 @@ private fun inferenceThreads(): Int =
  */
 private const val MAX_TOKENS = 4096
 
+/**
+ * Smallest window worth opening. Gemma 3 1B is built with a 2048-token cache,
+ * and asking LiteRT for more than a model was exported with fails at load.
+ */
+private const val MIN_TOKENS = 512
+
 class GemmaLlmModule : Module() {
     @Volatile private var engine: Engine? = null
 
     /** Which model the live engine was built from, so a reload can be skipped. */
     @Volatile private var loadedPath: String? = null
+    @Volatile private var loadedWindow: Int = MAX_TOKENS
 
     /** The conversation currently generating, so it can be cancelled from any thread. */
     @Volatile private var active: Conversation? = null
@@ -195,14 +202,17 @@ class GemmaLlmModule : Module() {
             )
         }
 
-        AsyncFunction("load") { modelPath: String, promise: Promise ->
+        // maxTokens is optional so older JS that passes only the path still loads
+        // the Gemma 4 models at their usual window.
+        AsyncFunction("load") { modelPath: String, maxTokens: Int?, promise: Promise ->
             moduleScope.launch {
                 engineLock.withLock {
                     try {
                         val fsPath = normalizeModelPath(modelPath)
+                        val window = (maxTokens ?: MAX_TOKENS).coerceIn(MIN_TOKENS, MAX_TOKENS)
 
                         // Already holding this exact model: hand it straight back.
-                        if (engine != null && loadedPath == fsPath) {
+                        if (engine != null && loadedPath == fsPath && loadedWindow == window) {
                             promise.resolve(true)
                             return@withLock
                         }
@@ -216,12 +226,13 @@ class GemmaLlmModule : Module() {
                             // several hundred megabytes of RAM on its own.
                             // generateWithImage reports this instead.
                             visionBackend = null,
-                            maxNumTokens = MAX_TOKENS,
+                            maxNumTokens = window,
                         )
                         val e = Engine(config)
                         e.initialize()
                         engine = e
                         loadedPath = fsPath
+                        loadedWindow = window
                         promise.resolve(true)
                     } catch (ex: Throwable) {
                         // Throwable, not Exception: an OutOfMemoryError while

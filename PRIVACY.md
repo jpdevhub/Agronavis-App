@@ -1,11 +1,11 @@
 # Privacy Policy
 
-**Last updated: 21 October 2026**
+**Last updated: 9 November 2026**
 
 <!-- Generated from features/legal/documents.ts by `npm run legal`.
      Edit that file, not this one — the app renders the same content. -->
 
-What Agronavis collects, why, who else sees it, and how to have it deleted. We collect what the app needs to advise your fields and nothing for advertising, your field boundaries are treated as the most sensitive thing we hold, and your conversations with Sahayak never leave your phone.
+What Agronavis collects, why, who else sees it, and how to have it deleted. We collect what the app needs to advise your fields and nothing for advertising, your field boundaries are treated as the most sensitive thing we hold, and what you ask Sahayak is used only to answer you.
 
 ## 1. What we collect
 
@@ -34,9 +34,13 @@ Android asks your permission before any of these. Each is used only while you ar
 
 Refusing any of them leaves the rest of the app working. You can change your mind at any time in Android settings.
 
-## 3. Your conversations stay on your phone
+## 3. How Sahayak answers your questions
 
-Sahayak runs a language model on your device. What you ask it, and what it answers, is processed on the handset and never sent to us or to anyone else. The farm details it reads to answer usefully are held in a copy on the phone.
+When you are online, Sahayak sends your question, the last few messages of the conversation and the farm details it needs to answer well (your village, district and state, crops, irrigation, soil readings, today’s weather and open alerts) to our server. The server finds matching advice in our knowledge base and asks an open AI model to write the answer. That model runs at Groq or Cloudflare, which receive this text only to produce the answer.
+
+We do not store your questions or Sahayak’s answers on our server. The conversation is kept on your phone for six hours and then cleared.
+
+With no internet, Sahayak answers with its offline model if you have downloaded it, and then nothing leaves your phone. If you have not, your question waits on your phone and is sent when you are back online.
 
 Speech recognition and speech output use your device’s own services, governed by your phone’s settings rather than by us.
 
@@ -52,6 +56,8 @@ We do not sell your data and we do not share it with advertisers. Each party bel
 
 - Supabase — our database, sign-in and file storage; holds everything we store.
 - Render — runs our API and processes your requests.
+- Groq — receives a Sahayak question with the farm details described above, to write the answer. It does not keep it by default.
+- Cloudflare — receives a Sahayak question to find matching advice, and to write the answer when Groq cannot. It does not use it to train models.
 - NASA POWER — receives a field’s coordinates, to return rainfall and sunlight.
 - OpenWeatherMap — receives a field’s coordinates, to return conditions and forecast.
 - Mapbox — receives the map area you are viewing, to return satellite imagery.
@@ -60,7 +66,7 @@ We do not sell your data and we do not share it with advertisers. Each party bel
 
 The weather, map and geocoding services receive coordinates with nothing identifying you attached. Agmarknet, the Soil Health Card scheme and the fertiliser scheme receive nothing — we read their published data on a schedule.
 
-Map and imagery credits: satellite imagery and maps © Mapbox, © OpenStreetMap contributors. Field monitoring uses Sentinel-2 imagery from the European Space Agency, through the Copernicus programme. Fire detections are from NASA FIRMS, and weather and soil moisture from NASA POWER.
+Map and imagery credits: satellite imagery and maps © Mapbox, © OpenStreetMap contributors. Field monitoring uses Sentinel-2 imagery from the European Space Agency, through the Copernicus programme. Fire detections are from NASA FIRMS, and weather and soil moisture from NASA POWER. Sahayak’s advice notes include Kisan Call Centre records published on data.gov.in under the Government Open Data License – India.
 
 ## 6. How long we keep it
 

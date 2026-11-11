@@ -1,6 +1,6 @@
 # Terms and Conditions
 
-**Last updated: 21 October 2026**
+**Last updated: 9 November 2026**
 
 <!-- Generated from features/legal/documents.ts by `npm run legal`.
      Edit that file, not this one — the app renders the same content. -->
@@ -70,6 +70,8 @@ We read reports within 24 hours. We may remove content that breaches these terms
 ## 8. Our intellectual property
 
 The application, its design, its source code and the models it runs belong to us. Government datasets and open models remain the property of their publishers and are used under their own terms. Nothing here transfers any ownership to you; you receive a personal, non-transferable permission to use the app.
+
+Sahayak’s offline model is Gemma, provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms. By downloading it you agree not to use it for anything the Gemma Prohibited Use Policy (ai.google.dev/gemma/prohibited_use_policy) forbids.
 
 ## 9. Availability
 

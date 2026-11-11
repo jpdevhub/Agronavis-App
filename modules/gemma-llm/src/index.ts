@@ -4,7 +4,7 @@ import type { EventSubscription } from "expo-modules-core";
 type NativeGemma = {
   isLoaded?: () => boolean;
   unload?: () => boolean;
-  load: (modelPath: string) => Promise<boolean>;
+  load: (modelPath: string, maxTokens?: number | null) => Promise<boolean>;
   generate: (prompt: string) => Promise<string>;
   generateWithImage: (prompt: string, imageBase64: string, mimeType: string) => Promise<string>;
   cancel: () => void;
@@ -54,11 +54,16 @@ export function unloadModel(): void {
   }
 }
 
-export const loadModel = (modelPath: string): Promise<boolean> => {
+/**
+ * Loads a model file. `maxTokens` is the whole turn — prompt plus answer —
+ * and must not exceed what the model was exported with (2048 for Gemma 3 1B);
+ * omitted, the native side uses 4096, which suits the Gemma 4 builds.
+ */
+export const loadModel = (modelPath: string, maxTokens?: number): Promise<boolean> => {
   if (!native) {
     return Promise.reject(new Error("GemmaLlm native module not linked; run prebuild."));
   }
-  return native.load(modelPath);
+  return native.load(modelPath, maxTokens ?? null);
 };
 
 export const generateText = (prompt: string): Promise<string> => {

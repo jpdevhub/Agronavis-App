@@ -28,7 +28,7 @@ export default function ScanResultScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const goBack = useGoBack('/(tabs)/scan');
-  const { capture } = useLocalSearchParams<{ capture?: string }>();
+  const { capture, crop } = useLocalSearchParams<{ capture?: string; crop?: string }>();
   const activeFarmId = useFarmStore((s) => s.activeFarmId);
 
   /**
@@ -47,8 +47,8 @@ export default function ScanResultScreen() {
    * the farmer came here to file a scan, not to hear about our model.
    */
   const scan = useQuery({
-    queryKey: ['crop-scan', capture],
-    queryFn: () => cropApi.diagnose(imageUri as string),
+    queryKey: ['crop-scan', capture, crop],
+    queryFn: () => cropApi.diagnose(imageUri as string, crop || null),
     enabled: Boolean(imageUri),
     retry: 1,
     staleTime: Infinity,
