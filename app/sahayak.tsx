@@ -18,7 +18,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Elevation, Shape, Spacing, Type, TypeEmphasized } from '@/constants/theme';
 import { MarkdownText } from '@/features/sahayak/components/MarkdownText';
 import { ModelDownloadCard } from '@/features/sahayak/components/ModelDownloadCard';
-import { APPROX_SIZE_GB } from '@/features/sahayak/ondevice/modelFile';
+import { SIZE_LABEL } from '@/features/sahayak/ondevice/modelFile';
 import { useSahayak } from '@/features/sahayak/useSahayak';
 import { useSahayakVoice } from '@/features/sahayak/useSahayakVoice';
 import { LANGUAGES } from '@/constants';
@@ -73,7 +73,7 @@ export default function SahayakScreen() {
   }, []);
   const {
     status, error, messages, streaming, summary, send, stop, load, variant,
-    onModelReady, language, setLanguage, reset,
+    onModelReady, language, setLanguage, reset, engine, modelPath,
   } = useSahayak();
   /**
    * Sahayak is not on this phone, so nothing can be asked of it yet.
@@ -309,9 +309,9 @@ export default function SahayakScreen() {
                     </View>
                     <Text style={styles.gateTitle}>Bring Sahayak to your phone</Text>
                     <Text style={styles.gateBody}>
-                      Sahayak answers without sending anything anywhere, so it has to live on your
-                      handset. It is a {APPROX_SIZE_GB[variant]} GB download, once, and best done
-                      on wi-fi. You can carry on using the app while it arrives.
+                      To answer with no internet, Sahayak needs its offline model on your handset.
+                      It is {SIZE_LABEL[variant]}, downloaded once over Wi-Fi. You can carry on
+                      using the app while it arrives.
                     </Text>
                     <Pressable
                       onPress={() => setShowDownload(true)}
@@ -326,7 +326,11 @@ export default function SahayakScreen() {
                 <View style={styles.empty}>
                   <Text style={styles.emptyTitle}>Ask about your farm</Text>
                   <Text style={styles.emptyBody}>
-                    Answers come from your own records and run entirely on this phone.
+                    {engine === 'online'
+                      ? 'Answers use your farm records and advice from the Kisan Call Centre and state crop guides.'
+                      : engine === 'phone'
+                        ? 'No internet, so Sahayak is answering on this phone from your own records.'
+                        : 'No internet right now. Ask anyway: answers arrive here when you are back online.'}
                   </Text>
                   <View style={styles.suggestions}>
                     {SUGGESTIONS.map((s) => (
@@ -335,6 +339,14 @@ export default function SahayakScreen() {
                       </Pressable>
                     ))}
                   </View>
+                  {/* Offered, never required: online answers need no download. */}
+                  {engine === 'online' && !modelPath && Platform.OS === 'android' ? (
+                    <Pressable onPress={() => setShowDownload(true)} accessibilityRole="button">
+                      <Text style={styles.offlineLink}>
+                        Also answer with no internet: get offline Sahayak ({SIZE_LABEL[variant]}, Wi-Fi)
+                      </Text>
+                    </Pressable>
+                  ) : null}
                 </View>
                 )
               ) : (
@@ -395,6 +407,18 @@ export default function SahayakScreen() {
                   </>
                 ) : status === 'unsupported' ? (
                   <Text style={styles.modelBarText}>{error ?? 'Sahayak runs on Android.'}</Text>
+                ) : status === 'queued' ? (
+                  <>
+                    <MaterialIcons name="cloud-off" size={18} color={Colors.onSecondaryContainer} />
+                    <Text style={styles.modelBarText} numberOfLines={2}>
+                      No internet. Questions are saved and answered when you are back online.
+                    </Text>
+                    {Platform.OS === 'android' ? (
+                      <Pressable onPress={() => setShowDownload(true)} style={styles.modelBarBtn}>
+                        <Text style={styles.modelBarBtnText}>Offline</Text>
+                      </Pressable>
+                    ) : null}
+                  </>
                 ) : (
                   <>
                     <MaterialIcons name="error-outline" size={18} color={Colors.error} />
@@ -471,6 +495,13 @@ export default function SahayakScreen() {
 
 
 const styles = StyleSheet.create({
+  offlineLink: {
+    ...Type.labelLarge,
+    color: Colors.primary,
+    textAlign: 'center',
+    marginTop: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+  },
   root: { flex: 1, backgroundColor: Colors.surface },
   fill: { flex: 1 },
   header: {

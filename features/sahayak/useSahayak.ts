@@ -7,6 +7,7 @@ import {
   isNativeGemmaModuleLinked,
   isModelLoaded,
   loadModel,
+  unloadModel,
 } from '@/modules/gemma-llm/src';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -20,7 +21,33 @@ import {
   saveContextSnapshot,
   type CachedContext,
 } from './contextCache';
-import { deleteModel, detectModelVariant, probeModel, type ModelVariant } from './ondevice/modelFile';
+import {
+  deleteModel,
+  detectModelVariant,
+  deviceMemoryBytes,
+  findInstalledModel,
+  MAX_TOKENS,
+  type ModelVariant,
+} from './ondevice/modelFile';
+import { useConnectivity } from '@/shared/network';
+import { sahayakApi } from '@/services/endpoints';
+import { askOnline, classifyOnlineFailure, ONLINE_ENABLED, withSources } from './cloud';
+import { addPending, clearPending, loadPending, removePending } from './pendingQuestions';
+
+/**
+ * Phones where the model and the rest of the app do not both fit.
+ *
+ * E2B alone is about 2.6 GB on disk and more once running. On a 4–6 GB phone
+ * — most Redmis — keeping it resident after the farmer leaves Sahayak leaves
+ * the dashboard drawing in whatever is left, and MIUI/HyperOS kills a
+ * backgrounded app that large almost at once. There, the model is handed back
+ * when it is not on screen; reloading costs a short wait, not the whole app.
+ */
+const LOW_MEMORY_BYTES = 8 * 1024 * 1024 * 1024;
+const isLowMemoryPhone = (): boolean => {
+  const total = deviceMemoryBytes();
+  return total !== null && total < LOW_MEMORY_BYTES;
+};
 
 export type SahayakMessage = { id: string; role: 'user' | 'assistant'; text: string };
 
@@ -31,7 +58,26 @@ export type ModelStatus =
   | 'ready'
   | 'loading'
   | 'loaded'
-  | 'error';
+  | 'error'
+  /**
+   * No signal and no model on the phone. Questions are still taken, kept,
+   * and answered in the thread once the network returns.
+   */
+  | 'queued';
+
+/** Where the next answer will come from. */
+export type SahayakEngine = 'online' | 'phone' | 'later';
+
+/**
+ * The on-phone model's share of a turn, in characters.
+ *
+ * Gemma 3 1B holds 2048 tokens for prompt and answer together — roughly 6,000
+ * characters of English, fewer of Hindi. The farm context and two turns of
+ * history fit; six turns did not, and a prompt that fills the window leaves
+ * the model no room to answer.
+ */
+const SMALL_MODEL_PROMPT_CHARS = 4_000;
+const SMALL_MODEL_HISTORY = 2;
 
 /** Gemma runs through a native Android module; everywhere else is unsupported. */
 const SUPPORTED = Platform.OS === 'android';
@@ -48,7 +94,7 @@ function readableFailure(error: Error): string {
   const message = error.message ?? '';
 
   if (/not loaded|load\(\) first/i.test(message)) {
-    return 'Sahayak is not running yet. It loads once after the app starts — try again in a moment.';
+    return 'Sahayak had to free memory and is starting again. Please ask once more.';
   }
   if (/not linked|not part of this build/i.test(message)) {
     return 'Sahayak is not available in this version of the app.';
@@ -67,8 +113,36 @@ function readableFailure(error: Error): string {
 }
 
 export function useSahayak() {
-  const variant: ModelVariant = useMemo(() => detectModelVariant(), []);
+  // What is on the phone, once known; until then, what would be downloaded.
+  const [variant, setVariant] = useState<ModelVariant>(detectModelVariant);
   const [status, setStatus] = useState<ModelStatus>(SUPPORTED ? 'checking' : 'unsupported');
+
+  /**
+   * Online first. Anything short of a confirmed "offline" is worth one try:
+   * NetInfo's reachability check is often wrong on Indian mobile networks, and
+   * a failed request falls back to the phone or the queue anyway.
+   */
+  const { status: connectivity, reconnectCount } = useConnectivity();
+  const [serverHasModel, setServerHasModel] = useState(true);
+  const onlineFirst = ONLINE_ENABLED && serverHasModel && connectivity !== 'offline';
+
+  // Ask the server once whether it has a model at all. This also wakes a
+  // sleeping free-tier instance before the farmer's first question needs it.
+  useEffect(() => {
+    if (!ONLINE_ENABLED || connectivity === 'offline') return;
+    let cancelled = false;
+    sahayakApi
+      .status()
+      .then((s) => {
+        if (!cancelled) setServerHasModel(s.online);
+      })
+      .catch(() => {
+        // Unreachable is not "no model": the next question tries again.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [connectivity, reconnectCount]);
   const [modelPath, setModelPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -197,6 +271,19 @@ export function useSahayak() {
     [context, replyLanguage],
   );
   const summary = useMemo(() => contextSummary(context), [context]);
+  /**
+   * What goes to the server: the same prompt without the farmer's name. The
+   * model does not need it to answer, and what it does not need it does not
+   * get (PRIVACY.md, "How Sahayak answers your questions").
+   */
+  const onlinePrompt = useMemo(
+    () => buildSahayakPrompt({
+      ...context,
+      farmer: context.farmer ? { ...context.farmer, fullName: '' } : undefined,
+      replyLanguage,
+    }),
+    [context, replyLanguage],
+  );
 
   useEffect(() => {
     if (!SUPPORTED) return;
@@ -221,21 +308,22 @@ export function useSahayak() {
     }
 
     let cancelled = false;
-    probeModel(variant)
+    findInstalledModel()
       .then((probe) => {
         if (cancelled) return;
-        setModelPath(probe.complete ? probe.path : null);
+        if (!probe) {
+          setModelPath(null);
+          setStatus('missing');
+          return;
+        }
+        setVariant(probe.variant);
+        setModelPath(probe.path);
 
         // The engine outlives this screen. If it is still holding the model,
         // go straight to the chat — asking someone to press "Start" so it can
-        // reload several gigabytes it already has is the whole of the wait
-        // they were complaining about.
-        if (probe.complete && isModelLoaded()) {
-          setStatus('loaded');
-          return;
-        }
-
-        setStatus(probe.complete ? 'ready' : 'missing');
+        // reload a model it already has is the whole of the wait they were
+        // complaining about.
+        setStatus(isModelLoaded() ? 'loaded' : 'ready');
       })
       .catch(() => {
         // Unreadable storage is not a reason to spin forever. Treat it as a
@@ -246,7 +334,7 @@ export function useSahayak() {
     return () => {
       cancelled = true;
     };
-  }, [variant]);
+  }, []);
 
   /**
    * Notice when Android has taken the model back.
@@ -257,11 +345,22 @@ export function useSahayak() {
    * returns to the foreground puts it back on "Ready to start" instead.
    */
   useEffect(() => {
+    const lowMemory = isLowMemoryPhone();
     const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'background' && lowMemory) {
+        unloadModel();
+        setStatus((current) => (current === 'loaded' ? 'ready' : current));
+        return;
+      }
       if (next !== 'active') return;
       setStatus((current) => (current === 'loaded' && !isModelLoaded() ? 'ready' : current));
     });
-    return () => sub.remove();
+    return () => {
+      sub.remove();
+      // Leaving the Sahayak screen on a small phone gives the memory back to
+      // the dashboard and the map.
+      if (lowMemory) unloadModel();
+    };
   }, []);
 
   const load = useCallback(async () => {
@@ -269,7 +368,7 @@ export function useSahayak() {
     setStatus('loading');
     setError(null);
     try {
-      await loadModel(modelPath);
+      await loadModel(modelPath, MAX_TOKENS[variant]);
       setStatus('loaded');
     } catch (e) {
       const message = (e as Error).message ?? '';
@@ -300,7 +399,12 @@ export function useSahayak() {
       setStatus('error');
       setError(message);
     }
-  }, [modelPath]);
+  }, [modelPath, variant]);
+
+  /** Writes one assistant message's text, wherever it is in the thread. */
+  const writeReply = useCallback((replyId: string, text: string) => {
+    setMessages((prev) => prev.map((m) => (m.id === replyId ? { ...m, text } : m)));
+  }, []);
 
   const send = useCallback(
     async (text: string) => {
@@ -309,14 +413,11 @@ export function useSahayak() {
 
       const userMessage: SahayakMessage = { id: `u${Date.now()}`, role: 'user', text: question };
       const replyId = `a${Date.now()}`;
+      const earlier = messages.filter((m) => m.text);
       setMessages((prev) => [...prev, userMessage, { id: replyId, role: 'assistant', text: '' }]);
       setStreaming(true);
       streamRef.current = '';
-
-      const history = messages
-        .slice(-6)
-        .map((m) => `${m.role === 'user' ? 'Farmer' : 'Sahayak'}: ${m.text}`)
-        .join('\n');
+      const setReply = (t: string) => writeReply(replyId, t);
 
       /**
        * Rates are looked up here, not at open.
@@ -335,8 +436,80 @@ export function useSahayak() {
         });
       }
 
+      /**
+       * Online first: a few kilobytes to the server, where an open model and
+       * the knowledge base answer. Only when that cannot happen does the
+       * phone's own model start — or, with neither, the question is kept.
+       */
+      let onlineFailure: ReturnType<typeof classifyOnlineFailure> | null = null;
+      if (onlineFirst) {
+        try {
+          const result = await askOnline({
+            question,
+            context: onlinePrompt,
+            history: earlier.map((m) => ({ role: m.role, text: m.text })),
+            facts: priceFacts,
+            state: contextRef.current?.farmer?.state,
+            language: replyLanguage,
+          });
+          setReply(withSources(result.answer, result.sources));
+          setStreaming(false);
+          return;
+        } catch (e) {
+          onlineFailure = classifyOnlineFailure(e);
+          if (onlineFailure === 'failed') {
+            setReply('Sahayak could not answer that one. Please try again.');
+            setStreaming(false);
+            return;
+          }
+        }
+      }
+
+      if (!modelPath) {
+        if (onlineFailure === 'daily-limit') {
+          setReply(
+            'You have used today\'s online answers. Download offline Sahayak on Wi-Fi to keep asking today, '
+            + 'or ask again tomorrow.',
+          );
+          setStreaming(false);
+          return;
+        }
+        if (signedInAs) {
+          await addPending(signedInAs, { replyId, question, askedAt: Date.now() });
+        }
+        setReply('No internet right now. I have saved your question and will answer it here as soon as you are back online.');
+        setStreaming(false);
+        return;
+      }
+
+      // The phone's model. Gemma 3 1B has a small window, so it gets the
+      // farm context and the last exchange only.
+      const small = variant === 'g3-1b';
+      const history = earlier
+        .slice(small ? -SMALL_MODEL_HISTORY : -6)
+        .map((m) => `${m.role === 'user' ? 'Farmer' : 'Sahayak'}: ${small ? m.text.slice(0, 400) : m.text}`)
+        .join('\n');
+
+      /**
+       * Android may have taken the model back while the farmer was reading —
+       * MIUI does this far more readily than Samsung. Start it again here
+       * instead of answering "not running".
+       */
+      if (!isModelLoaded()) {
+        setStatus('loading');
+        try {
+          await loadModel(modelPath, MAX_TOKENS[variant]);
+          setStatus('loaded');
+        } catch (e) {
+          setStatus('ready');
+          setReply(readableFailure(e as Error));
+          setStreaming(false);
+          return;
+        }
+      }
+
       const prompt = [
-        systemPrompt,
+        small ? systemPrompt.slice(0, SMALL_MODEL_PROMPT_CHARS) : systemPrompt,
         ...priceFacts,
         '',
         history,
@@ -448,6 +621,8 @@ export function useSahayak() {
           );
         }
       } catch (e) {
+        // Released mid-answer: the next question reloads it.
+        if (/not loaded|load\(\) first/i.test((e as Error).message ?? '')) setStatus('ready');
         if (!settled) {
           setMessages((prev) =>
             prev.map((m) =>
@@ -459,24 +634,88 @@ export function useSahayak() {
         finish();
       }
     },
-    [messages, streaming, systemPrompt, queryClient],
+    [messages, streaming, systemPrompt, onlinePrompt, queryClient, modelPath, variant, onlineFirst, replyLanguage, signedInAs, writeReply],
   );
+
+  /**
+   * Questions kept while offline, answered once the network is back.
+   *
+   * Runs on every reconnect and when the screen opens online. One at a time,
+   * oldest first, and only into a thread that still holds the waiting message
+   * — a farmer who cleared the chat has moved on.
+   */
+  const draining = useRef(false);
+  useEffect(() => {
+    if (!signedInAs || !onlineFirst || streaming || draining.current) return;
+    let cancelled = false;
+    draining.current = true;
+
+    (async () => {
+      const pending = await loadPending(signedInAs);
+      for (const item of pending) {
+        if (cancelled) break;
+        try {
+          const result = await askOnline({
+            question: item.question,
+            context: onlinePrompt,
+            history: [],
+            facts: [],
+            state: contextRef.current?.farmer?.state,
+            language: replyLanguage,
+          });
+          writeReply(item.replyId, withSources(result.answer, result.sources));
+          await removePending(signedInAs, item.replyId);
+        } catch (e) {
+          // Still unreachable: leave it for the next reconnect.
+          if (classifyOnlineFailure(e) !== 'failed') break;
+          writeReply(item.replyId, 'Sahayak could not answer that one. Please ask it again.');
+          await removePending(signedInAs, item.replyId);
+        }
+      }
+    })().finally(() => {
+      draining.current = false;
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // Re-run on reconnect; systemPrompt and language are read as they are then.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signedInAs, onlineFirst, reconnectCount]);
 
   const stop = useCallback(() => {
     cancelGeneration();
     setStreaming(false);
   }, []);
 
+  /**
+   * What the screen should offer. Online, Sahayak can always be asked, so the
+   * screen behaves as if a model were loaded; offline it is the phone's model,
+   * or a composer that keeps questions for later.
+   */
+  const deviceUsable = status === 'ready' || status === 'loaded' || status === 'loading' || status === 'checking'
+    || status === 'error';
+  const engine: SahayakEngine = onlineFirst ? 'online' : modelPath && deviceUsable ? 'phone' : 'later';
+  const screenStatus: ModelStatus = engine === 'online'
+    ? 'loaded'
+    : engine === 'later' && status !== 'checking'
+      ? 'queued'
+      : status;
+
   return {
     language: replyLanguage,
     setLanguage,
     variant,
-    status,
+    status: screenStatus,
+    engine,
     /** Starts a new conversation and forgets the stored one. */
     reset: () => {
       setMessages([]);
       setError(null);
-      if (signedInAs) clearThread(signedInAs);
+      if (signedInAs) {
+        clearThread(signedInAs);
+        void clearPending(signedInAs);
+      }
     },
     error,
     modelPath,

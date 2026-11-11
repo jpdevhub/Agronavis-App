@@ -26,6 +26,8 @@ import type {
   SoilHealth,
   DiseasePrediction,
   EligibleCrop,
+  SahayakChatRequest,
+  SahayakChatResponse,
   SoilReport,
   TwoFactorSetup,
   TwoFactorStatus,
@@ -76,8 +78,16 @@ export const cropApi = {
    * Classifies a leaf photograph. Runs on the server, so the model ships once
    * rather than inside every APK.
    */
-  diagnose: (uri: string) =>
-    api.upload<DiseasePrediction>('/crops/diagnose', uri, 'scan.jpg', 'image/jpeg', 'image'),
+  diagnose: (uri: string, crop?: string | null) =>
+    api.upload<DiseasePrediction>(
+      '/crops/diagnose',
+      uri,
+      'scan.jpg',
+      'image/jpeg',
+      'image',
+      // What the farmer says this crop is; the answer is then among its diseases.
+      crop ? { crop } : undefined,
+    ),
   /** Crops the scheme will advise on where this field is. */
   eligible: (fieldId: string) => api.get<EligibleCrop[]>('/crops/eligible', { fieldId }),
   list: (params?: { fieldId?: string; status?: CropStatus }) => api.get<Crop[]>('/crops', params),
@@ -243,4 +253,15 @@ export const storageApi = {
   signedUrl: (bucket: UploadBucket, path: string) =>
     api.get<UploadResult>(`/storage/${bucket}/signed-url`, { path }),
   remove: (bucket: UploadBucket, path: string) => api.delete(`/storage/${bucket}`, { path }),
+};
+
+/**
+ * Sahayak online: the server's open models, grounded in the knowledge base.
+ * Generous timeout — a free tier on a slow day is still faster than a farmer
+ * re-asking.
+ */
+export const sahayakApi = {
+  status: () => api.get<{ online: boolean }>('/sahayak/status'),
+  chat: (payload: SahayakChatRequest) =>
+    api.post<SahayakChatResponse>('/sahayak/chat', payload, { timeout: 60_000 }),
 };

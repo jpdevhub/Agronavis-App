@@ -1,5 +1,6 @@
 import { Platform, StyleSheet, View } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { ANDROID_BLUR_METHOD } from '@/components/ui/blurMethod';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/theme';
 
@@ -32,7 +33,7 @@ export function NavScrim() {
         // thing between a table of readings and the home button.
         intensity={Platform.OS === 'android' ? 40 : 48}
         tint="light"
-        experimentalBlurMethod="dimezisBlurView"
+        experimentalBlurMethod={ANDROID_BLUR_METHOD}
         style={[StyleSheet.absoluteFill, styles.tint]}
       />
     </View>

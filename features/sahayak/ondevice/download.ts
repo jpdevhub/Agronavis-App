@@ -5,6 +5,7 @@ import {
   clearDownloadState,
   loadDownloadState,
   saveDownloadState,
+  saveExpectedBytes,
   type SavedDownload,
 } from './downloadState';
 
@@ -52,6 +53,7 @@ export async function createModelDownload(
   }
 
   let lastCheckpoint = 0;
+  let sizeRecorded = false;
 
   const resumable = FileSystem.createDownloadResumable(
     url,
@@ -66,6 +68,13 @@ export async function createModelDownload(
             ? totalBytesWritten / totalBytesExpectedToWrite
             : null,
       });
+
+      // The server's word on how big the whole file is, kept so a later check
+      // can tell a finished download from one that stopped early.
+      if (!sizeRecorded && totalBytesExpectedToWrite > 0) {
+        sizeRecorded = true;
+        void saveExpectedBytes(variant, totalBytesExpectedToWrite);
+      }
 
       const now = Date.now();
       if (now - lastCheckpoint >= CHECKPOINT_INTERVAL_MS) {

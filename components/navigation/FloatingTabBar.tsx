@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { ANDROID_BLUR_METHOD } from '@/components/ui/blurMethod';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -34,7 +35,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
       <BlurView
         intensity={Platform.OS === 'android' ? 24 : 32}
         tint="light"
-        experimentalBlurMethod="dimezisBlurView"
+        experimentalBlurMethod={ANDROID_BLUR_METHOD}
         style={[StyleSheet.absoluteFill, styles.scrim]}
       />
       <View style={styles.bar}>

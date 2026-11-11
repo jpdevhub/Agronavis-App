@@ -9,7 +9,7 @@ import type { LegalSection } from '@/components/legal/LegalDocument';
  * other has to, and the Play Store privacy URL must resolve to the same words
  * a farmer sees in the app.
  */
-export const LEGAL_UPDATED = '21 October 2026';
+export const LEGAL_UPDATED = '9 November 2026';
 
 /**
  * One mailbox answers all of these. Listing addresses that bounce is worse
@@ -151,6 +151,15 @@ export const TERMS_SECTIONS: LegalSection[] = [
         kind: 'text',
         text: 'The application, its design, its source code and the models it runs belong to us. Government datasets and open models remain the property of their publishers and are used under their own terms. Nothing here transfers any ownership to you; you receive a personal, non-transferable permission to use the app.',
       },
+      /**
+       * Required to redistribute Gemma: its use restrictions must bind the
+       * people who receive it, and they must be told the terms apply
+       * (Gemma Terms of Use, section 3.1).
+       */
+      {
+        kind: 'text',
+        text: 'Sahayak’s offline model is Gemma, provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms. By downloading it you agree not to use it for anything the Gemma Prohibited Use Policy (ai.google.dev/gemma/prohibited_use_policy) forbids.',
+      },
     ],
   },
   {
@@ -261,9 +270,11 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     ],
   },
   {
-    heading: 'Your conversations stay on your phone',
+    heading: 'How Sahayak answers your questions',
     blocks: [
-      { kind: 'text', text: 'Sahayak runs a language model on your device. What you ask it, and what it answers, is processed on the handset and never sent to us or to anyone else. The farm details it reads to answer usefully are held in a copy on the phone.' },
+      { kind: 'text', text: 'When you are online, Sahayak sends your question, the last few messages of the conversation and the farm details it needs to answer well (your village, district and state, crops, irrigation, soil readings, today’s weather and open alerts) to our server. The server finds matching advice in our knowledge base and asks an open AI model to write the answer. That model runs at Groq or Cloudflare, which receive this text only to produce the answer.' },
+      { kind: 'text', text: 'We do not store your questions or Sahayak’s answers on our server. The conversation is kept on your phone for six hours and then cleared.' },
+      { kind: 'text', text: 'With no internet, Sahayak answers with its offline model if you have downloaded it, and then nothing leaves your phone. If you have not, your question waits on your phone and is sent when you are back online.' },
       { kind: 'text', text: 'Speech recognition and speech output use your device’s own services, governed by your phone’s settings rather than by us.' },
     ],
   },
@@ -283,6 +294,8 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
         items: [
           'Supabase — our database, sign-in and file storage; holds everything we store.',
           'Render — runs our API and processes your requests.',
+          'Groq — receives a Sahayak question with the farm details described above, to write the answer. It does not keep it by default.',
+          'Cloudflare — receives a Sahayak question to find matching advice, and to write the answer when Groq cannot. It does not use it to train models.',
           'NASA POWER — receives a field’s coordinates, to return rainfall and sunlight.',
           'OpenWeatherMap — receives a field’s coordinates, to return conditions and forecast.',
           'Mapbox — receives the map area you are viewing, to return satellite imagery.',
@@ -297,7 +310,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
        * screen whose whole purpose is tapping the corners of a field, so it
        * lives here instead — which their terms allow.
        */
-      { kind: 'text', text: 'Map and imagery credits: satellite imagery and maps © Mapbox, © OpenStreetMap contributors. Field monitoring uses Sentinel-2 imagery from the European Space Agency, through the Copernicus programme. Fire detections are from NASA FIRMS, and weather and soil moisture from NASA POWER.' },
+      { kind: 'text', text: 'Map and imagery credits: satellite imagery and maps © Mapbox, © OpenStreetMap contributors. Field monitoring uses Sentinel-2 imagery from the European Space Agency, through the Copernicus programme. Fire detections are from NASA FIRMS, and weather and soil moisture from NASA POWER. Sahayak’s advice notes include Kisan Call Centre records published on data.gov.in under the Government Open Data License – India.' },
     ],
   },
   {

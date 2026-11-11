@@ -140,15 +140,18 @@ not.
 
 ## Ask Sahayak
 
-**An assistant that already knows your farm — and runs on your phone.**
+**An assistant that already knows your farm — online or off.**
 
 Sahayak knows your fields, your soil reading, your current weather and your
 open advisories before you ask it anything. You can type, or you can speak to
 it and hear the answer, in English or Hindi.
 
-It runs on the handset rather than on a server. That means it answers in a
-field with one bar of signal, it costs nothing per question, and what you ask
-about your own land is never sent anywhere.
+Online, it answers from open AI models grounded in Kisan Call Centre answers
+and state crop guides for your state, and shows where the advice came from.
+A question is a few kilobytes, so it works on a weak signal with nothing to
+download. With no signal, an optional offline model (about 550 MB, downloaded
+once over Wi-Fi) answers on the phone; without it, the question is kept and
+answered when the network returns.
 
 ---
 

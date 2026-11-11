@@ -65,7 +65,7 @@ Map one field, and the app reads what is above and below it.
 | **Disease** | A reading from a photograph of a leaf, with a confidence figure and the honesty to say when it does not know |
 | **Smoke** | Stubble fires within 150 km, and whether the wind is bringing their smoke to you |
 | **Prices** | Mandi rates from Agmarknet for the commodities you grow |
-| **Sahayak** | A farming assistant that runs on the phone — your questions never leave it |
+| **Sahayak** | A farming assistant grounded in Kisan Call Centre advice — online, or offline on the phone |
 
 ## What is loaded today
 

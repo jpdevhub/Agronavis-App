@@ -61,7 +61,7 @@ const files: [string, string][] = [
     'PRIVACY.md',
     render(
       'Privacy Policy',
-      'What Agronavis collects, why, who else sees it, and how to have it deleted. We collect what the app needs to advise your fields and nothing for advertising, your field boundaries are treated as the most sensitive thing we hold, and your conversations with Sahayak never leave your phone.',
+      'What Agronavis collects, why, who else sees it, and how to have it deleted. We collect what the app needs to advise your fields and nothing for advertising, your field boundaries are treated as the most sensitive thing we hold, and what you ask Sahayak is used only to answer you.',
       PRIVACY_SECTIONS,
     ),
   ],

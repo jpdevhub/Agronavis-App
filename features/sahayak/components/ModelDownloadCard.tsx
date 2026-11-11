@@ -10,7 +10,7 @@ import {
   startDownload,
   subscribeToDownload,
 } from '../ondevice/downloadManager';
-import { APPROX_SIZE_GB, type ModelVariant } from '../ondevice/modelFile';
+import { SIZE_LABEL, type ModelVariant } from '../ondevice/modelFile';
 import { Loader } from '@/components/ui';
 
 interface Props {
@@ -20,8 +20,16 @@ interface Props {
 
 const gb = (bytes: number) => `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
 
+const mb = (bytes: number) => `${Math.round(bytes / 1024 / 1024)} MB`;
+const size = (bytes: number) => (bytes >= 1024 * 1024 * 1024 ? gb(bytes) : mb(bytes));
+
 export function ModelDownloadCard({ variant, onReady }: Props) {
-  const [warnMobile, setWarnMobile] = useState(false);
+  /**
+   * Wi-Fi only. Online answers already cost a farmer nothing to start, so the
+   * offline model is an extra, and an extra must not eat a day's mobile data
+   * on a prepaid plan.
+   */
+  const [needsWifi, setNeedsWifi] = useState(false);
 
   /**
    * The download runs outside this component and outlives it.
@@ -49,14 +57,15 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
   }, [state.finishedPath, onReady]);
 
   const begin = useCallback(async () => {
-    if (!warnMobile && !(await isOnWifi())) {
-      setWarnMobile(true);
+    if (!(await isOnWifi())) {
+      setNeedsWifi(true);
       return;
     }
+    setNeedsWifi(false);
     // Returns as soon as the download is under way; the manager carries it
     // from here and tells everyone watching how it goes.
     void startDownload(variant);
-  }, [variant, warnMobile]);
+  }, [variant]);
 
   const pct = progress?.fraction != null ? Math.round(progress.fraction * 100) : null;
 
@@ -66,10 +75,10 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
         <MaterialIcons name="download-for-offline" size={30} color={Colors.onPrimaryContainer} />
       </View>
 
-      <Text style={styles.title}>Download Sahayak</Text>
+      <Text style={styles.title}>Offline Sahayak</Text>
       <Text style={styles.body}>
-        Sahayak answers on your phone, with no internet and nothing sent to a server. The model is
-        about {APPROX_SIZE_GB[variant]} GB and downloads once.
+        With this on your phone, Sahayak can answer with no internet, and nothing is sent to a
+        server. It is {SIZE_LABEL[variant]} and downloads once, over Wi-Fi.
       </Text>
 
       {busy ? (
@@ -79,7 +88,7 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
           </View>
           <Text style={styles.progressText}>
             {progress
-              ? `${gb(progress.receivedBytes)}${progress.totalBytes > 0 ? ` of ${gb(progress.totalBytes)}` : ''}${pct != null ? ` · ${pct}%` : ''}`
+              ? `${size(progress.receivedBytes)}${progress.totalBytes > 0 ? ` of ${size(progress.totalBytes)}` : ''}${pct != null ? ` · ${pct}%` : ''}`
               : resumed
                 ? 'Continuing where it stopped…'
                 : 'Starting…'}
@@ -90,11 +99,12 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
         </View>
       ) : (
         <>
-          {warnMobile && (
+          {needsWifi && (
             <View style={styles.notice}>
-              <MaterialIcons name="signal-cellular-alt" size={18} color={Colors.onTertiaryContainer} />
+              <MaterialIcons name="wifi-off" size={18} color={Colors.onTertiaryContainer} />
               <Text style={styles.noticeText}>
-                You are not on Wi-Fi. This will use several gigabytes of mobile data.
+                Connect to Wi-Fi to download. Until then, Sahayak still answers whenever you have
+                internet.
               </Text>
             </View>
           )}
@@ -104,7 +114,7 @@ export function ModelDownloadCard({ variant, onReady }: Props) {
               <Loader tone="onColor" size={28} />
             ) : (
               <Text style={styles.primaryText}>
-                {warnMobile ? 'Download anyway' : 'Download model'}
+                {needsWifi ? 'Try again on Wi-Fi' : 'Download'}
               </Text>
             )}
           </Pressable>

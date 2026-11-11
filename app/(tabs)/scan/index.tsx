@@ -1,5 +1,5 @@
 /** Camera capture. The photo is identified on the result screen. */
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, StatusBar,
   AppState, Platform, ScrollView, useWindowDimensions,
@@ -11,7 +11,15 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radii, Spacing } from '@/constants/theme';
 import { useTabBarHeight } from '@/hooks/useTabBarHeight';
 import { holdCapture } from '@/features/scan';
+import { pickPictureSize } from '@/features/scan/pictureSize';
+import { useFarmer } from '@/hooks/useFarmer';
 import { Loader } from '@/components/ui';
+
+/**
+ * Offered after the farmer's own crops. West Bengal's main field crops first,
+ * since that is where most farmers using this are.
+ */
+const COMMON_CROPS = ['Paddy', 'Potato', 'Jute', 'Mustard', 'Wheat', 'Tomato', 'Maize'];
 
 const CORNER_SIZE  = 44;
 const CORNER_THICK = 4;
@@ -27,6 +35,37 @@ export default function ScanScreen() {
   const [facing, setFacing]   = useState<CameraType>('back');
   const [flash,  setFlash]    = useState<FlashMode>('off');
   const [busy,   setBusy]     = useState(false);
+  const [pictureSize, setPictureSize] = useState<string | undefined>(undefined);
+
+  /**
+   * Which crop this is. The scanner then chooses among that crop's diseases
+   * only, instead of guessing the crop as well — the main source of answers
+   * like "tomato blight" for a rice leaf.
+   */
+  const { data: farmer } = useFarmer();
+  const cropOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return [...(farmer?.primaryCrops ?? []), ...COMMON_CROPS]
+      .map((c) => c.trim())
+      .filter((c) => c && !seen.has(c.toLowerCase()) && seen.add(c.toLowerCase()))
+      .slice(0, 8);
+  }, [farmer?.primaryCrops]);
+  // undefined: not chosen yet, so the farmer's first crop is offered.
+  // null: the farmer tapped it off — "not sure" — and that choice stands.
+  const [crop, setCrop] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (crop === undefined && farmer?.primaryCrops?.[0]) setCrop(farmer.primaryCrops[0]);
+  }, [crop, farmer?.primaryCrops]);
+
+  const onCameraReady = useCallback(async () => {
+    try {
+      const sizes = await cameraRef.current?.getAvailablePictureSizesAsync();
+      const chosen = sizes ? pickPictureSize(sizes) : undefined;
+      if (chosen) setPictureSize(chosen);
+    } catch {
+      // Full size still works; it is only slower to send.
+    }
+  }, []);
   /**
    * Gates whether CameraView is mounted at all. Unmounting is what actually
    * releases the hardware — there is no pause — so the camera must be torn
@@ -85,7 +124,10 @@ export default function ScanScreen() {
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.75 });
       if (photo?.uri) {
-        router.push({ pathname: '/(tabs)/scan/result', params: { capture: holdCapture(photo.uri) } } as any);
+        router.push({
+          pathname: '/(tabs)/scan/result',
+          params: { capture: holdCapture(photo.uri), crop: crop ?? '' },
+        } as any);
       }
     } catch (e) {
       console.warn('Capture error:', e);
@@ -107,7 +149,7 @@ export default function ScanScreen() {
     if (!result.canceled && result.assets[0]) {
       router.push({
         pathname: '/(tabs)/scan/result',
-        params: { capture: holdCapture(result.assets[0].uri) },
+        params: { capture: holdCapture(result.assets[0].uri), crop: crop ?? '' },
       } as any);
     }
   }
@@ -171,6 +213,8 @@ export default function ScanScreen() {
             style={StyleSheet.absoluteFill}
             facing={facing}
             flash={flash}
+            pictureSize={pictureSize}
+            onCameraReady={onCameraReady}
           />
         )}
 
@@ -224,6 +268,23 @@ export default function ScanScreen() {
           Outside it, the padded strip showed the screen's near-black
           background as a band between the tips and the tab bar. */}
       <View style={[styles.bottomSection, { paddingBottom: tabBarHeight + Spacing.md }]}>
+        <Text style={styles.tipsHeader}>Which crop is this?</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+          {cropOptions.map((c) => {
+            const on = crop?.toLowerCase() === c.toLowerCase();
+            return (
+              <TouchableOpacity
+                key={c}
+                onPress={() => setCrop(on ? null : c)}
+                style={[styles.cropChip, on && styles.cropChipOn]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+              >
+                <Text style={[styles.cropChipText, on && styles.cropChipTextOn]}>{c}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
         <Text style={styles.tipsHeader}>Scanning Tips</Text>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -316,6 +377,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tipsHeader:     { fontSize: 15, fontWeight: '800', color: Colors.onSurface },
+  cropChip: {
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: Radii.xl,
+    backgroundColor: Colors.surfaceContainerLow,
+  },
+  cropChipOn:     { backgroundColor: Colors.primary },
+  cropChipText:   { fontSize: 14, fontWeight: '700', color: Colors.onSurface },
+  cropChipTextOn: { color: Colors.onPrimary },
   tipCard: {
     backgroundColor: Colors.surfaceContainerLow, borderRadius: Radii.xl,
     paddingHorizontal: 16, paddingVertical: 14, gap: 8, alignItems: 'center', width: 130,

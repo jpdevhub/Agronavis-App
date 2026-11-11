@@ -45,3 +45,31 @@ export async function clearDownloadState(variant: ModelVariant): Promise<void> {
     // A stale checkpoint is discarded when the URL no longer matches.
   }
 }
+
+/**
+ * The size the server said the model is, recorded as the download starts.
+ *
+ * The self-hosted offline model has no size baked into the app, and without one
+ * a download cut short looks the same as a finished one — the failure the
+ * completeness check exists to catch.
+ */
+const sizeKey = (variant: ModelVariant): string => `agronavis_model_size:${variant}`;
+
+export async function saveExpectedBytes(variant: ModelVariant, bytes: number): Promise<void> {
+  if (!(bytes > 0)) return;
+  try {
+    await AsyncStorage.setItem(sizeKey(variant), String(Math.floor(bytes)));
+  } catch {
+    // Without it the floor in modelFile.ts still applies.
+  }
+}
+
+export async function loadExpectedBytes(variant: ModelVariant): Promise<number | null> {
+  try {
+    const raw = await AsyncStorage.getItem(sizeKey(variant));
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch {
+    return null;
+  }
+}

@@ -114,7 +114,8 @@ export const api = {
   get: <T>(url: string, params?: Record<string, unknown>) => request<T>({ method: 'GET', url, params }),
   getWithMeta: <T>(url: string, params?: Record<string, unknown>) =>
     requestWithMeta<T>({ method: 'GET', url, params }),
-  post: <T>(url: string, data?: unknown) => request<T>({ method: 'POST', url, data }),
+  post: <T>(url: string, data?: unknown, options?: Pick<AxiosRequestConfig, 'timeout'>) =>
+    request<T>({ method: 'POST', url, data, ...options }),
   patch: <T>(url: string, data?: unknown) => request<T>({ method: 'PATCH', url, data }),
   put: <T>(url: string, data?: unknown) => request<T>({ method: 'PUT', url, data }),
   delete: <T = void>(url: string, data?: unknown) => request<T>({ method: 'DELETE', url, data }),
@@ -128,8 +129,17 @@ export const api = {
    * "[object Object]" and send a text field, so there the uri — `blob:` or
    * `data:` — is read into a real Blob first.
    */
-  upload: async <T>(url: string, uri: string, name: string, type: string, field = 'file') => {
+  upload: async <T>(
+    url: string,
+    uri: string,
+    name: string,
+    type: string,
+    field = 'file',
+    fields?: Record<string, string>,
+  ) => {
     const form = new FormData();
+    // Plain text parts first; multer reads them into req.body.
+    for (const [k, v] of Object.entries(fields ?? {})) form.append(k, v);
     if (Platform.OS === 'web') {
       const blob = await (await fetch(uri)).blob();
       form.append(field, blob, name);

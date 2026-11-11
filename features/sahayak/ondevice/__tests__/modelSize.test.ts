@@ -1,4 +1,12 @@
-import { APPROX_SIZE_GB, EXACT_BYTES } from '../modelFile';
+import { APPROX_SIZE_GB, EXACT_BYTES, MAX_TOKENS, MODEL_URL, detectModelVariant } from '../modelFile';
+
+// modelFile reads a recorded download size through AsyncStorage, whose native
+// module does not exist under Jest.
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(() => Promise.resolve(null)),
+  setItem: jest.fn(() => Promise.resolve()),
+  removeItem: jest.fn(() => Promise.resolve()),
+}));
 
 /**
  * A model download that stops early must not be recorded as finished.
@@ -39,5 +47,27 @@ describe('model sizes', () => {
   it('still accepts a complete file', () => {
     expect(EXACT_BYTES.e4b).toBeGreaterThanOrEqual(Math.floor(EXACT_BYTES.e4b * 0.995));
     expect(EXACT_BYTES.e2b).toBeGreaterThanOrEqual(Math.floor(EXACT_BYTES.e2b * 0.995));
+  });
+
+  it('offers the small model for download, not the 2.6 GB one', () => {
+    // Online answers come from the server; the phone's model is only the
+    // no-signal fallback, so the download must be one a farmer will finish.
+    expect(detectModelVariant()).toBe('g3-1b');
+    expect(APPROX_SIZE_GB['g3-1b']).toBeLessThan(1);
+  });
+
+  it('never understates the small model either', () => {
+    // Published as 529 MB; covers it whether that meant 10^6 or 2^20.
+    expect(APPROX_SIZE_GB['g3-1b'] * 1e9).toBeGreaterThanOrEqual(529 * 1024 * 1024 * 0.98);
+  });
+
+  it('opens no larger a window than the 1B model was exported with', () => {
+    expect(MAX_TOKENS['g3-1b']).toBe(2048);
+    expect(MAX_TOKENS.e2b).toBe(4096);
+  });
+
+  it('fetches the 1B model from somewhere a phone can reach without an account', () => {
+    // Hugging Face gates Gemma 3 behind a licence click-through.
+    expect(MODEL_URL['g3-1b']).not.toContain('huggingface.co/litert-community/Gemma3');
   });
 });
