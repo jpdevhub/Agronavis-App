@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 
 export const LightScheme = {
   primary: '#006c49',
-  primaryContainer: '#10b981',
+  primaryContainer: '#8cf3c0',
   onPrimary: '#ffffff',
   onPrimaryContainer: '#00422b',
   primaryFixed: '#6ffbbe',
@@ -16,7 +16,7 @@ export const LightScheme = {
   inversePrimary: '#4edea3',
 
   secondary: '#1b6b51',
-  secondaryContainer: '#a6f2d1',
+  secondaryContainer: '#cfe9da',
   onSecondary: '#ffffff',
   onSecondaryContainer: '#237157',
   secondaryFixed: '#a6f2d1',
@@ -35,7 +35,7 @@ export const LightScheme = {
    * what the role calls for, and the palette already had it as
    * tertiaryFixed.
    */
-  tertiaryContainer: '#ffddb8',
+  tertiaryContainer: '#ffdf9e',
   onTertiary: '#ffffff',
   onTertiaryContainer: '#523200',
   tertiaryFixed: '#ffddb8',
@@ -48,26 +48,40 @@ export const LightScheme = {
   onError: '#ffffff',
   onErrorContainer: '#93000a',
 
-  surface: '#f8f9ff',
-  surfaceBright: '#f8f9ff',
-  surfaceDim: '#cbdbf5',
-  surfaceVariant: '#d3e4fe',
+  surface: '#f4fbf5',
+  surfaceBright: '#f4fbf5',
+  surfaceDim: '#d5dcd7',
+  surfaceVariant: '#dbe5de',
   surfaceContainerLowest: '#ffffff',
-  surfaceContainerLow: '#eff4ff',
-  surfaceContainer: '#e5eeff',
-  surfaceContainerHigh: '#dce9ff',
-  surfaceContainerHighest: '#d3e4fe',
-  inverseSurface: '#213145',
-  inverseOnSurface: '#eaf1ff',
+  surfaceContainerLow: '#eff7f1',
+  surfaceContainer: '#e8f0ea',
+  surfaceContainerHigh: '#e2eae4',
+  surfaceContainerHighest: '#dce5df',
+  inverseSurface: '#2b322e',
+  inverseOnSurface: '#eceff0',
 
-  onSurface: '#0b1c30',
-  onSurfaceVariant: '#3c4a42',
-  onBackground: '#0b1c30',
-  background: '#f8f9ff',
+  onSurface: '#161d19',
+  onSurfaceVariant: '#3f4943',
+  onBackground: '#161d19',
+  background: '#f4fbf5',
 
-  outline: '#6c7a71',
-  outlineVariant: '#bbcabf',
+  outline: '#6f7975',
+  outlineVariant: '#bfc9c1',
   surfaceTint: '#006c49',
+
+  /**
+   * Brand roles, outside the generated palette.
+   *
+   * `forest` is the ground the weather and irrigation card sits on, `leaf`
+   * the lime that marks a reading as good, `skyContainer` the tint weather
+   * and rainfall take when they are not on forest.
+   */
+  forest: '#08321f',
+  onForest: '#ffffff',
+  leaf: '#7ecb4d',
+  onLeaf: '#0b2a05',
+  skyContainer: '#d3e8ff',
+  onSkyContainer: '#0b1c30',
 
   onPrimaryFixed: '#002114',
   onPrimaryFixedVariant: '#00422b',
@@ -76,6 +90,13 @@ export const LightScheme = {
 } as const;
 
 export const DarkScheme: Record<keyof typeof LightScheme, string> = {
+  forest: '#0b3d26',
+  onForest: '#ffffff',
+  leaf: '#9fdc74',
+  onLeaf: '#0b2a05',
+  skyContainer: '#1d3049',
+  onSkyContainer: '#d7e3f8',
+
   primary: '#6adba8',
   onPrimary: '#003825',
   primaryContainer: '#005236',
