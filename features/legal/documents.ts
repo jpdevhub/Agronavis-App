@@ -328,6 +328,15 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     ],
   },
   {
+    heading: 'Where the map comes from',
+    blocks: [
+      {
+        kind: 'text',
+        text: 'The map of India in the app is drawn from Survey of India state boundary data, used under a Creative Commons Attribution 4.0 licence. The boundaries are India’s own, as the Survey publishes them.',
+      },
+    ],
+  },
+  {
     heading: 'Changes and contact',
     blocks: [
       { kind: 'text', text: 'Material changes will be announced in the app before they take effect, and the date at the top of this page will change.' },

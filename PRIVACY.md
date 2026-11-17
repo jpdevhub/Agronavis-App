@@ -89,7 +89,11 @@ Write to contact@agronavis.in. We reply within 30 days. If you are not satisfied
 
 Agronavis is for adults who farm. We do not knowingly collect data from anyone under 18. If you believe a child has given us data, write to us and we will remove it.
 
-## 10. Changes and contact
+## 10. Where the map comes from
+
+The map of India in the app is drawn from Survey of India state boundary data, used under a Creative Commons Attribution 4.0 licence. The boundaries are India’s own, as the Survey publishes them.
+
+## 11. Changes and contact
 
 Material changes will be announced in the app before they take effect, and the date at the top of this page will change.
 
