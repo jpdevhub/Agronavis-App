@@ -19,6 +19,10 @@ KrishiSaathi-AI/
 /.agents/
 /skills-lock.json
 
+# Brand masters: 5.3 MB of print-resolution logo artwork that no screen
+# requires, so Metro never bundles it and only the upload pays for it.
+/assets/Brand/
+
 # Rendered promo and launch videos: 103 MB of MP4 uploaded on every build,
 # for an archive that was 153 MB in total.
 /video/

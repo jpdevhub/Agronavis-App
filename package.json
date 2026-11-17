@@ -2,11 +2,11 @@
   "name": "agronavis",
   "version": "1.0.0",
   "private": true,
-  "description": "Agronavis \u2014 AI-driven geospatial intelligence platform for Indian agriculture",
+  "description": "Agronavis — AI-driven geospatial intelligence platform for Indian agriculture",
   "license": "UNLICENSED",
   "main": "expo-router/entry",
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22 <23",
     "npm": ">=10.0.0"
   },
   "workspaces": [
@@ -42,7 +42,6 @@
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/netinfo": "11.4.1",
     "@react-navigation/bottom-tabs": "^7.4.0",
-    "@react-navigation/native": "^7.1.8",
     "@rnmapbox/maps": "^10.3.7",
     "@supabase/supabase-js": "^2.108.1",
     "@tanstack/query-async-storage-persister": "^5.104.4",
@@ -93,7 +92,6 @@
     "@types/jest": "^29.5.12",
     "@types/react": "~19.1.0",
     "babel-plugin-module-resolver": "^5.0.2",
-    "concurrently": "^9.1.2",
     "dotenv": "^16.4.7",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
@@ -101,7 +99,6 @@
     "jest-expo": "~54.0.0",
     "react-native-svg-transformer": "^1.5.3",
     "rimraf": "^6.0.1",
-    "supabase": "^2.12.1",
     "typescript": "~5.9.2"
   },
   "overrides": {

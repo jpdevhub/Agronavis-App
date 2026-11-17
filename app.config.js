@@ -138,7 +138,13 @@ module.exports = () => ({
     './plugins/withReleaseSigning',
   ],
 
-  experiments: { typedRoutes: true },
+  experiments: {
+    typedRoutes: true,
+    // Memoises components and hooks at build time. The dashboard re-renders
+    // on every store write, and hand-memoising each one is work the compiler
+    // does correctly and for free.
+    reactCompiler: true,
+  },
 
   extra: {
     // The project this app belongs to on EAS. Hand-written because this is a

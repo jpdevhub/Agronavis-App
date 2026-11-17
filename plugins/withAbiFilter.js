@@ -1,4 +1,4 @@
-const { withGradleProperties, withAppBuildGradle } = require('@expo/config-plugins');
+const { withGradleProperties, withAppBuildGradle } = require('expo/config-plugins');
 
 /**
  * Packages native libraries for arm64-v8a only.
