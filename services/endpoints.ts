@@ -7,6 +7,7 @@ import type {
   CommunityReply,
   CreateFieldPayload,
   Crop,
+  CreateCropPayload,
   CropScan,
   CropStatus,
   DashboardPrice,
@@ -34,6 +35,8 @@ import type {
   UploadResult,
   WeatherBundle,
   PostAuthor,
+  RecommendationReport,
+  StateRecommendation,
 } from '@agronavis/shared-types';
 import { api } from './api';
 
@@ -81,7 +84,7 @@ export const cropApi = {
   /** Crops the scheme will advise on where this field is. */
   eligible: (fieldId: string) => api.get<EligibleCrop[]>('/crops/eligible', { fieldId }),
   list: (params?: { fieldId?: string; status?: CropStatus }) => api.get<Crop[]>('/crops', params),
-  create: (payload: Partial<Crop> & { name: string }) => api.post<Crop>('/crops', payload),
+  create: (payload: CreateCropPayload) => api.post<Crop>('/crops', payload),
   update: (id: string, payload: Partial<Crop>) => api.patch<Crop>(`/crops/${id}`, payload),
   remove: (id: string) => api.delete(`/crops/${id}`),
 
@@ -196,6 +199,15 @@ export const communitySafetyApi = {
   listBlocked: () => api.get<PostAuthor[]>('/community/blocks'),
   block: (farmerId: string) => api.post<void>(`/community/block/${farmerId}`),
   unblock: (farmerId: string) => api.delete<void>(`/community/block/${farmerId}`),
+};
+
+export const recommendApi = {
+  /** Ranked for one field, using its soil, weather and area. */
+  forField: (fieldId: string) =>
+    api.get<RecommendationReport>(`/recommend/field/${fieldId}`),
+  /** Ranked for a state, per acre — the browse map. */
+  forState: (state: string) =>
+    api.get<StateRecommendation>('/recommend/state', { state }),
 };
 
 export const advisoryApi = {

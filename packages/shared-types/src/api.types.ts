@@ -71,6 +71,51 @@ export interface FarmerProfile {
 export type AlertCategory = 'weather_alert' | 'irrigation' | 'pest_control';
 export type AlertPreferences = Record<AlertCategory, boolean>;
 
+/** What to buy for one crop on one field, and the arithmetic behind it. */
+export interface FertiliserPlan {
+  needed: { n: number; p: number; k: number };
+  products: { name: string; kg: number; bags: number; supplies: string }[];
+  workings: string[];
+}
+
+export interface CropSuggestion {
+  crop: string;
+  category: 'cereal' | 'pulse' | 'oilseed' | 'vegetable' | 'fruit' | 'spice' | 'fibre' | 'other';
+  season: 'kharif' | 'rabi' | 'zaid' | 'perennial' | 'year-round';
+  durationDays: number;
+  sowingWindows: string[];
+  sowableNow: boolean;
+  /** 0-100, how well it suits this field right now. */
+  fit: number;
+  pricePerQuintal: number | null;
+  expectedYieldQuintals: number;
+  estimatedRevenue: number | null;
+  estimatedInputCost: number;
+  estimatedProfit: number | null;
+  /** Everything working against it. Shown, never used to hide the crop. */
+  cautions: string[];
+  fertiliser: FertiliserPlan;
+  notes: string | null;
+}
+
+export interface RecommendationReport {
+  fieldId: string;
+  fieldName: string;
+  areaAcres: number;
+  month: string;
+  sowableNow: number;
+  suggestions: CropSuggestion[];
+}
+
+/** The browse map's answer: no field, so no soil or weather behind it. */
+export interface StateRecommendation {
+  state: string;
+  month: string;
+  /** Said on the screen, so nobody mistakes a state figure for their field's. */
+  soilBasis: string;
+  suggestions: CropSuggestion[];
+}
+
 export interface UpdateFarmerPayload {
   alertPreferences?: AlertPreferences;
   fullName?: string;
@@ -109,6 +154,10 @@ export interface FarmField {
   name: string;
   areaAcres: number;
   areaHectares: number | null;
+  /** Where the field is, resolved when its boundary was saved. Drives which
+   *  crops the scheme offers and which state the browse map opens on. */
+  state: string | null;
+  district: string | null;
   centerLatitude: number | null;
   centerLongitude: number | null;
   polygon: Json;
@@ -147,6 +196,25 @@ export interface Crop {
   harvestDate: string | null;
   status: CropStatus;
   createdAt: string;
+}
+
+/**
+ * What `POST /crops` accepts — wider than `Crop`, which is the stored row.
+ * The scheme's id and the season length shape the plan that is generated and
+ * are not kept on the crop itself.
+ */
+export interface CreateCropPayload {
+  name: string;
+  variety?: string;
+  category?: string;
+  farmId?: string;
+  fieldId?: string;
+  /** The Soil Health Card scheme's own crop id, which its advice engine takes. */
+  shcCropId?: string;
+  /** 30–400 days. Sets the harvest date and spaces the tasks. */
+  durationDays?: number;
+  sownDate?: string;
+  harvestDate?: string;
 }
 
 /** One class the disease model ranked for a photograph. */

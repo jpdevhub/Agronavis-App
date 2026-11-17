@@ -15,8 +15,23 @@ happens, rather than being reconstructed from commit subjects at the end.
 
 ## [1.0.1] — unreleased
 
-Nothing a farmer would notice yet. The work so far is documentation and
-release process: see `CONTRIBUTING.md` and `docs/RELEASING.md`.
+### Added
+
+- **Crop recommendations per field.** Every crop ranked for this field and this
+  month, on soil, weather and today's mandi price — with what counts against
+  each one written beside it. Nothing is removed from the list: the field is
+  the farmer's and the ranking is an argument, not a gate.
+
+### Fixed
+
+- Tasks showed the whole farm's work on every field, so sowing dates for the
+  cotton appeared against the plot growing rice.
+- Sahayak stopped answering once Android reclaimed the model, and said to try
+  again when trying again could not work.
+- The model download restarted from zero whenever the connection dropped.
+- Sahayak was offered to phones too small to hold it, after 2.6 GB of download.
+- Answers kept being read aloud after the chat was cleared or muted.
+- The field name sheet put Continue under the keyboard.
 
 ## [1.0.0] — 2026-10-27 · build 12
 
