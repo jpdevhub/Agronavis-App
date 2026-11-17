@@ -25,7 +25,7 @@ Express API  (backend/)
         ├── /notifications  → Expo Push (no 3rd-party service)
         └── /auth           → JWT verify + TOTP 2FA (speakeasy, AES-256)
                 │
-        Supabase Postgres   (supabase/migrations/ — single schema source)
+        Supabase Postgres   (backend-pro: supabase/migrations/)
         Supabase Storage    (crop scan images)
 ```
 
@@ -197,8 +197,8 @@ longitude narrowing. Displayed on the field card; used to contextualise NDVI rea
 | What | Platform | Config |
 |---|---|---|
 | Expo app | EAS + Play Store | `eas.json` build profiles |
-| Express API | Render | `render.yaml` blueprint; `npm run start:api` |
-| Database | Supabase cloud | `supabase/migrations/` only; `npm run db:push` |
+| Express API | Render | `render.yaml` in backend-pro |
+| Database | Supabase cloud | `supabase/migrations/` in backend-pro; `npm run db:push` |
 
 **Render notes:**
 - Free-tier instance sleeps → cron jobs need a manual trigger: `npm run sync:ndvi`

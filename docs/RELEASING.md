@@ -22,8 +22,9 @@ curl -s https://agronavis-api.onrender.com/health
 `commit` must match your merge. Confirm it every time — a green build means it
 compiled, not that it started.
 
-**Migration?** Apply it *before* the API that needs it. Adding a column is
-safe; renaming one is not. `npm run db:push`, then verify the table exists.
+**Migration?** It lives in the backend repo now. Apply it *before* the API
+that needs it — adding a column is safe, renaming one is not — then verify
+the table exists.
 
 ## 4. Build
 

@@ -51,7 +51,6 @@ if [ ${#missing[@]} -gt 0 ]; then
 fi
 
 echo "${bold}Then:${reset}"
-echo "  npm run db:push    apply supabase/migrations to your project"
-echo "  npm run dev        API on :3001 and Expo together"
+echo "  npm run dev        Expo on :8081"
 echo "  npm run verify     typecheck, lint and test"
 echo
