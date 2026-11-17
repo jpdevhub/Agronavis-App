@@ -27,8 +27,8 @@
     "lint:fix": "expo lint --fix && npm run lint:fix --workspaces --if-present",
     "test": "jest --passWithNoTests && npm run test --workspaces --if-present",
     "verify": "npm run typecheck && npm run lint && npm run test",
-    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,sql}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,sql}\"",
+    "format": "biome format --write .",
+    "format:check": "biome ci .",
     "clean": "rimraf dist .expo \"**/*.tsbuildinfo\" coverage",
     "clean:deps": "rimraf node_modules \"packages/*/node_modules\"",
     "reinstall": "npm run clean:deps && npm install",
@@ -88,6 +88,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.6.7",
     "@types/geojson": "^7946.0.16",
     "@types/jest": "^29.5.12",
     "@types/react": "~19.1.0",
@@ -98,7 +99,6 @@
     "eslint-config-expo": "~10.0.0",
     "jest": "^29.7.0",
     "jest-expo": "~54.0.0",
-    "prettier": "^3.4.2",
     "react-native-svg-transformer": "^1.5.3",
     "rimraf": "^6.0.1",
     "supabase": "^2.12.1",
