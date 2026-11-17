@@ -27,7 +27,7 @@ const publicEnv = {
  * it per production build. A copy in this file would be ignored and would
  * drift.
  */
-const VERSION = '1.0.0';
+const VERSION = '1.0.1';
 
 /** @type {import('expo/config').ExpoConfig} */
 module.exports = () => ({
@@ -138,7 +138,13 @@ module.exports = () => ({
     './plugins/withReleaseSigning',
   ],
 
-  experiments: { typedRoutes: true },
+  experiments: {
+    typedRoutes: true,
+    // Memoises components and hooks at build time. The dashboard re-renders
+    // on every store write, and hand-memoising each one is work the compiler
+    // does correctly and for free.
+    reactCompiler: true,
+  },
 
   extra: {
     // The project this app belongs to on EAS. Hand-written because this is a

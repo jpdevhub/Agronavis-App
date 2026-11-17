@@ -39,6 +39,21 @@ export const APPROX_SIZE_GB: Record<ModelVariant, number> = {
  */
 const E2B_RAM_CEILING = 12 * 1024 * 1024 * 1024;
 
+/**
+ * Below this, Sahayak is not offered at all.
+ *
+ * The smaller model is 2.6 GB and has to stay resident to answer. A phone
+ * reporting less than this has perhaps two gigabytes free once Android has
+ * taken its share, so the system evicts the model almost as fast as it loads
+ * — the assistant spends its life reloading and the phone slows down around
+ * it. Worse, the farmer pays for 2.6 GB of mobile data first.
+ *
+ * Reported memory runs above the retail figure, since it counts kernel and
+ * GPU shared memory: a retail 8 GB phone reports 9–11 GB. This sits where a
+ * retail 6 GB device passes and a retail 4 GB one does not.
+ */
+const MIN_RAM_FOR_SAHAYAK = 5.5 * 1024 * 1024 * 1024;
+
 /** A partial download must not be mistaken for a usable model. */
 /**
  * What counts as a finished download.
@@ -75,6 +90,17 @@ export function deviceMemoryBytes(): number | null {
   if (Platform.OS !== 'android') return null;
   const total = Device.totalMemory;
   return typeof total === 'number' && total > 0 ? total : null;
+}
+
+/**
+ * Whether this phone can hold the model at all.
+ *
+ * Unknown memory reads as yes: the check exists to spare phones we know are
+ * too small, not to withhold the feature wherever the OS declines to answer.
+ */
+export function canRunSahayak(): boolean {
+  const memory = deviceMemoryBytes();
+  return memory === null || memory >= MIN_RAM_FOR_SAHAYAK;
 }
 
 /** Picks the variant this device can actually hold in memory. */

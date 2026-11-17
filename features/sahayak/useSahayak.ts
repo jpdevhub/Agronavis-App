@@ -437,7 +437,31 @@ export function useSahayak() {
       });
 
       try {
-        const full = await generateText(prompt);
+        /**
+         * Android can take the model back mid-session.
+         *
+         * It releases the engine under memory pressure, which some phones
+         * apply far more readily than others, and the first the farmer knew
+         * was being told to try again — which failed the same way, because
+         * nothing reloaded it. Load it back and answer the question they
+         * already asked.
+         */
+        const answer = async () => {
+          try {
+            return await generateText(prompt);
+          } catch (e) {
+            const message = (e as Error).message ?? '';
+            if (!/not loaded|load\(\) first/i.test(message) || !modelPath) throw e;
+
+            setStatus('loading');
+            await loadModel(modelPath);
+            setStatus('loaded');
+            streamRef.current = '';
+            return generateText(prompt);
+          }
+        };
+
+        const full = await answer();
         // Whatever is still buffered belongs on screen before the final text.
         paintNow();
         // A late return must not overwrite an answer the farmer is reading, nor
@@ -459,7 +483,7 @@ export function useSahayak() {
         finish();
       }
     },
-    [messages, streaming, systemPrompt, queryClient],
+    [messages, streaming, systemPrompt, queryClient, modelPath],
   );
 
   const stop = useCallback(() => {

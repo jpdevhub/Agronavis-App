@@ -9,13 +9,17 @@ export type { FarmTask };
 
 export function useTimelineTasks() {
   const activeFarmId = useFarmStore((s) => s.activeFarmId);
+  // Tasks belong to the crop growing in a plot, so they follow the selected
+  // field. Without it every plot showed the whole farm's work — sowing dates
+  // for the cotton appearing against the field growing rice.
+  const activeFieldId = useFarmStore((s) => s.activeFieldId);
   const { isOnline } = useConnectivity();
   const queryClient = useQueryClient();
-  const queryKey = ['tasks', activeFarmId];
+  const queryKey = ['tasks', activeFarmId, activeFieldId];
 
   const query = useQuery({
     queryKey,
-    queryFn: () => taskApi.list(activeFarmId ?? undefined),
+    queryFn: () => taskApi.list(activeFarmId ?? undefined, activeFieldId ?? undefined),
     enabled: !!activeFarmId,
     staleTime: 1000 * 60 * 5,
   });

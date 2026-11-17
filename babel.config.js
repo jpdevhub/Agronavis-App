@@ -7,20 +7,9 @@ module.exports = function (api) {
         'module-resolver',
         {
           root: ['./'],
-          alias: {
-            '@': './',
-            '@app': './app',
-            '@components': './components',
-            '@features': './features',
-            '@store': './store',
-            '@services': './services',
-            '@hooks': './hooks',
-            '@contexts': './contexts',
-            '@constants': './constants',
-            '@utils': './utils',
-            '@types': './types',
-            '@assets': './assets',
-          },
+          // Only `@/` is used. Each extra alias is another prefix
+          // module-resolver tests against every import in every file.
+          alias: { '@': './' },
           extensions: ['.ios.js', '.android.js', '.js', '.jsx', '.ts', '.tsx', '.json'],
         },
       ],

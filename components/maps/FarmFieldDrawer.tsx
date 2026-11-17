@@ -5,7 +5,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Platform, KeyboardAvoidingView, Animated, PanResponder, ScrollView,
+  Platform, KeyboardAvoidingView, Animated, PanResponder, ScrollView, Keyboard,
 } from 'react-native';
 import { Camera, MapView, MarkerView, ShapeSource, FillLayer, LineLayer, UserLocation } from '@rnmapbox/maps';
 // Side-effect import: the access token must be set before any MapView mounts.
@@ -79,9 +79,39 @@ function computeAcres(coords: LatLng[]): number {
   return parseFloat((Math.abs(area) / 2 / 4046.86).toFixed(2));
 }
 
+/**
+ * How much of the screen the keyboard is covering.
+ *
+ * Under edge-to-edge the window does not resize when the keyboard opens, so
+ * `KeyboardAvoidingView` has nothing to shrink and the bottom of the sheet —
+ * the Continue button — sits underneath the keys with no way to reach it.
+ * Padding the sheet by this much puts it back within reach.
+ */
+function useKeyboardInset(): number {
+  const [inset, setInset] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (event) => setInset(event.endCoordinates?.height ?? 0),
+    );
+    const hide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setInset(0),
+    );
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  return inset;
+}
+
 export default function FarmFieldDrawer({
   mode, onComplete, onBack, onSkip,
 }: FarmFieldDrawerProps) {
+  const keyboardInset = useKeyboardInset();
   const createField   = useCreateField();
   const { setLocation } = useOnboardingStore();
   const cameraRef     = useRef<Camera>(null);
@@ -388,7 +418,10 @@ export default function FarmFieldDrawer({
   const aboveSheet = sheetHeight + 16;
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    /* Android compensates for the keyboard below, by measuring it. Letting
+       KeyboardAvoidingView shrink the container as well moved the sheet twice
+       and left it stranded above the map. */
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
       {/* ── Top header ── */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -544,7 +577,14 @@ export default function FarmFieldDrawer({
 
       {/* ── Bottom sheet ── */}
       <Animated.View
-        style={[styles.sheet, { paddingBottom: sheetPadBottom, transform: [{ translateY: slide }] }]}
+        style={[
+          styles.sheet,
+          { paddingBottom: sheetPadBottom, transform: [{ translateY: slide }] },
+          // Sit the sheet on top of the keyboard rather than behind it, and
+          // give it only the room that is left, so its scroll view can still
+          // reach the button at the bottom.
+          keyboardInset > 0 && { bottom: keyboardInset, maxHeight: '45%' },
+        ]}
         onLayout={(e) => {
           const h = e.nativeEvent.layout.height;
           setSheetHeight(h);

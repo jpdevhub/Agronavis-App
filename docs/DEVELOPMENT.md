@@ -1,8 +1,14 @@
 # Development
 
-An Expo app, an Express API and a Supabase project. The app never touches the
-database: every read and write goes through the API, which is the only holder of
-the service-role key and the third-party API keys.
+> **`main` is production.** Agronavis is published on Google Play, so nothing
+> reaches `main` except through a reviewed pull request with CI green. The
+> process is in [CONTRIBUTING.md](../CONTRIBUTING.md); cutting a release is in
+> [RELEASING.md](RELEASING.md).
+
+This repo is the Expo app. The API, the schema and the Render blueprint live in
+[Agronavis-AI/backend-pro](https://github.com/Agronavis-AI/backend-pro) — the
+app never touches the database, so every read and write goes through that API,
+which is the only holder of the service-role key and the third-party keys.
 
 ## Quick start
 
@@ -10,55 +16,46 @@ the service-role key and the third-party API keys.
 git clone https://github.com/jpdevhub/Agronavis-App.git && cd Agronavis-App
 cp .env.example .env
 npm install --legacy-peer-deps
-npm run db:push               # apply supabase/migrations to your project
-npm run dev                   # API on :3001, Expo on :8081
+npm run dev                   # Expo on :8081
 ```
 
-Node 20 or newer. `scripts/setup.sh` does the same and tells you which keys are
-still blank.
+Node 22 (`.nvmrc`). `scripts/setup.sh` does the same and tells you which keys
+are still blank. `EXPO_PUBLIC_API_URL` in `.env` picks the API: the deployed one
+by default, or `http://localhost:3001/api/v1` against a backend checkout.
 
 ## Layout
 
 The repo root **is** the React Native project. `app/` is expo-router's routes
-directory; `backend` and `packages/*` are npm workspaces underneath it.
+directory; `packages/*` are npm workspaces underneath it.
 
 | Path                                                                 | What it is                                                 |
 | -------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `app/`                                                               | Expo Router screens — the app's routes                     |
 | `components/` `hooks/` `services/` `store/` `constants/` `features/` | App source                                                 |
-| `assets/`                                                            | Icons, splash and brand images                             |
-| `backend/`                                                           | Express REST API and the cron pollers                      |
-| `backend/model/`                                                     | The disease classifier's weights, served in-process        |
-| `packages/shared-types/`                                             | Type contracts shared by the app and the API               |
-| `supabase/migrations/`                                               | The only schema definition                                 |
-| `.env`                                                               | The one environment file, read by both the app and the API |
-| `render.yaml`                                                        | Render blueprint for the API                               |
+| `assets/`                                                            | Icons, splash, brand images and the India boundary file    |
+| `modules/`                                                           | Native modules — the on-device Gemma runtime               |
+| `packages/shared-types/`                                             | The API contract the app codes against                     |
+| `.env`                                                               | The one environment file                                   |
 
 One `package.json`, one `.env`, one `.gitignore`, one `tsconfig` — all at the
-root. `backend` and `packages/shared-types` keep a minimal `package.json` each,
-which npm workspaces require. A single `npm install` sets up everything.
+root. `packages/shared-types` keeps a minimal `package.json`, which npm
+workspaces require. A single `npm install` sets up everything.
 
 ## Scripts
 
 ```bash
-npm run dev            # API and app together
-npm run dev:api        # API only
-npm start              # Expo only (alias: npm run dev:app)
+npm run dev            # Expo (alias: npm start)
 npm run web            # Expo in the browser
 npm run android        # native Android build and run
 
-npm run verify         # typecheck + lint + test, app and API
+npm run verify         # typecheck + lint + test
 npm run typecheck
-npm run lint
+npm run lint           # ESLint, for the Expo and React rules
+npm run format         # Biome
 npm test
 
-npm run db:link        # link the Supabase project named in .env
-npm run db:push        # apply pending migrations
-npm run db:types       # regenerate database.types.ts from the live schema
-
-npm run build:api      # compile the API to backend/dist
-npm run start:api      # run the compiled API (what Render runs)
 npm run build:android  # EAS Android build
+npm run legal          # regenerate TERMS.md and PRIVACY.md
 ```
 
 ## How it fits together
@@ -94,10 +91,10 @@ The model is forced to return one of its 86 labels for any image at all, so a
 photograph of a wall or a person still produces a winner — measured directly, a
 grey wall scored a _higher_ top logit than a healthy leaf. A vegetation check on
 the decoded frame therefore runs first, and a photograph that does not show a
-plant is refused rather than answered. `backend/tests/unit/vegetation.test.ts`
+plant is refused rather than answered. The backend repo's `tests/unit/vegetation.test.ts`
 holds the colours that check is calibrated against.
 
-`backend/src/modules/crops/plant-gate.service.ts` is a stronger version of that
+Its `src/modules/crops/plant-gate.service.ts` is a stronger version of that
 check, using a second pretrained model. It is deliberately not wired in: its
 thresholds have to be measured against real leaf photographs first, and its
 weights are not committed. The file header says where to fetch them.
@@ -114,6 +111,6 @@ dropping the file. Both failures look identical from the app, so
 
 ## Documentation
 
-| Document                          | Covers             |
-| --------------------------------- | ------------------ |
-| [Database](../supabase/README.md) | Migration workflow |
+| Document                                                                              | Covers                       |
+| ------------------------------------------------------------------------------------- | ---------------------------- |
+| [backend-pro](https://github.com/Agronavis-AI/backend-pro)                              | The API, its schema and seeds |

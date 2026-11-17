@@ -3,9 +3,10 @@
 Every capability in the app, what it gives the person standing in the field,
 and the release it arrived in.
 
-Everything here is in **1.0.0**, the first public release. The pull request
-numbers record when each part was built, not when it shipped — they all
-shipped together.
+Everything here is in **1.0.0**, the first public release, live on Google Play
+as [`com.agronavis.app`](https://play.google.com/store/apps/details?id=com.agronavis.app).
+The pull request numbers record when each part was built, not when it shipped —
+they all shipped together.
 
 ---
 
@@ -144,11 +145,35 @@ not.
 
 Sahayak knows your fields, your soil reading, your current weather and your
 open advisories before you ask it anything. You can type, or you can speak to
-it and hear the answer, in English or Hindi.
+it and hear the answer.
 
 It runs on the handset rather than on a server. That means it answers in a
 field with one bar of signal, it costs nothing per question, and what you ask
 about your own land is never sent anywhere.
+
+Everything it knows up front comes from what the app has already stored, never
+from a fresh request — which is why it opens instantly instead of showing a
+blank screen while five things load.
+
+### Today's prices, when you ask for them
+
+Ask what a crop is making and Sahayak looks up the real mandi rates near your
+district, once, at that moment. They are quoted in both units — **per quintal
+and per kg**, because mandis publish one and farmers sell in the other.
+
+This is the one thing it fetches, and it fetches it only when asked. The
+reason is not speed but honesty: a model asked what wheat is selling for will
+answer with a number whether or not it knows one, and a farmer who carts a
+crop to market on an invented price has lost a day and the cartage. With the
+real figures in front of it, it is told to quote nothing else and to say
+plainly when it has no rate for the crop you asked about.
+
+### Your conversation is yours
+
+The thread stays for the working day, so going out to look at the field and
+coming back does not lose it. It belongs to the account that had it — signing
+out deletes it from the handset, and a second account on the same phone never
+sees it. There is a **new chat** button when you would rather start clean.
 
 ---
 
@@ -182,9 +207,22 @@ task list from sowing through to harvest.
 
 ## Your language, your voice
 
-English and Hindi across the whole app, not only the assistant. Speak your
-question and hear the answer, so reading comfortably is never a requirement for
-using any part of it.
+**Sahayak answers in eight languages. The screens are in English, and the app
+says so before you choose.**
+
+Pick from English, Hindi, Bengali, Marathi, Punjabi, Gujarati, Telugu or
+Kannada and Sahayak will answer in it, in its own script — and speak it aloud,
+and listen in it. Reading comfortably is not a requirement for using the part
+of the app you can talk to.
+
+The rest of the screens are still English. That is stated plainly on the
+language screen, under the list, rather than discovered afterwards: a farmer
+who picks their own language and watches every screen stay in English decides
+the app is broken, and they are closer to right than a label claiming support
+would be.
+
+A Hindi translation file exists and one screen reads it. The screens become
+multilingual when they are genuinely translated, not when the picker says so.
 
 ---
 
@@ -214,3 +252,95 @@ could see it.
 
 > Sentinel-2, European Space Agency · 10 m · free and open · no account needed
 > **#20** — technical detail in [docs/architecture/SATELLITE.md](architecture/SATELLITE.md)
+
+---
+
+## Know what is burning upwind
+
+**Stubble fires near your field, and whether their smoke is coming your way.**
+
+Satellites detect burning twice a day. Agronavis reads every detection within
+150 km of your field and asks the question that actually matters: is the wind
+carrying that smoke here? A fire upwind of you at twenty kilometres matters
+more than one downwind at five.
+
+Detections from a single burning field are merged, so one fire appears once
+rather than as a scatter of hot pixels. Only recent fires count toward a
+warning — today's wind says nothing about a fire that went out last season.
+
+When the satellite data cannot be reached, the screen shows when it was last
+updated instead of an empty list. An empty list drawn as good news is how an
+app tells a farmer their field is clear when it has not looked.
+
+> NASA FIRMS · VIIRS and MODIS · **#16**, **#17**, **#18**, **#19**
+
+---
+
+## Ask the farmers around you
+
+**A feed for the questions an app cannot answer.**
+
+Post a photograph and a question; other farmers answer. Prices, varieties, what
+worked on soil like yours — the things that are local knowledge rather than
+public data.
+
+### And leave when you want to
+
+Every post and every comment carries a menu that reports it, with six reasons
+in plain words rather than a policy vocabulary, and blocks whoever wrote it.
+
+A block runs **both ways**: their posts and comments disappear for you, and
+yours for them. One-directional blocking would hide a harasser from the person
+being harassed while leaving that person's writing open for the harasser to
+read and answer — which is the half that matters least to the one who asked
+for it.
+
+The filtering happens in the database query, not on the phone. Hiding posts
+after they arrive would leave the blocked farmer's words sitting in the data
+the app downloaded, which is concealment rather than blocking.
+
+Blocks are listed under **Profile → Blocked farmers**, where any of them can
+be lifted. Nobody is told they have been blocked.
+
+> **#20**
+
+---
+
+## Alerts, and only the ones you asked for
+
+**The app tells you when something needs doing, not when something happened.**
+
+Three kinds of alert, each a switch you set during onboarding and can change
+later: **weather warnings**, **irrigation**, and **pest and disease**.
+
+Muting one stops your phone buzzing but still records the alert, so it is
+there in the list when you go looking. "Do not buzz my phone at night" is not
+"never tell me".
+
+Only urgent alerts reach the handset at all. The rest wait in the list, which
+is why the list has to be worth opening.
+
+The app welcomes you on your first visit, and again after three days away.
+Both are written to the list whether or not a notification could be delivered
+— the record a farmer can read must not depend on whether a push got through.
+
+---
+
+## Your account, and leaving
+
+**Two-factor authentication, enforced by the server rather than the screen.**
+
+Turning on two-factor authentication binds an authenticator app and stores
+backup codes. The API checks it on every request, not just the login screen —
+before this it was a prompt the app drew and the server ignored.
+
+**Deletion means deletion.** Profile → Delete My Account removes the profile,
+the farms and their boundaries, the scans and their photographs, the posts and
+the alerts, and signs the handset out with the notification shade emptied. It
+is also reachable from
+[agronavis.in/delete-account](https://www.agronavis.in/delete-account) for
+anyone who has already uninstalled the app.
+
+Billing records are kept for seven years because Indian tax law requires it,
+and encrypted backups catch up within ninety days. Both are stated on the page
+rather than left to be discovered.

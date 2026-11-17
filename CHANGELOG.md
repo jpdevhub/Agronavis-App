@@ -6,10 +6,37 @@ release they shipped in; the build number beside each is the Android
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Which bump a change earns is set out in
+[CONTRIBUTING.md](CONTRIBUTING.md#versions).
 
-## [1.0.0] — 2026-10-20 · build 9
+Each release is built on a branch named after it — `release/v1.0.1` — and every commit
+that changes something a farmer would notice adds its own line here as it
+happens, rather than being reconstructed from commit subjects at the end.
 
-**The first public release.**
+## [1.0.1] — unreleased
+
+### Added
+
+- **Crop recommendations per field.** Every crop ranked for this field and this
+  month, on soil, weather and today's mandi price — with what counts against
+  each one written beside it. Nothing is removed from the list: the field is
+  the farmer's and the ranking is an argument, not a gate.
+
+### Fixed
+
+- Tasks showed the whole farm's work on every field, so sowing dates for the
+  cotton appeared against the plot growing rice.
+- Sahayak stopped answering once Android reclaimed the model, and said to try
+  again when trying again could not work.
+- The model download restarted from zero whenever the connection dropped.
+- Sahayak was offered to phones too small to hold it, after 2.6 GB of download.
+- Answers kept being read aloud after the chat was cleared or muted.
+- The field name sheet put Continue under the keyboard.
+
+## [1.0.0] — 2026-10-27 · build 12
+
+**The first public release**, live on Google Play as
+[`com.agronavis.app`](https://play.google.com/store/apps/details?id=com.agronavis.app).
 
 Everything below this line shipped in it: a farmer maps a field, and the app
 reads the soil under it, the weather over it, what is growing on it and what
@@ -46,6 +73,17 @@ do not know.
   in the app — a one-way block would leave the harasser still able to read and
   reply, and filtering on the phone would leave the blocked farmer's words in
   the payload. Blocks are listed under Profile, where they can be lifted.
+- **Alerts you choose.** The onboarding step now offers the three kinds of
+  advisory the app actually produces, and the choice is enforced by the server
+  before it pushes. Muting one stops the notification but still records the
+  alert, because "do not buzz my phone" is not "never tell me".
+- **A greeting that does not depend on push.** The app welcomes a farmer on
+  their first visit and after three days away, written to the alerts list
+  whether or not a notification could be delivered.
+- **Mandi rates inside Sahayak**, fetched only when a price is asked about, and
+  quoted in both ₹/quintal and ₹/kg. The assistant is told to quote nothing
+  else and to decline when it has no rate — a farmer who carts a crop to market
+  on an invented price has lost a day and the cartage.
 - `LICENSE`, `SECURITY.md`, `PRIVACY.md` and this changelog.
 
 ### Changed

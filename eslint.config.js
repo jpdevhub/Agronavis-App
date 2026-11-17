@@ -5,18 +5,17 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    // `._*` are AppleDouble sidecars the OS writes on non-native volumes.
-    // backend/ and packages/ have their own configs and are linted by their
-    // own workspace scripts; everything else here is not source.
+    // Biome formats; ESLint is here for the Expo and React rules Biome has
+    // no equivalent for. `._*` are AppleDouble sidecars the OS writes on
+    // non-native volumes. `packages/` lints itself through its own workspace
+    // script; the rest is not source.
     ignores: [
       'dist/*',
       '.expo/*',
       '**/._*',
-      'backend/**',
       'packages/**',
       'android/**',
       'ios/**',
-      'supabase/**',
       'scripts/**',
       'docs/**',
       'notebooks/**',

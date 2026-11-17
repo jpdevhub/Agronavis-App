@@ -42,10 +42,6 @@ tmp/
 /android/
 /ios/
 
-# Supabase CLI
-supabase/.branches/
-supabase/.temp/
-
 # Testing
 coverage/
 .nyc_output/

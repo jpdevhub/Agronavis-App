@@ -228,8 +228,8 @@ re-run and skips passes it has already measured.
 ## Operational notes
 
 **`npm run sync:ndvi`** runs the job by hand. The cron is nightly, but
-`render.yaml` already records why that is not enough on the free tier: *a
-sleeping instance fires no cron*. The same applies to `sync:fires`.
+the backend repo's `render.yaml` already records why that is not enough on the
+free tier: *a sleeping instance fires no cron*. The same applies to `sync:fires`.
 
 **Caps.** Eight fields per run, two passes each — at ~40 s per band that is
 already several minutes.

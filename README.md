@@ -7,11 +7,20 @@
 ### Every field in India, advised.
 
 Soil, weather, crops, disease and the day's market price — for one mapped field,
-in the farmer's own language.
+with an assistant that answers in the farmer's own language.
 
-**Version 1.0.0** · Android · [agronavis.in](https://agronavis.in)
+[![Get it on Google Play](https://img.shields.io/badge/Google%20Play-com.agronavis.app-0E3D1F?logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.agronavis.app)
+[![Version](https://img.shields.io/badge/version-1.0.0-90D684)](CHANGELOG.md)
+
+**Live on Google Play** · Android · [agronavis.in](https://agronavis.in)
 
 </div>
+
+> [!IMPORTANT]
+> **This is a production repository.** `main` is what farmers are running.
+> Every change reaches it through a reviewed pull request with CI green — see
+> **[CONTRIBUTING.md](CONTRIBUTING.md)**. Releases are cut as described in
+> **[docs/RELEASING.md](docs/RELEASING.md)**.
 
 ---
 
@@ -65,7 +74,9 @@ Map one field, and the app reads what is above and below it.
 | **Disease** | A reading from a photograph of a leaf, with a confidence figure and the honesty to say when it does not know |
 | **Smoke** | Stubble fires within 150 km, and whether the wind is bringing their smoke to you |
 | **Prices** | Mandi rates from Agmarknet for the commodities you grow |
-| **Sahayak** | A farming assistant that runs on the phone — your questions never leave it |
+| **Sahayak** | A farming assistant that runs on the phone — your questions never leave it, and it quotes real mandi rates rather than inventing one |
+| **Neighbours** | A feed of farmers near you, with reporting and a block that works both ways |
+| **Alerts** | Only the kinds you asked for, and muting one still records it |
 
 ## What is loaded today
 
@@ -80,7 +91,7 @@ These are counts from the live production database, not projections.
 | **4,172**  | mandis in the directory                |
 | **1,812**  | crops in the scheme catalogue          |
 | **86**     | crop conditions the scanner recognises |
-| **2**      | languages live — English and Hindi     |
+| **8**      | languages Sahayak answers in           |
 
 ---
 
@@ -122,7 +133,13 @@ know:
 
 ## What comes next
 
-- Five more languages — Marathi, Punjabi, Gujarati, Telugu and Kannada
+- **The screens in more than English.** Sahayak already answers in eight
+  languages; the screens themselves are English, and the app says so plainly
+  rather than claiming otherwise.
+- **Push notifications actually reaching handsets.** Alerts are written and
+  shown in the app, but no FCM project exists yet, so no phone is woken.
+- **Over-the-air updates.** `expo-updates` is not installed, so every fix
+  needs a store round trip.
 - Fertiliser and pesticide quantities worked out for the field's actual acreage
 - A second model dedicated to deciding whether a photograph shows a crop at all
 - Dated task timelines extended across the full crop catalogue
@@ -143,6 +160,10 @@ know:
 ---
 
 ## For developers
+
+**Start with [CONTRIBUTING.md](CONTRIBUTING.md)** — `main` is production, and
+nothing lands on it except through a reviewed pull request. How a release is
+cut is in **[docs/RELEASING.md](docs/RELEASING.md)**.
 
 What the app does for a farmer, feature by feature with the release each
 arrived in, is in **[docs/FEATURES.md](docs/FEATURES.md)**.
