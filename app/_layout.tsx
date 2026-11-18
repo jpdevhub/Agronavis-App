@@ -15,6 +15,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { LoadingScreen } from '@/components/ui';
 import { readLanding, writeLanding, type Landing } from '@/features/auth/landingCache';
 import { ConnectivityProvider, NetworkBanner } from '@/shared/network';
+import { useAppFonts } from '@/features/typography/useAppFonts';
 import { useSyncOnReconnect } from '@/shared/offline';
 import { authApi } from '@/services/endpoints';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -284,6 +285,19 @@ function AppShell() {
   );
 }
 
+/**
+ * Holds the shell until the type is in memory.
+ *
+ * Only the shell: the providers above it start rehydrating the query cache
+ * and reading the session while the cuts load, so the two waits overlap
+ * instead of queueing. Rendering first and swapping the family underneath
+ * reflows every screen and jumps the text a frame in.
+ */
+function FontGate() {
+  const { ready } = useAppFonts();
+  return ready ? <AppShell /> : <LoadingScreen />;
+}
+
 export default function RootLayout() {
   return (
     <PersistQueryClientProvider
@@ -306,7 +320,7 @@ export default function RootLayout() {
         <ConnectivityProvider>
           <GestureHandlerRootView style={styles.root}>
             <NetworkBanner />
-            <AppShell />
+            <FontGate />
           </GestureHandlerRootView>
         </ConnectivityProvider>
       </SafeAreaProvider>

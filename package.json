@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@agronavis/shared-types": "*",
+    "@expo-google-fonts/roboto": "^0.4.3",
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.2",
     "@hookform/resolvers": "^5.4.0",

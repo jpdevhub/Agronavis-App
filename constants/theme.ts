@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 
 export const LightScheme = {
   primary: '#006c49',
-  primaryContainer: '#10b981',
+  primaryContainer: '#8cf3c0',
   onPrimary: '#ffffff',
   onPrimaryContainer: '#00422b',
   primaryFixed: '#6ffbbe',
@@ -16,7 +16,7 @@ export const LightScheme = {
   inversePrimary: '#4edea3',
 
   secondary: '#1b6b51',
-  secondaryContainer: '#a6f2d1',
+  secondaryContainer: '#cfe9da',
   onSecondary: '#ffffff',
   onSecondaryContainer: '#237157',
   secondaryFixed: '#a6f2d1',
@@ -35,7 +35,7 @@ export const LightScheme = {
    * what the role calls for, and the palette already had it as
    * tertiaryFixed.
    */
-  tertiaryContainer: '#ffddb8',
+  tertiaryContainer: '#ffdf9e',
   onTertiary: '#ffffff',
   onTertiaryContainer: '#523200',
   tertiaryFixed: '#ffddb8',
@@ -48,26 +48,40 @@ export const LightScheme = {
   onError: '#ffffff',
   onErrorContainer: '#93000a',
 
-  surface: '#f8f9ff',
-  surfaceBright: '#f8f9ff',
-  surfaceDim: '#cbdbf5',
-  surfaceVariant: '#d3e4fe',
+  surface: '#f4fbf5',
+  surfaceBright: '#f4fbf5',
+  surfaceDim: '#d5dcd7',
+  surfaceVariant: '#dbe5de',
   surfaceContainerLowest: '#ffffff',
-  surfaceContainerLow: '#eff4ff',
-  surfaceContainer: '#e5eeff',
-  surfaceContainerHigh: '#dce9ff',
-  surfaceContainerHighest: '#d3e4fe',
-  inverseSurface: '#213145',
-  inverseOnSurface: '#eaf1ff',
+  surfaceContainerLow: '#eff7f1',
+  surfaceContainer: '#e8f0ea',
+  surfaceContainerHigh: '#e2eae4',
+  surfaceContainerHighest: '#dce5df',
+  inverseSurface: '#2b322e',
+  inverseOnSurface: '#eceff0',
 
-  onSurface: '#0b1c30',
-  onSurfaceVariant: '#3c4a42',
-  onBackground: '#0b1c30',
-  background: '#f8f9ff',
+  onSurface: '#161d19',
+  onSurfaceVariant: '#3f4943',
+  onBackground: '#161d19',
+  background: '#f4fbf5',
 
-  outline: '#6c7a71',
-  outlineVariant: '#bbcabf',
+  outline: '#6f7975',
+  outlineVariant: '#bfc9c1',
   surfaceTint: '#006c49',
+
+  /**
+   * Brand roles, outside the generated palette.
+   *
+   * `forest` is the ground the weather and irrigation card sits on, `leaf`
+   * the lime that marks a reading as good, `skyContainer` the tint weather
+   * and rainfall take when they are not on forest.
+   */
+  forest: '#08321f',
+  onForest: '#ffffff',
+  leaf: '#7ecb4d',
+  onLeaf: '#0b2a05',
+  skyContainer: '#d3e8ff',
+  onSkyContainer: '#0b1c30',
 
   onPrimaryFixed: '#002114',
   onPrimaryFixedVariant: '#00422b',
@@ -76,6 +90,13 @@ export const LightScheme = {
 } as const;
 
 export const DarkScheme: Record<keyof typeof LightScheme, string> = {
+  forest: '#0b3d26',
+  onForest: '#ffffff',
+  leaf: '#9fdc74',
+  onLeaf: '#0b2a05',
+  skyContainer: '#1d3049',
+  onSkyContainer: '#d7e3f8',
+
   primary: '#6adba8',
   onPrimary: '#003825',
   primaryContainer: '#005236',
@@ -198,29 +219,50 @@ export const Elevation = {
   level5: shadow(12, 0.18, 16),
 } as const;
 
-const systemFont = Platform.select({ ios: 'System', android: 'sans-serif', default: 'System' });
+/**
+ * Roboto, in the weights the design asks for.
+ *
+ * The design names Roboto Flex at 400 / 640 / 680 / 700 / 760. Flex is a
+ * variable font and React Native cannot set a weight axis on one, so each
+ * weight here is a real cut of Roboto — the same typeface, shipped as static
+ * instances — rounded to the nearest one that exists.
+ *
+ * A family name is the whole story on Android: `fontWeight` on a loaded
+ * custom font is ignored there, and asking for bold on a regular cut gets a
+ * smeared synthetic bold. So the weight lives in the family, never in
+ * `fontWeight`.
+ */
+export const FontFace = {
+  regular: 'Roboto_400Regular',
+  medium: 'Roboto_500Medium',
+  semiBold: 'Roboto_600SemiBold',
+  bold: 'Roboto_700Bold',
+  extraBold: 'Roboto_800ExtraBold',
+} as const;
+
+const systemFont = FontFace.regular;
 
 /** MD3 type scale, mapped onto the platform system font. */
 export const Type = {
-  displayLarge: { fontFamily: systemFont, fontSize: 57, lineHeight: 64, letterSpacing: -0.25, fontWeight: '400' as const },
-  displayMedium: { fontFamily: systemFont, fontSize: 45, lineHeight: 52, letterSpacing: 0, fontWeight: '400' as const },
-  displaySmall: { fontFamily: systemFont, fontSize: 36, lineHeight: 44, letterSpacing: 0, fontWeight: '400' as const },
+  displayLarge: { fontFamily: FontFace.bold, fontSize: 57, lineHeight: 64, letterSpacing: -0.25 },
+  displayMedium: { fontFamily: FontFace.bold, fontSize: 45, lineHeight: 52, letterSpacing: 0 },
+  displaySmall: { fontFamily: FontFace.bold, fontSize: 36, lineHeight: 44, letterSpacing: 0 },
 
-  headlineLarge: { fontFamily: systemFont, fontSize: 32, lineHeight: 40, letterSpacing: 0, fontWeight: '400' as const },
-  headlineMedium: { fontFamily: systemFont, fontSize: 28, lineHeight: 36, letterSpacing: 0, fontWeight: '400' as const },
-  headlineSmall: { fontFamily: systemFont, fontSize: 24, lineHeight: 32, letterSpacing: 0, fontWeight: '400' as const },
+  headlineLarge: { fontFamily: FontFace.extraBold, fontSize: 32, lineHeight: 40, letterSpacing: 0 },
+  headlineMedium: { fontFamily: FontFace.extraBold, fontSize: 28, lineHeight: 36, letterSpacing: 0 },
+  headlineSmall: { fontFamily: FontFace.extraBold, fontSize: 24, lineHeight: 32, letterSpacing: 0 },
 
-  titleLarge: { fontFamily: systemFont, fontSize: 22, lineHeight: 28, letterSpacing: 0, fontWeight: '500' as const },
-  titleMedium: { fontFamily: systemFont, fontSize: 16, lineHeight: 24, letterSpacing: 0.15, fontWeight: '600' as const },
-  titleSmall: { fontFamily: systemFont, fontSize: 14, lineHeight: 20, letterSpacing: 0.1, fontWeight: '600' as const },
+  titleLarge: { fontFamily: FontFace.bold, fontSize: 22, lineHeight: 28, letterSpacing: 0 },
+  titleMedium: { fontFamily: FontFace.semiBold, fontSize: 16, lineHeight: 24, letterSpacing: 0.15 },
+  titleSmall: { fontFamily: FontFace.semiBold, fontSize: 14, lineHeight: 20, letterSpacing: 0.1 },
 
-  bodyLarge: { fontFamily: systemFont, fontSize: 16, lineHeight: 24, letterSpacing: 0.5, fontWeight: '400' as const },
-  bodyMedium: { fontFamily: systemFont, fontSize: 14, lineHeight: 20, letterSpacing: 0.25, fontWeight: '400' as const },
-  bodySmall: { fontFamily: systemFont, fontSize: 12, lineHeight: 16, letterSpacing: 0.4, fontWeight: '400' as const },
+  bodyLarge: { fontFamily: FontFace.regular, fontSize: 16, lineHeight: 24, letterSpacing: 0.5 },
+  bodyMedium: { fontFamily: FontFace.regular, fontSize: 14, lineHeight: 20, letterSpacing: 0.25 },
+  bodySmall: { fontFamily: FontFace.regular, fontSize: 12, lineHeight: 16, letterSpacing: 0.4 },
 
-  labelLarge: { fontFamily: systemFont, fontSize: 14, lineHeight: 20, letterSpacing: 0.1, fontWeight: '600' as const },
-  labelMedium: { fontFamily: systemFont, fontSize: 12, lineHeight: 16, letterSpacing: 0.5, fontWeight: '600' as const },
-  labelSmall: { fontFamily: systemFont, fontSize: 11, lineHeight: 16, letterSpacing: 0.5, fontWeight: '600' as const },
+  labelLarge: { fontFamily: FontFace.bold, fontSize: 14, lineHeight: 20, letterSpacing: 0.1 },
+  labelMedium: { fontFamily: FontFace.bold, fontSize: 12, lineHeight: 16, letterSpacing: 0.5 },
+  labelSmall: { fontFamily: FontFace.bold, fontSize: 11, lineHeight: 16, letterSpacing: 0.5 },
 } as const;
 
 /**
@@ -229,24 +271,24 @@ export const Type = {
  * create hierarchy, instead of reaching for a bigger font size.
  */
 export const TypeEmphasized = {
-  displayLarge: { ...Type.displayLarge, fontWeight: '800' as const, letterSpacing: -1 },
-  displayMedium: { ...Type.displayMedium, fontWeight: '800' as const, letterSpacing: -0.8 },
-  displaySmall: { ...Type.displaySmall, fontWeight: '800' as const, letterSpacing: -0.6 },
+  displayLarge: { ...Type.displayLarge, fontFamily: FontFace.extraBold, letterSpacing: -1 },
+  displayMedium: { ...Type.displayMedium, fontFamily: FontFace.extraBold, letterSpacing: -0.8 },
+  displaySmall: { ...Type.displaySmall, fontFamily: FontFace.extraBold, letterSpacing: -0.6 },
 
-  headlineLarge: { ...Type.headlineLarge, fontWeight: '800' as const, letterSpacing: -0.6 },
-  headlineMedium: { ...Type.headlineMedium, fontWeight: '800' as const, letterSpacing: -0.5 },
-  headlineSmall: { ...Type.headlineSmall, fontWeight: '800' as const, letterSpacing: -0.4 },
+  headlineLarge: { ...Type.headlineLarge, fontFamily: FontFace.extraBold, letterSpacing: -0.6 },
+  headlineMedium: { ...Type.headlineMedium, fontFamily: FontFace.extraBold, letterSpacing: -0.5 },
+  headlineSmall: { ...Type.headlineSmall, fontFamily: FontFace.extraBold, letterSpacing: -0.4 },
 
-  titleLarge: { ...Type.titleLarge, fontWeight: '800' as const, letterSpacing: -0.3 },
-  titleMedium: { ...Type.titleMedium, fontWeight: '700' as const },
-  titleSmall: { ...Type.titleSmall, fontWeight: '700' as const },
+  titleLarge: { ...Type.titleLarge, fontFamily: FontFace.extraBold, letterSpacing: -0.3 },
+  titleMedium: { ...Type.titleMedium, fontFamily: FontFace.extraBold },
+  titleSmall: { ...Type.titleSmall, fontFamily: FontFace.extraBold },
 
-  bodyLarge: { ...Type.bodyLarge, fontWeight: '600' as const },
-  bodyMedium: { ...Type.bodyMedium, fontWeight: '600' as const },
+  bodyLarge: { ...Type.bodyLarge, fontFamily: FontFace.bold },
+  bodyMedium: { ...Type.bodyMedium, fontFamily: FontFace.bold },
 
-  labelLarge: { ...Type.labelLarge, fontWeight: '800' as const, letterSpacing: 0 },
-  labelMedium: { ...Type.labelMedium, fontWeight: '700' as const },
-  labelSmall: { ...Type.labelSmall, fontWeight: '700' as const },
+  labelLarge: { ...Type.labelLarge, fontFamily: FontFace.extraBold, letterSpacing: 0 },
+  labelMedium: { ...Type.labelMedium, fontFamily: FontFace.extraBold },
+  labelSmall: { ...Type.labelSmall, fontFamily: FontFace.extraBold },
 } as const;
 
 /**
